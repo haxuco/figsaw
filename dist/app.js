@@ -124,8 +124,10 @@ function rod(parent,start,end,radius,material){
  const part=mesh(new THREE.CylinderGeometry(radius,radius,delta.length(),16),material,parent);
  part.position.copy(a).add(b).multiplyScalar(.5);part.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());return part;
 }
+const spinningWheels=[];
 function wheel(x,y,z,radius,spokes){
  const group=new THREE.Group();group.position.set(x,y,z);group.rotation.y=Math.PI/2;group.name=spokes===8?'Large front wheel':'Small rear wheel';tricycle.add(group);
+ group.userData.radius=radius;spinningWheels.push(group);
  const tireWidth=radius>.7?.073:.061;
  mesh(new THREE.TorusGeometry(radius-tireWidth,tireWidth,12,80),rubber,group);
  mesh(new THREE.TorusGeometry(radius-tireWidth*2,.029,10,80),enamel,group);
@@ -165,22 +167,33 @@ for(const side of[-1,1]){
  tube([[side*.16,frontAxleY,frontAxleZ],[side*.18,1.76,1.55],[side*.17,2.05,1.32],[side*.11,2.13,1.25]],.052,enamel,tricycle);
 }
 rod(tricycle,[0,1.94,1.28],[0,2.26,1.23],.103,enamel);
-rod(tricycle,[0,2.15,1.25],[0,2.42,1.34],.041,chrome);
-tube([[-.96,2.61,1.58],[-.75,2.55,1.62],[-.45,2.36,1.48],[0,2.36,1.36],[.45,2.36,1.48],[.75,2.55,1.62],[.96,2.61,1.58]],.038,chrome,tricycle);
+// The stem meets the bar at its center; the grips sweep back toward the saddle.
+rod(tricycle,[0,2.15,1.25],[0,2.43,1.16],.041,chrome);
+tube([[-.94,2.55,.54],[-.90,2.54,.89],[-.78,2.49,1.10],[-.45,2.43,1.17],[0,2.43,1.16],[.45,2.43,1.17],[.78,2.49,1.10],[.90,2.54,.89],[.94,2.55,.54]],.038,chrome,tricycle);
+rod(tricycle,[-.10,2.43,1.16],[.10,2.43,1.16],.060,chrome);
+ball(tricycle,chrome,[0,2.43,1.217],[.025,.025,.015],2);
 for(const side of[-1,1]){
- rod(tricycle,[side*.73,2.55,1.62],[side*1.02,2.63,1.57],.064,rubber);
- ball(tricycle,enamel,[side*1.025,2.632,1.57],[.067,.067,.067],2);
+ rod(tricycle,[side*.90,2.54,.89],[side*.94,2.55,.54],.064,rubber);
+ ball(tricycle,enamel,[side*.94,2.55,.525],[.067,.067,.035],2);
 }
-// The front wheel carries two little pedals; no legs or body are added to Rocky.
+// Direct-drive cranks turn with the front wheel, with level pedal platforms.
+const crank=new THREE.Group();crank.name='Rotating pedal crank';crank.position.set(0,frontAxleY,frontAxleZ);tricycle.add(crank);
+const pedalPlatforms=[];
 for(const side of[-1,1]){
- const pedalY=frontAxleY+side*.17,pedalZ=frontAxleZ-side*.19;
- rod(tricycle,[side*.17,frontAxleY,frontAxleZ],[side*.30,pedalY,pedalZ],.025,chrome);
- rod(tricycle,[side*.30,pedalY,pedalZ],[side*.53,pedalY,pedalZ],.023,chrome);
- const pedal=mesh(new THREE.BoxGeometry(.27,.075,.19),rubber,tricycle);pedal.position.set(side*.44,pedalY,pedalZ);
- for(let j=-1;j<=1;j++){const rib=mesh(new THREE.BoxGeometry(.24,.008,.012),saddleMaterial,tricycle);rib.position.set(side*.44,pedalY+.041,pedalZ+j*.05);}
+ const pedalY=side*.17,pedalZ=-side*.19;
+ rod(crank,[side*.17,0,0],[side*.30,pedalY,pedalZ],.025,chrome);
+ rod(crank,[side*.30,pedalY,pedalZ],[side*.53,pedalY,pedalZ],.023,chrome);
+ const platform=new THREE.Group();platform.position.set(side*.44,pedalY,pedalZ);crank.add(platform);pedalPlatforms.push(platform);
+ mesh(new THREE.BoxGeometry(.27,.075,.19),rubber,platform);
+ for(let j=-1;j<=1;j++){const rib=mesh(new THREE.BoxGeometry(.24,.008,.012),saddleMaterial,platform);rib.position.set(0,.041,j*.05);}
 }
-ball(tricycle,chrome,[-.40,2.44,1.48],[.10,.065,.10]);
-rod(tricycle,[-.40,2.43,1.48],[-.52,2.45,1.48],.018,rubber);
+function setRollingDistance(distance){
+ for(const wheel of spinningWheels)wheel.rotation.z=distance/wheel.userData.radius;
+ crank.rotation.x=distance/.86;
+ for(const platform of pedalPlatforms)platform.rotation.x=-crank.rotation.x;
+}
+ball(tricycle,chrome,[-.47,2.50,1.17],[.10,.065,.10]);
+rod(tricycle,[-.47,2.49,1.17],[-.59,2.51,1.17],.018,rubber);
 const riderScale=.72,riderSeatY=2.08;
 const puppet=new THREE.Group();puppet.scale.setScalar(riderScale);puppet.position.set(0,riderSeatY,-.45);garden.add(puppet);
 const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=8*Math.PI*2/cols;
@@ -373,6 +386,7 @@ function render(){
  const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
  puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
+ setRollingDistance(reducedMotion?0:t*.85);
  plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});
  for(let i=0;i<moteSeeds.length;i++){const[a,r,y]=moteSeeds[i];motePositions[i*3]=Math.cos(a+(reducedMotion?0:t*.018))*r;motePositions[i*3+1]=.7+(y+(reducedMotion?0:t*.055))%3.6;motePositions[i*3+2]=Math.sin(a+(reducedMotion?0:t*.018))*r*.7;}
  moteGeo.attributes.position.needsUpdate=true;
