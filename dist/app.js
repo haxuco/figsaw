@@ -3,7 +3,7 @@ import * as THREE from './vendor/three.module.js';
 const $ = (s) => document.querySelector(s);
 const canvas = $('#scene');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const homeView={yaw:.62,pitch:.20};
+const homeView={yaw:.64,pitch:.38};
 const state = { mouth:0, jaw:0, mood:'happy', env:'day', dusk:0, yaw:homeView.yaw, pitch:homeView.pitch, zoom:1, drag:false, helloUntil:0, space:false, sound:false, time:0, tapUntil:0 };
 let renderer;
 try { renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true}); }
@@ -51,7 +51,7 @@ function lipstickTexture(){
   }
  }
  // The wide black mouth line continues across the cheeks beyond the short lipstick stroke.
- const wideMouth=[];for(let i=0;i<=120;i++){const u=i/120;wideMouth.push([mix(-1.28,1.23,u),1.45-.016*Math.sin(u*Math.PI)+.006*Math.sin(u*12)]);}
+ const wideMouth=[];for(let i=0;i<=140;i++){const u=i/140,x=mix(-1.65,1.23,u);const curl=.16*Math.exp(-Math.pow((x+1.65)/.26,2))+.06*Math.pow(Math.max(0,(x-.42)/.81),2);wideMouth.push([x,1.45-curl+.006*Math.sin(u*12)]);}
  stroke(wideMouth,.075,['rgba(23,25,24,.98)','rgba(23,25,24,.94)']);
  const lips=[];for(let i=0;i<=80;i++){const u=i/80;lips.push([mix(-.68,.42,u),1.452+.009*Math.sin(u*15)+.012*Math.sin(u*7)]);}
  stroke(lips,.18);
@@ -82,7 +82,8 @@ rockMaterial.onBeforeCompile=(shader)=>{
  float grain=stoneNoise(vStone*53.);float fleck=stoneNoise(vStone*142.);float mottled=stoneNoise(vStone*5.);
  float edge=.43 + vStone.x*.53 + .21*sin(vStone.z*5.+vStone.x*3.)+(stoneNoise(vStone*4.)-.5)*.34;
  float moss=1.-smoothstep(-.045,.045,vStone.y-edge);
- float mossPatch=1.-smoothstep(.23,.34,length((vStone.xy-vec2(-.95,.65))*vec2(1.,1.4))+(mottled-.5)*.12);
+ vec2 mossSpot=(vStone.xy-vec2(.26,.98))/vec2(.31,.20);
+ float mossPatch=(1.-smoothstep(.94,1.08,length(mossSpot)+(mottled-.5)*.16))*smoothstep(1.25,1.55,vStone.z);
  moss=max(moss,mossPatch*.97);
  vec3 stone=diffuseColor.rgb*(.79+mottled*.17+grain*.12);
  vec3 green=mix(vec3(.20,.32,.075),vec3(.40,.53,.17),grain*.6+mottled*.4);
@@ -193,8 +194,28 @@ function rawSurface(t,a){
  return new THREE.Vector3(Math.sin(a)*r*noise-.28*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise+muzzle);
 }
 function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
+// Shape the seams around the bulging lower jaw, so they descend from the lip
+// and curl outward toward the underside in the reference viewing angle.
+const seamCamera=new THREE.PerspectiveCamera(36,1,.1,80),seamDistance=11.8;
+seamCamera.position.set(Math.sin(homeView.yaw)*Math.cos(homeView.pitch)*seamDistance,cameraTarget.y+Math.sin(homeView.pitch)*seamDistance,Math.cos(homeView.yaw)*Math.cos(homeView.pitch)*seamDistance);
+seamCamera.lookAt(cameraTarget);seamCamera.updateMatrixWorld();
+function seamViewX(t,a){return rawSurface(t,a).multiplyScalar(riderScale).add(puppet.position).project(seamCamera).x;}
+const seamTargets=[seamViewX(cutRow/rows,-halfMouth),seamViewX(cutRow/rows,halfMouth)],seamCache=new Map();
+function seamAngles(t){
+ if(t===0||t>=cutRow/rows)return[-halfMouth,halfMouth];
+ const key=t.toFixed(7);if(seamCache.has(key))return seamCache.get(key);
+ const s=t/(cutRow/rows),bend=Math.sin(Math.PI*s),targets=[seamTargets[0]-.021*bend-.008*(1-s),seamTargets[1]+.037*bend+.012*(1-s)];
+ let silhouette=-1.35,minX=Infinity;
+ for(let i=0;i<=80;i++){const a=mix(-1.35,1.45,i/80),x=seamViewX(t,a);if(x<minX){minX=x;silhouette=a;}}
+ const angles=targets.map(target=>{
+  let low=silhouette,high=1.45;
+  for(let i=0;i<24;i++){const mid=(low+high)/2;if(seamViewX(t,mid)<target)low=mid;else high=mid;}
+  return(low+high)/2;
+ });
+ seamCache.set(key,angles);return angles;
+}
 function slotSurface(t,a){
- if(t<=cutRow/rows){const s=t/(cutRow/rows),bend=Math.sin(Math.PI*s);const left=-halfMouth-.045*bend+.018*Math.sin(s*8)*bend,right=halfMouth+.05*bend+.024*Math.sin(s*6)*bend;
+ if(t<=cutRow/rows){const[left,right]=seamAngles(t);
   if(a<-halfMouth)a=mix(-Math.PI,left,(a+Math.PI)/(Math.PI-halfMouth));
   else if(a<=halfMouth)a=mix(left,right,(a+halfMouth)/(halfMouth*2));
   else a=mix(right,Math.PI,(a-halfMouth)/(Math.PI-halfMouth));
@@ -245,10 +266,11 @@ const mouthLine=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-h
 for(const side of[-1,1]){
  const seam=[];for(let i=4;i<=cutRow;i++){const p=slotSurface(i/rows,side*halfMouth);p.z+=.009;seam.push(p);}tube(seam,.033,new THREE.MeshBasicMaterial({color:0x171918}),puppet);
 }
-// Fixed, open eyes: no blinking or eyelid scaling in any mood.
+// The open eyes sit close to the mouth and face the viewer as the camera orbits.
+const trackingEyes=[];
 for(const side of[-1,1]){
- const x=side*.42-.09,y=2.04+(side===-1?.045:0),z=faceZ(x,y)+.025;
- const eye=new THREE.Group();eye.position.set(x,y,z);eye.rotation.y=side*.15;puppet.add(eye);
+ const x=side*.42-.09,y=1.84+(side===-1?.045:0),z=faceZ(x,y)+.055;
+ const eye=new THREE.Group();eye.position.set(x,y,z);puppet.add(eye);trackingEyes.push(eye);
  ball(eye,mat(0x101015,.25),[0,0,0],[.205,.235,.095]);
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
  ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
@@ -360,6 +382,7 @@ function render(){
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale+bounce*.6;
  const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
  puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
+ for(const eye of trackingEyes)eye.lookAt(camera.position);
  plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});
  for(let i=0;i<moteSeeds.length;i++){const[a,r,y]=moteSeeds[i];motePositions[i*3]=Math.cos(a+(reducedMotion?0:t*.018))*r;motePositions[i*3+1]=.7+(y+(reducedMotion?0:t*.055))%3.6;motePositions[i*3+2]=Math.sin(a+(reducedMotion?0:t*.018))*r*.7;}
  moteGeo.attributes.position.needsUpdate=true;
