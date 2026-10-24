@@ -38,10 +38,10 @@ function lipstickTexture(){
  const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');
  let brushSeed=2718;const rand=()=>{brushSeed=(brushSeed*1664525+1013904223)>>>0;return brushSeed/4294967296;};
  const project=([x,y])=>[(x+2)/4*c.width,(1-y/3)*c.height];
- function stroke(points,width){
+ function stroke(points,width,colors=['rgba(211,12,57,.66)','rgba(227,17,62,.50)']){
   const p=points.map(project);ctx.lineCap='round';ctx.lineJoin='round';
   for(let pass=0;pass<3;pass++){
-   ctx.strokeStyle=pass===0?'rgba(211,12,57,.66)':'rgba(227,17,62,.50)';
+   ctx.strokeStyle=colors[pass===0?0:1];
    for(let i=1;i<p.length;i++){
     const wobble=(Math.sin(i*1.37+pass)*.08+Math.sin(i*.42)*.1);
     ctx.lineWidth=width*c.width/4*(1+wobble)*(pass===0?1.13:.77);
@@ -50,7 +50,10 @@ function lipstickTexture(){
    }
   }
  }
- const lips=[];for(let i=0;i<=80;i++){const u=i/80;lips.push([mix(-1.13,.88,u),1.452+.009*Math.sin(u*15)+.012*Math.sin(u*7)]);}
+ // The wide black mouth line continues across the cheeks beyond the short lipstick stroke.
+ const wideMouth=[];for(let i=0;i<=120;i++){const u=i/120;wideMouth.push([mix(-1.28,1.23,u),1.45-.016*Math.sin(u*Math.PI)+.006*Math.sin(u*12)]);}
+ stroke(wideMouth,.075,['rgba(23,25,24,.98)','rgba(23,25,24,.94)']);
+ const lips=[];for(let i=0;i<=80;i++){const u=i/80;lips.push([mix(-.68,.42,u),1.452+.009*Math.sin(u*15)+.012*Math.sin(u*7)]);}
  stroke(lips,.18);
  for(const side of[-1,1]){
   const spiral=[],cx=side===-1?-1.13:1.15,cy=1.68;
@@ -111,7 +114,7 @@ function shadowTexture(){const c=document.createElement('canvas');c.width=c.heig
 const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMaterial({map:shadowTexture(),transparent:true,depthWrite:false}));contact.rotation.x=-Math.PI/2;contact.position.y=-.09;scene.add(contact);
 
 const puppet=new THREE.Group();puppet.position.set(0,.54,0);garden.add(puppet);
-const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=13*Math.PI*2/cols;
+const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=8*Math.PI*2/cols;
 const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight,maxMouthTravel=.12;
 function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
 function rawSurface(t,a){
@@ -176,7 +179,7 @@ for(const side of[-1,1]){
 }
 // Fixed, open eyes: no blinking or eyelid scaling in any mood.
 for(const side of[-1,1]){
- const x=side*.57-.09,y=2.04+(side===-1?.045:0),z=faceZ(x,y)+.025;
+ const x=side*.42-.09,y=2.04+(side===-1?.045:0),z=faceZ(x,y)+.025;
  const eye=new THREE.Group();eye.position.set(x,y,z);eye.rotation.y=side*.15;puppet.add(eye);
  ball(eye,mat(0x101015,.25),[0,0,0],[.205,.235,.095]);
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
@@ -186,10 +189,10 @@ for(const side of[-1,1]){
 const browMaterial=mat(0xf8f6f0,.88);
 for(const side of[-1,1]){
  const path=new THREE.CatmullRomCurve3([
-  new THREE.Vector3(-.09+side*.17,2.28,0),
-  new THREE.Vector3(-.09+side*.41,2.43,0),
-  new THREE.Vector3(-.09+side*.70,2.49,0),
-  new THREE.Vector3(-.09+side*1.02,2.36,0)
+  new THREE.Vector3(-.09+side*.02,2.28,0),
+  new THREE.Vector3(-.09+side*.26,2.43,0),
+  new THREE.Vector3(-.09+side*.55,2.49,0),
+  new THREE.Vector3(-.09+side*.87,2.36,0)
  ]);
  const positions=[],indices=[],segments=48,sides=16;
  for(let i=0;i<=segments;i++){
