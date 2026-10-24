@@ -3,7 +3,7 @@ import * as THREE from './vendor/three.module.js';
 const $ = (s) => document.querySelector(s);
 const canvas = $('#scene');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const homeView={yaw:.48,pitch:.22};
+const homeView={yaw:.62,pitch:.20};
 const state = { mouth:0, jaw:0, mood:'happy', env:'day', dusk:0, yaw:homeView.yaw, pitch:homeView.pitch, zoom:1, drag:false, helloUntil:0, space:false, sound:false, time:0, tapUntil:0 };
 let renderer;
 try { renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true}); }
@@ -17,7 +17,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.08;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(36,1,.1,80);
-const cameraTarget=new THREE.Vector3(0,1.38,0);
+const cameraTarget=new THREE.Vector3(0,1.90,0);
 const hemi=new THREE.HemisphereLight(0xf6fbf0,0x9d9877,2.1);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff3d9,3.3);sun.position.set(-3.5,7,5);sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-6;sun.shadow.camera.right=6;sun.shadow.camera.top=6;sun.shadow.camera.bottom=-6;sun.shadow.normalBias=.035;sun.shadow.bias=-.00015;sun.shadow.radius=4;scene.add(sun);
@@ -113,7 +113,75 @@ for(let i=0;i<110;i++){
 function shadowTexture(){const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');const g=ctx.createRadialGradient(64,64,0,64,64,63);g.addColorStop(0,'rgba(51,62,28,.25)');g.addColorStop(.45,'rgba(51,62,28,.13)');g.addColorStop(1,'rgba(51,62,28,0)');ctx.fillStyle=g;ctx.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
 const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMaterial({map:shadowTexture(),transparent:true,depthWrite:false}));contact.rotation.x=-Math.PI/2;contact.position.y=-.09;scene.add(contact);
 
-const puppet=new THREE.Group();puppet.position.set(0,.54,0);garden.add(puppet);
+// A vintage tricycle supports the rock directly on its saddle.
+const tricycle=new THREE.Group();tricycle.name='Rocky’s red tricycle';garden.add(tricycle);
+const enamel=new THREE.MeshStandardMaterial({color:0xb71925,roughness:.36,metalness:.42});
+const chrome=new THREE.MeshStandardMaterial({color:0xd6ddda,roughness:.24,metalness:.78});
+const rubber=mat(0x171c1b,.93),saddleMaterial=mat(0x242725,.85);
+function rod(parent,start,end,radius,material){
+ const a=new THREE.Vector3(...start),b=new THREE.Vector3(...end),delta=b.clone().sub(a);
+ const part=mesh(new THREE.CylinderGeometry(radius,radius,delta.length(),16),material,parent);
+ part.position.copy(a).add(b).multiplyScalar(.5);part.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),delta.normalize());return part;
+}
+function wheel(x,y,z,radius,spokes){
+ const group=new THREE.Group();group.position.set(x,y,z);group.rotation.y=Math.PI/2;group.name=spokes===8?'Large front wheel':'Small rear wheel';tricycle.add(group);
+ const tireWidth=radius>.7?.073:.061;
+ mesh(new THREE.TorusGeometry(radius-tireWidth,tireWidth,12,80),rubber,group);
+ mesh(new THREE.TorusGeometry(radius-tireWidth*2,.029,10,80),enamel,group);
+ for(const side of[-1,1]){
+  const trim=mesh(new THREE.TorusGeometry(radius-tireWidth*1.35,.009,6,80),chrome,group);trim.position.z=side*.043;
+ }
+ for(let i=0;i<spokes;i++){
+  const a=i/spokes*Math.PI*2+.16;
+  rod(group,[0,0,0],[Math.cos(a)*(radius-.12),Math.sin(a)*(radius-.12),0],radius>.7?.026:.022,enamel);
+ }
+ rod(group,[0,0,-.14],[0,0,.14],.082,enamel);
+ for(const side of[-1,1])ball(group,chrome,[0,0,side*.15],[.061,.061,.027],2);
+ return group;
+}
+const frontAxleY=1.39,frontAxleZ=1.52,rearAxleY=1.04,rearAxleZ=-1.13;
+wheel(0,frontAxleY,frontAxleZ,.86,8);
+wheel(-1.10,rearAxleY,rearAxleZ,.51,6);
+wheel(1.10,rearAxleY,rearAxleZ,.51,6);
+rod(tricycle,[-1.20,rearAxleY,rearAxleZ],[1.20,rearAxleY,rearAxleZ],.065,chrome);
+// Swept frame, rear standing platform, and saddle post.
+tube([[0,rearAxleY,rearAxleZ],[0,1.12,-.76],[0,1.38,-.24],[0,1.91,1.18]],.075,enamel,tricycle);
+for(const side of[-1,1])tube([[0,1.63,-.42],[side*.39,1.28,-.82],[side*.91,rearAxleY,rearAxleZ]],.047,enamel,tricycle);
+rod(tricycle,[0,1.27,-.45],[0,2.02,-.45],.064,chrome);
+const deck=mesh(new THREE.BoxGeometry(1.77,.09,.39),enamel,tricycle);deck.position.set(0,1.14,-1.13);
+for(let i=-5;i<=5;i++){
+ const tread=mesh(new THREE.BoxGeometry(.014,.008,.26),rubber,tricycle);tread.position.set(i*.14,1.19,-1.13);
+}
+const saddleShape=new THREE.Shape();saddleShape.moveTo(-.20,-.58);
+saddleShape.bezierCurveTo(-.30,-.18,-.72,.02,-.70,.34);
+saddleShape.bezierCurveTo(-.66,.57,.66,.57,.70,.34);
+saddleShape.bezierCurveTo(.72,.02,.30,-.18,.20,-.58);
+saddleShape.quadraticCurveTo(0,-.70,-.20,-.58);
+const saddle=mesh(new THREE.ExtrudeGeometry(saddleShape,{depth:.08,bevelEnabled:true,bevelSize:.035,bevelThickness:.025,bevelSegments:3,steps:1,curveSegments:20}),saddleMaterial,tricycle);
+saddle.rotation.x=-Math.PI/2;saddle.position.set(0,2.0,-.45);
+// Two fork legs straddle the front wheel and lead into the steering head.
+for(const side of[-1,1]){
+ tube([[side*.16,frontAxleY,frontAxleZ],[side*.18,1.76,1.55],[side*.17,2.05,1.32],[side*.11,2.13,1.25]],.052,enamel,tricycle);
+}
+rod(tricycle,[0,1.94,1.28],[0,2.26,1.23],.103,enamel);
+rod(tricycle,[0,2.15,1.25],[0,2.42,1.34],.041,chrome);
+tube([[-.96,2.61,1.58],[-.75,2.55,1.62],[-.45,2.36,1.48],[0,2.36,1.36],[.45,2.36,1.48],[.75,2.55,1.62],[.96,2.61,1.58]],.038,chrome,tricycle);
+for(const side of[-1,1]){
+ rod(tricycle,[side*.73,2.55,1.62],[side*1.02,2.63,1.57],.064,rubber);
+ ball(tricycle,enamel,[side*1.025,2.632,1.57],[.067,.067,.067],2);
+}
+// The front wheel carries two little pedals; no legs or body are added to Rocky.
+for(const side of[-1,1]){
+ const pedalY=frontAxleY+side*.17,pedalZ=frontAxleZ-side*.19;
+ rod(tricycle,[side*.17,frontAxleY,frontAxleZ],[side*.30,pedalY,pedalZ],.025,chrome);
+ rod(tricycle,[side*.30,pedalY,pedalZ],[side*.53,pedalY,pedalZ],.023,chrome);
+ const pedal=mesh(new THREE.BoxGeometry(.27,.075,.19),rubber,tricycle);pedal.position.set(side*.44,pedalY,pedalZ);
+ for(let j=-1;j<=1;j++){const rib=mesh(new THREE.BoxGeometry(.24,.008,.012),saddleMaterial,tricycle);rib.position.set(side*.44,pedalY+.041,pedalZ+j*.05);}
+}
+ball(tricycle,chrome,[-.40,2.44,1.48],[.10,.065,.10]);
+rod(tricycle,[-.40,2.43,1.48],[-.52,2.45,1.48],.018,rubber);
+const riderScale=.72,riderSeatY=2.08;
+const puppet=new THREE.Group();puppet.scale.setScalar(riderScale);puppet.position.set(0,riderSeatY,-.45);garden.add(puppet);
 const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=8*Math.PI*2/cols;
 const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight,maxMouthTravel=.12;
 function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
@@ -233,7 +301,7 @@ const moteMat=new THREE.PointsMaterial({color:0xc4bc89,size:.027,transparent:tru
 const motes=new THREE.Points(moteGeo,moteMat);scene.add(motes);
 const heartShape=new THREE.Shape();heartShape.moveTo(0,.22);heartShape.bezierCurveTo(-.5,.66,-.72,.04,0,-.47);heartShape.bezierCurveTo(.72,.04,.5,.66,0,.22);
 const heartGeo=new THREE.ShapeGeometry(heartShape,18);const hearts=[];
-function heartsBurst(count=7){for(let i=0;i<count;i++){const h=new THREE.Mesh(heartGeo,new THREE.MeshBasicMaterial({color:i%2?0xff728d:0xf94377,transparent:true,side:THREE.DoubleSide,depthWrite:false}));const size=.12+Math.random()*.12;h.scale.setScalar(size);h.position.set((Math.random()-.5)*2,2.5+Math.random()*.7,1);h.userData={born:state.time,speed:.45+Math.random()*.4,drift:(Math.random()-.5)*.35};scene.add(h);hearts.push(h);}}
+function heartsBurst(count=7){for(let i=0;i<count;i++){const h=new THREE.Mesh(heartGeo,new THREE.MeshBasicMaterial({color:i%2?0xff728d:0xf94377,transparent:true,side:THREE.DoubleSide,depthWrite:false}));const size=.12+Math.random()*.12;h.scale.setScalar(size);h.position.set((Math.random()-.5)*2,3.5+Math.random()*.7,.8);h.userData={born:state.time,speed:.45+Math.random()*.4,drift:(Math.random()-.5)*.35};scene.add(h);hearts.push(h);}}
 
 let speechTimer,toastTimer;
 function speak(message,duration=3400){$('#speech span').textContent=message;$('#speech').classList.add('visible');clearTimeout(speechTimer);speechTimer=setTimeout(()=>$('#speech').classList.remove('visible'),duration);}
@@ -282,14 +350,14 @@ function render(){
  const eased=1-Math.exp(-dt*12);
  state.dusk=mix(state.dusk,state.env==='dusk'?1:0,1-Math.exp(-dt*2));sun.color.copy(dayLight).lerp(nightLight,state.dusk);sun.intensity=mix(3.3,1.65,state.dusk);hemi.color.copy(dayHemi).lerp(nightHemi,state.dusk);hemi.intensity=mix(2.1,1.2,state.dusk);fill.intensity=mix(1.5,2,state.dusk);warm.intensity=state.dusk*5;moteMat.opacity=mix(.55,.95,state.dusk);moteMat.size=mix(.024,.045,state.dusk);moteMat.color.set(state.dusk>.5?0xffdfa0:0xbeb98f);
  if(resetAnimation){state.yaw=mix(state.yaw,homeView.yaw,eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);if(Math.abs(state.yaw-homeView.yaw)+Math.abs(state.pitch-homeView.pitch)+Math.abs(state.zoom-1)<.005)resetAnimation=0;}
- const distance=(camera.aspect<.85?12.6:10.8)*state.zoom;
+ const distance=(camera.aspect<.85?13.8:11.8)*state.zoom;
  camera.position.set(Math.sin(state.yaw)*Math.cos(state.pitch)*distance,cameraTarget.y+Math.sin(state.pitch)*distance,Math.cos(state.yaw)*Math.cos(state.pitch)*distance);camera.lookAt(cameraTarget);
  let mouthTarget=state.space?1:state.mouth;
  if(t<state.helloUntil)mouthTarget=Math.max(mouthTarget,.16+.7*Math.pow(Math.sin(t*10),2));
  if(state.mood==='sleepy'&&!reducedMotion)mouthTarget=Math.max(mouthTarget,Math.pow(Math.max(0,Math.sin(t*.6)),14)*.65);
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  const bounce=t<state.tapUntil&&!reducedMotion?Math.abs(Math.sin((state.tapUntil-t)*7))*.16:0;
- puppet.position.y=.54+state.jaw*maxMouthTravel+bounce+(reducedMotion?0:Math.sin(t*1.65)*.012);
+ puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale+bounce*.6;
  const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
  puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
  plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});

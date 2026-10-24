@@ -4,6 +4,8 @@ A self-contained, interactive WebGL rock puppet garden, built with Three.js. The
 
 A short lipstick stroke caps the narrow movable jaw, while a wide black mouth line extends across the stone on both sides. The mouth opens into a recessed dark cavity, with vertical travel limited to 0.12 scene units (one quarter of its original range) across the slider, keyboard, and reactions.
 
+Rocky sits directly on a vintage red tricycle's black saddle, with no body or limbs. The tricycle has one large front wheel, two smaller rear wheels, red spokes, black tires, silver handlebars, pedals, a bell, and a rear standing platform. The orbit view frames the full rider and tricycle.
+
 Serve `dist` with any static HTTP server. For example:
 
 ```sh
