@@ -185,29 +185,6 @@ for(const side of[-1,1]){
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
  ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
 }
-// Sculpted white brow ridges taper into the stone and project over the eyes.
-const browMaterial=mat(0xf8f6f0,.88);
-for(const side of[-1,1]){
- const path=new THREE.CatmullRomCurve3([
-  new THREE.Vector3(-.09+side*.02,2.28,0),
-  new THREE.Vector3(-.09+side*.26,2.43,0),
-  new THREE.Vector3(-.09+side*.55,2.49,0),
-  new THREE.Vector3(-.09+side*.87,2.36,0)
- ]);
- const positions=[],indices=[],segments=48,sides=16;
- for(let i=0;i<=segments;i++){
-  const t=i/segments,p=path.getPoint(t),tangent=path.getTangent(t);
-  const taper=Math.pow(Math.sin(Math.PI*t),.55),width=.105*taper+.008,depth=.16*taper+.008;
-  for(let j=0;j<=sides;j++){
-   const a=j/sides*Math.PI*2,across=Math.sin(a)*width;
-   const x=p.x-tangent.y*across,y=p.y+tangent.x*across;
-   positions.push(x,y,faceZ(x,y)+.025+Math.cos(a)*depth);
-   if(i<segments&&j<sides){const v=i*(sides+1)+j;indices.push(v,v+sides+1,v+1,v+1,v+sides+1,v+sides+2);}
-  }
- }
- const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();
- const brow=mesh(geo,browMaterial,puppet);brow.name=side===-1?'Left white eyebrow':'Right white eyebrow';
-}
 // A small red fabric bow tie sits below the jaw's full travel, attached to the stone.
 const bowTie=new THREE.Group();bowTie.name='Red bow tie';bowTie.position.set(mouthCenter,.40,faceZ(mouthCenter,.40)+.065);jaw.add(bowTie);
 const ribbonMaterial=new THREE.MeshPhysicalMaterial({color:0xc71326,roughness:.76,sheen:.55,sheenColor:0xf04a53,sheenRoughness:.82});
