@@ -6,7 +6,7 @@ A short lipstick stroke caps the narrow movable jaw, while a wide black mouth li
 
 The default camera matches the elevated side view of the reference. The wide mouth line curls around the lower face, while the side seams descend vertically beneath the lip corners. A separate green moss spot sits near the lower center. The low-set, always-open eyes track the camera while orbiting.
 
-Rocky sits directly on a vintage red tricycle's black saddle, with no body or limbs. The tricycle has one large front wheel, two smaller rear wheels, red spokes, black tires, silver handlebars swept back toward the saddle, pedals, a bell, and a rear standing platform. All wheels turn at a shared rolling speed; the pedals rotate with the front wheel while their platforms stay level. Automatic cycling respects reduced-motion preferences. The orbit view frames the full rider and tricycle.
+Rocky sits directly on a vintage red tricycle's black saddle, with no body or limbs. The tricycle follows the supplied front and side references: one large front wheel, two much smaller rear wheels, slender steel spokes and black tires, a broad arched red frame, and raised silver handlebars with burgundy grips swept back toward the saddle. It also has pedals, a bell, and a narrow rear standing platform. All wheels turn at a shared rolling speed; the pedals rotate with the front wheel while their platforms stay level. Automatic cycling respects reduced-motion preferences. The orbit view frames the full rider and tricycle.
 
 Serve `dist` with any static HTTP server. For example:
 

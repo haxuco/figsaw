@@ -116,8 +116,10 @@ const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMat
 
 // A vintage tricycle supports the rock directly on its saddle.
 const tricycle=new THREE.Group();tricycle.name='Rocky’s red tricycle';garden.add(tricycle);
-const enamel=new THREE.MeshStandardMaterial({color:0xb71925,roughness:.36,metalness:.42});
-const chrome=new THREE.MeshStandardMaterial({color:0xd6ddda,roughness:.24,metalness:.78});
+const enamel=new THREE.MeshStandardMaterial({color:0x982d32,roughness:.48,metalness:.42});
+const chrome=new THREE.MeshStandardMaterial({color:0xaeb5b3,roughness:.34,metalness:.72});
+const spokeMaterial=new THREE.MeshStandardMaterial({color:0x535a59,roughness:.46,metalness:.65});
+const gripMaterial=mat(0x641c22,.86);
 const rubber=mat(0x171c1b,.93),saddleMaterial=mat(0x242725,.85);
 function rod(parent,start,end,radius,material){
  const a=new THREE.Vector3(...start),b=new THREE.Vector3(...end),delta=b.clone().sub(a);
@@ -128,32 +130,46 @@ const spinningWheels=[];
 function wheel(x,y,z,radius,spokes){
  const group=new THREE.Group();group.position.set(x,y,z);group.rotation.y=Math.PI/2;group.name=spokes===8?'Large front wheel':'Small rear wheel';tricycle.add(group);
  group.userData.radius=radius;spinningWheels.push(group);
- const tireWidth=radius>.7?.073:.061;
+ const tireWidth=radius>.7?.045:.033;
  mesh(new THREE.TorusGeometry(radius-tireWidth,tireWidth,12,80),rubber,group);
- mesh(new THREE.TorusGeometry(radius-tireWidth*2,.029,10,80),enamel,group);
+ mesh(new THREE.TorusGeometry(radius-tireWidth*2,.018,10,80),spokeMaterial,group);
  for(const side of[-1,1]){
-  const trim=mesh(new THREE.TorusGeometry(radius-tireWidth*1.35,.009,6,80),chrome,group);trim.position.z=side*.043;
+  const trim=mesh(new THREE.TorusGeometry(radius-tireWidth*1.65,.006,6,80),chrome,group);trim.position.z=side*.024;
  }
  for(let i=0;i<spokes;i++){
   const a=i/spokes*Math.PI*2+.16;
-  rod(group,[0,0,0],[Math.cos(a)*(radius-.12),Math.sin(a)*(radius-.12),0],radius>.7?.026:.022,enamel);
+  rod(group,[0,0,0],[Math.cos(a)*(radius-tireWidth*2),Math.sin(a)*(radius-tireWidth*2),0],radius>.7?.013:.011,spokeMaterial);
  }
  rod(group,[0,0,-.14],[0,0,.14],.082,enamel);
  for(const side of[-1,1])ball(group,chrome,[0,0,side*.15],[.061,.061,.027],2);
  return group;
 }
-const frontAxleY=1.39,frontAxleZ=1.52,rearAxleY=1.04,rearAxleZ=-1.13;
+const frontAxleY=1.39,frontAxleZ=1.52,rearAxleY=.89,rearAxleZ=-1.23;
 wheel(0,frontAxleY,frontAxleZ,.86,8);
-wheel(-1.10,rearAxleY,rearAxleZ,.51,6);
-wheel(1.10,rearAxleY,rearAxleZ,.51,6);
-rod(tricycle,[-1.20,rearAxleY,rearAxleZ],[1.20,rearAxleY,rearAxleZ],.065,chrome);
-// Swept frame, rear standing platform, and saddle post.
-tube([[0,rearAxleY,rearAxleZ],[0,1.12,-.76],[0,1.38,-.24],[0,1.91,1.18]],.075,enamel,tricycle);
-for(const side of[-1,1])tube([[0,1.63,-.42],[side*.39,1.28,-.82],[side*.91,rearAxleY,rearAxleZ]],.047,enamel,tricycle);
-rod(tricycle,[0,1.27,-.45],[0,2.02,-.45],.064,chrome);
-const deck=mesh(new THREE.BoxGeometry(1.77,.09,.39),enamel,tricycle);deck.position.set(0,1.14,-1.13);
+wheel(-1.05,rearAxleY,rearAxleZ,.36,6);
+wheel(1.05,rearAxleY,rearAxleZ,.36,6);
+rod(tricycle,[-1.16,rearAxleY,rearAxleZ],[1.16,rearAxleY,rearAxleZ],.045,spokeMaterial);
+// A broad curved steel strip runs from the rear axle to the steering head.
+const frameCurve=new THREE.CatmullRomCurve3([[0,.89,-1.23],[0,1.24,-1.03],[0,1.65,-.55],[0,1.95,.05],[0,2.14,.73],[0,2.19,1.22]].map(p=>new THREE.Vector3(...p)));
+const framePoints=[],frameIndices=[],frameSegments=64;
+for(let i=0;i<=frameSegments;i++){
+ const p=frameCurve.getPoint(i/frameSegments),tangent=frameCurve.getTangent(i/frameSegments);
+ const normal=new THREE.Vector3(0,-tangent.z,tangent.y).normalize();
+ for(const [x,edge] of [[-.055,-1],[.055,-1],[.055,1],[-.055,1]]){
+  framePoints.push(p.x+x,p.y+normal.y*.074*edge,p.z+normal.z*.074*edge);
+ }
+ if(i<frameSegments)for(let edge=0;edge<4;edge++){
+  const a=i*4+edge,b=i*4+(edge+1)%4;frameIndices.push(a,b+4,b,a,a+4,b+4);
+ }
+}
+frameIndices.push(0,1,2,0,2,3);
+const frameEnd=frameSegments*4;frameIndices.push(frameEnd,frameEnd+2,frameEnd+1,frameEnd,frameEnd+3,frameEnd+2);
+const frameGeometry=new THREE.BufferGeometry();frameGeometry.setAttribute('position',new THREE.Float32BufferAttribute(framePoints,3));frameGeometry.setIndex(frameIndices);frameGeometry.computeVertexNormals();
+mesh(frameGeometry,enamel,tricycle);
+rod(tricycle,[0,1.72,-.45],[0,2.02,-.45],.064,enamel);
+const deck=mesh(new THREE.BoxGeometry(1.91,.07,.29),enamel,tricycle);deck.position.set(0,.99,rearAxleZ);
 for(let i=-5;i<=5;i++){
- const tread=mesh(new THREE.BoxGeometry(.014,.008,.26),rubber,tricycle);tread.position.set(i*.14,1.19,-1.13);
+ const tread=mesh(new THREE.BoxGeometry(.012,.006,.24),gripMaterial,tricycle);tread.position.set(i*.16,1.028,rearAxleZ);
 }
 const saddleShape=new THREE.Shape();saddleShape.moveTo(-.20,-.58);
 saddleShape.bezierCurveTo(-.30,-.18,-.72,.02,-.70,.34);
@@ -164,17 +180,17 @@ const saddle=mesh(new THREE.ExtrudeGeometry(saddleShape,{depth:.08,bevelEnabled:
 saddle.rotation.x=-Math.PI/2;saddle.position.set(0,2.0,-.45);
 // Two fork legs straddle the front wheel and lead into the steering head.
 for(const side of[-1,1]){
- tube([[side*.16,frontAxleY,frontAxleZ],[side*.18,1.76,1.55],[side*.17,2.05,1.32],[side*.11,2.13,1.25]],.052,enamel,tricycle);
+ tube([[side*.16,frontAxleY,frontAxleZ],[side*.18,1.76,1.48],[side*.17,2.10,1.29],[side*.10,2.27,1.20]],.046,enamel,tricycle);
 }
-rod(tricycle,[0,1.94,1.28],[0,2.26,1.23],.103,enamel);
-// The stem meets the bar at its center; the grips sweep back toward the saddle.
-rod(tricycle,[0,2.15,1.25],[0,2.43,1.16],.041,chrome);
-tube([[-.94,2.55,.54],[-.90,2.54,.89],[-.78,2.49,1.10],[-.45,2.43,1.17],[0,2.43,1.16],[.45,2.43,1.17],[.78,2.49,1.10],[.90,2.54,.89],[.94,2.55,.54]],.038,chrome,tricycle);
-rod(tricycle,[-.10,2.43,1.16],[.10,2.43,1.16],.060,chrome);
-ball(tricycle,chrome,[0,2.43,1.217],[.025,.025,.015],2);
+rod(tricycle,[0,2.15,1.22],[0,2.43,1.17],.084,enamel);
+// A raised U-shaped bar has a level crosspiece and tall, backswept grip ends.
+tube([[0,2.36,1.18],[0,2.52,1.18],[0,2.63,1.34],[0,2.69,1.43]],.046,chrome,tricycle);
+tube([[-1.11,2.99,.86],[-1.10,2.98,1.12],[-1.04,2.88,1.35],[-.87,2.71,1.46],[-.60,2.69,1.45],[0,2.69,1.43],[.60,2.69,1.45],[.87,2.71,1.46],[1.04,2.88,1.35],[1.10,2.98,1.12],[1.11,2.99,.86]],.048,chrome,tricycle);
+rod(tricycle,[-.10,2.69,1.43],[.10,2.69,1.43],.064,chrome);
+ball(tricycle,spokeMaterial,[0,2.69,1.491],[.027,.027,.015],2);
 for(const side of[-1,1]){
- rod(tricycle,[side*.90,2.54,.89],[side*.94,2.55,.54],.064,rubber);
- ball(tricycle,enamel,[side*.94,2.55,.525],[.067,.067,.035],2);
+ rod(tricycle,[side*1.10,2.98,1.12],[side*1.11,2.99,.86],.061,gripMaterial);
+ ball(tricycle,spokeMaterial,[side*1.11,2.99,.85],[.061,.061,.022],2);
 }
 // Direct-drive cranks turn with the front wheel, with level pedal platforms.
 const crank=new THREE.Group();crank.name='Rotating pedal crank';crank.position.set(0,frontAxleY,frontAxleZ);tricycle.add(crank);
@@ -192,8 +208,8 @@ function setRollingDistance(distance){
  crank.rotation.x=distance/.86;
  for(const platform of pedalPlatforms)platform.rotation.x=-crank.rotation.x;
 }
-ball(tricycle,chrome,[-.47,2.50,1.17],[.10,.065,.10]);
-rod(tricycle,[-.47,2.49,1.17],[-.59,2.51,1.17],.018,rubber);
+ball(tricycle,chrome,[-.47,2.76,1.45],[.085,.055,.085]);
+rod(tricycle,[-.47,2.75,1.45],[-.57,2.77,1.45],.016,rubber);
 const riderScale=.72,riderSeatY=2.08;
 const puppet=new THREE.Group();puppet.scale.setScalar(riderScale);puppet.position.set(0,riderSeatY,-.45);garden.add(puppet);
 const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=8*Math.PI*2/cols;
