@@ -82,8 +82,8 @@ rockMaterial.onBeforeCompile=(shader)=>{
  float grain=stoneNoise(vStone*53.);float fleck=stoneNoise(vStone*142.);float mottled=stoneNoise(vStone*5.);
  float edge=.43 + vStone.x*.53 + .21*sin(vStone.z*5.+vStone.x*3.)+(stoneNoise(vStone*4.)-.5)*.34;
  float moss=1.-smoothstep(-.045,.045,vStone.y-edge);
- vec2 mossSpot=(vStone.xy-vec2(.26,.98))/vec2(.31,.20);
- float mossPatch=(1.-smoothstep(.94,1.08,length(mossSpot)+(mottled-.5)*.16))*smoothstep(1.25,1.55,vStone.z);
+ vec2 mossSpot=(vStone.xy-vec2(-.13,.88))/vec2(.31,.20);
+ float mossPatch=(1.-smoothstep(.94,1.08,length(mossSpot)+(mottled-.5)*.16))*smoothstep(.70,.95,vStone.z);
  moss=max(moss,mossPatch*.97);
  vec3 stone=diffuseColor.rgb*(.79+mottled*.17+grain*.12);
  vec3 green=mix(vec3(.20,.32,.075),vec3(.40,.53,.17),grain*.6+mottled*.4);
@@ -188,30 +188,20 @@ const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight,maxMouthTravel=.12;
 function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
 function rawSurface(t,a){
  const r=radius(t),noise=1+.018*Math.sin(a*5+t*9)+.012*Math.cos(a*9-t*7);
- // A closed, rounded underside and a broad lower muzzle make a continuous stone silhouette.
+ // A small amount of fullness keeps the lower face rounded without a projecting chin.
  const s=THREE.MathUtils.clamp(t/(cutRow/rows),0,1);
- const muzzle=t<cutRow/rows?.91*Math.pow(Math.sin(Math.PI*s),.8)*Math.pow(Math.max(0,Math.cos(a)),3):0;
+ const muzzle=t<cutRow/rows?.20*Math.pow(Math.sin(Math.PI*s),.8)*Math.pow(Math.max(0,Math.cos(a)),3):0;
  return new THREE.Vector3(Math.sin(a)*r*noise-.28*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise+muzzle);
 }
 function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
-// Shape the seams around the bulging lower jaw, so they descend from the lip
-// and curl outward toward the underside in the reference viewing angle.
-const seamCamera=new THREE.PerspectiveCamera(36,1,.1,80),seamDistance=11.8;
-seamCamera.position.set(Math.sin(homeView.yaw)*Math.cos(homeView.pitch)*seamDistance,cameraTarget.y+Math.sin(homeView.pitch)*seamDistance,Math.cos(homeView.yaw)*Math.cos(homeView.pitch)*seamDistance);
-seamCamera.lookAt(cameraTarget);seamCamera.updateMatrixWorld();
-function seamViewX(t,a){return rawSurface(t,a).multiplyScalar(riderScale).add(puppet.position).project(seamCamera).x;}
-const seamTargets=[seamViewX(cutRow/rows,-halfMouth),seamViewX(cutRow/rows,halfMouth)],seamCache=new Map();
+// Keep each seam beneath its lip corner in the rock's own coordinates.
+// A slight hand-drawn bend softens the lines without skewing the jaw to one side.
+const seamStarts=[rawSurface(cutRow/rows,-halfMouth).x,rawSurface(cutRow/rows,halfMouth).x],seamCache=new Map();
 function seamAngles(t){
  if(t===0||t>=cutRow/rows)return[-halfMouth,halfMouth];
  const key=t.toFixed(7);if(seamCache.has(key))return seamCache.get(key);
- const s=t/(cutRow/rows),bend=Math.sin(Math.PI*s),targets=[seamTargets[0]-.021*bend-.008*(1-s),seamTargets[1]+.037*bend+.012*(1-s)];
- let silhouette=-1.35,minX=Infinity;
- for(let i=0;i<=80;i++){const a=mix(-1.35,1.45,i/80),x=seamViewX(t,a);if(x<minX){minX=x;silhouette=a;}}
- const angles=targets.map(target=>{
-  let low=silhouette,high=1.45;
-  for(let i=0;i<24;i++){const mid=(low+high)/2;if(seamViewX(t,mid)<target)low=mid;else high=mid;}
-  return(low+high)/2;
- });
+ const s=t/(cutRow/rows),bend=Math.sin(Math.PI*s);
+ const angles=[angleAtX(t,seamStarts[0]-.018*bend),angleAtX(t,seamStarts[1]+.018*bend)];
  seamCache.set(key,angles);return angles;
 }
 function slotSurface(t,a){
@@ -250,7 +240,7 @@ function mouthInterior(parent,lower=false){
 }
 mouthInterior(puppet);
 const jaw=new THREE.Group();puppet.add(jaw);
-// Close the jaw's shell so its rounded, projecting underside also gets a silhouette outline.
+// Close the jaw's shell so its rounded underside also gets a silhouette outline.
 function solidJawGeometry(){
  const front=patchGeometry(true),positions=Array.from(front.attributes.position.array),indices=Array.from(front.index.array),count=front.attributes.position.count;
  for(let i=0;i<count;i++)positions.push(positions[i*3],positions[i*3+1],positions[i*3+2]-.14);

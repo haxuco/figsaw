@@ -1,10 +1,10 @@
 # Rocky
 
-A self-contained, interactive WebGL rock puppet garden, built with Three.js. The character has a rounded procedural stone shell with a thick black silhouette, a large projecting jaw with vertical puppet motion, curved unstitched mouth seams, flat hand-drawn lipstick and spiral cheeks, fixed black eyes with red irises, moss patches, and a red bow tie. The initial camera shows a slight side view with the lower jaw projecting to the left. The lipstick is a grainy pigment texture applied directly to the stone, with no raised makeup geometry. The eyes never blink or close.
+A self-contained, interactive WebGL rock puppet garden, built with Three.js. The character has a rounded procedural stone shell with a thick black silhouette, a shallow rounded jaw with vertical puppet motion, gently curved unstitched mouth seams, flat hand-drawn lipstick and spiral cheeks, black eyes with red irises, moss patches, and a red bow tie. The lipstick is a grainy pigment texture applied directly to the stone, with no raised makeup geometry. The eyes never blink or close.
 
 A short lipstick stroke caps the narrow movable jaw, while a wide black mouth line extends across the stone on both sides. The mouth opens into a recessed dark cavity, with vertical travel limited to 0.12 scene units (one quarter of its original range) across the slider, keyboard, and reactions.
 
-The default camera matches the elevated side view of the reference. The mouth line and seams curl around the lower jaw, with a separate green moss spot near the lower center. The low-set, always-open eyes track the camera while orbiting.
+The default camera matches the elevated side view of the reference. The wide mouth line curls around the lower face, while the side seams descend vertically beneath the lip corners. A separate green moss spot sits near the lower center. The low-set, always-open eyes track the camera while orbiting.
 
 Rocky sits directly on a vintage red tricycle's black saddle, with no body or limbs. The tricycle has one large front wheel, two smaller rear wheels, red spokes, black tires, silver handlebars, pedals, a bell, and a rear standing platform. The orbit view frames the full rider and tricycle.
 
