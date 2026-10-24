@@ -9,6 +9,7 @@ try { renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,prese
 catch(error) { $('#loading').classList.add('hidden'); $('#error').classList.remove('hidden'); throw error; }
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
+renderer.localClippingEnabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
@@ -31,12 +32,45 @@ function mesh(geometry,material,parent=scene){const m=new THREE.Mesh(geometry,ma
 function ball(parent,color,position,scale,detail=3){const m=mesh(new THREE.IcosahedronGeometry(1,detail),typeof color==='string'||typeof color==='number'?mat(color):color,parent);m.position.set(...position);m.scale.set(...scale);return m;}
 function tube(points,radius,material,parent,closed=false){const c=new THREE.CatmullRomCurve3(points.map(p=>p.isVector3?p:new THREE.Vector3(...p)),closed);return mesh(new THREE.TubeGeometry(c,Math.max(24,points.length*2),radius,8,closed),material,parent);}
 
-// Sculpted stone and moss are procedural, so the avatar remains fully three-dimensional.
+// Pigment is painted into the stone material, with no raised lip or cheek geometry.
+function lipstickTexture(){
+ const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');
+ let brushSeed=2718;const rand=()=>{brushSeed=(brushSeed*1664525+1013904223)>>>0;return brushSeed/4294967296;};
+ const project=([x,y])=>[(x+2)/4*c.width,(1-y/3)*c.height];
+ function stroke(points,width){
+  const p=points.map(project);ctx.lineCap='round';ctx.lineJoin='round';
+  for(let pass=0;pass<3;pass++){
+   ctx.strokeStyle=pass===0?'rgba(211,12,57,.66)':'rgba(227,17,62,.50)';
+   for(let i=1;i<p.length;i++){
+    const wobble=(Math.sin(i*1.37+pass)*.08+Math.sin(i*.42)*.1);
+    ctx.lineWidth=width*c.width/4*(1+wobble)*(pass===0?1.13:.77);
+    const dx=(rand()-.5)*1.5,dy=(rand()-.5)*1.5;
+    ctx.beginPath();ctx.moveTo(p[i-1][0]+dx,p[i-1][1]+dy);ctx.lineTo(p[i][0]+dx,p[i][1]+dy);ctx.stroke();
+   }
+  }
+ }
+ const lips=[];for(let i=0;i<=80;i++){const u=i/80;lips.push([mix(-.75,.59,u),1.174+.009*Math.sin(u*15)+.012*Math.sin(u*7)]);}
+ stroke(lips,.145);
+ for(const side of[-1,1]){
+  const spiral=[],cx=side*1.13-.06,cy=1.42;
+  for(let i=0;i<=150;i++){const f=i/150,a=f*Math.PI*3.9,r=.023+f*.255+.006*Math.sin(f*39+side);spiral.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r*.8+.005*Math.sin(f*43)]);}
+  stroke(spiral,.064);
+ }
+ // Fine gaps and dry, streaky edges suggest wax dragged across rough stone.
+ ctx.globalCompositeOperation='destination-out';
+ for(let i=0;i<14000;i++){ctx.fillStyle=`rgba(0,0,0,${.08+rand()*.48})`;const x=rand()*c.width,y=rand()*c.height;ctx.fillRect(x,y,.35+rand()*1.2,.4+rand()*1.8);}
+ for(let i=0;i<1600;i++){ctx.strokeStyle=`rgba(0,0,0,${.05+rand()*.17})`;ctx.lineWidth=.4+rand()*.7;const x=rand()*c.width,y=rand()*c.height;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+rand()*6,y+rand()*2-1);ctx.stroke();}
+ const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=renderer.capabilities.getMaxAnisotropy();return texture;
+}
+const pigment=lipstickTexture();
+// Sculpted stone and moss remain procedural beneath the flat lipstick pigment.
 const rockMaterial=new THREE.MeshStandardMaterial({color:0xd3d5ca,roughness:.94});
 rockMaterial.onBeforeCompile=(shader)=>{
+ shader.uniforms.lipstickPaint={value:pigment};
  shader.vertexShader='varying vec3 vStone;\n'+shader.vertexShader;
  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\nvStone = position;');
  shader.fragmentShader=`varying vec3 vStone;
+ uniform sampler2D lipstickPaint;
  float hash3(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}
  float stoneNoise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.-2.*f);return mix(mix(mix(hash3(i),hash3(i+vec3(1,0,0)),f.x),mix(hash3(i+vec3(0,1,0)),hash3(i+vec3(1,1,0)),f.x),f.y),mix(mix(hash3(i+vec3(0,0,1)),hash3(i+vec3(1,0,1)),f.x),mix(hash3(i+vec3(0,1,1)),hash3(i+vec3(1,1,1)),f.x),f.y),f.z);}
  `+shader.fragmentShader;
@@ -50,9 +84,12 @@ rockMaterial.onBeforeCompile=(shader)=>{
  vec3 green=mix(vec3(.20,.32,.075),vec3(.40,.53,.17),grain*.6+mottled*.4);
  diffuseColor.rgb=mix(stone,green,moss);
  diffuseColor.rgb*=.91+fleck*.17;
+ vec4 paint=texture2D(lipstickPaint,vec2((vStone.x+2.)/4.,vStone.y/3.));
+ float pigmentMask=paint.a*smoothstep(.40,.65,vStone.z);
+ diffuseColor.rgb=mix(diffuseColor.rgb,paint.rgb*(.84+grain*.19),pigmentMask);
  `);
 };
-const stonePlain=mat(0xbfc5ad), dark=mat(0x201e22,.98), lipMat=mat(0xff0757,.36), tongueMat=mat(0xc74568,.7);
+const dark=mat(0x201e22,.98), tongueMat=mat(0xc74568,.7);
 const garden=new THREE.Group();scene.add(garden);
 const islandProfile=[[0,-.05],[2.4,-.05],[2.91,.02],[3.12,.14],[3.17,.29],[3.09,.42],[2.92,.49],[0,.49]].map(p=>new THREE.Vector2(...p));
 const island=mesh(new THREE.LatheGeometry(islandProfile,96),mat(0xbaa784),garden);
@@ -73,52 +110,58 @@ const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMat
 
 const puppet=new THREE.Group();puppet.position.set(0,.54,0);garden.add(puppet);
 const bodyHeight=2.8,rows=60,cols=160,cutRow=24,halfMouth=10*Math.PI*2/cols;
+const mouthCenter=-.08,mouthHalfWidth=.65,mouthTop=.05+cutRow/rows*bodyHeight;
 function radius(t){return 1.87*Math.pow(Math.max(0,Math.sin(Math.PI*(.15+.85*t))),.57)*(1.06-.22*t);}
-function surface(t,a){const r=radius(t),noise=1+.018*Math.sin(a*5+t*9)+.012*Math.cos(a*9-t*7);return new THREE.Vector3(Math.sin(a)*r*noise-.20*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise);}
+function rawSurface(t,a){const r=radius(t),noise=1+.018*Math.sin(a*5+t*9)+.012*Math.cos(a*9-t*7);return new THREE.Vector3(Math.sin(a)*r*noise-.20*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise);}
+function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
+function trackDepth(x){return rawSurface(cutRow/rows,angleAtX(cutRow/rows,x)).z;}
+function surface(t,a){
+ const p=rawSurface(t,a);
+ if(t<=cutRow/rows&&Math.cos(a)>0){const blend=1-THREE.MathUtils.smoothstep(Math.abs(p.x-mouthCenter),mouthHalfWidth+.025,mouthHalfWidth+.38);p.z=mix(p.z,trackDepth(p.x),blend);}
+ return p;
+}
+function slotSurface(t,a){
+ if(t<=cutRow/rows){const left=angleAtX(t,mouthCenter-mouthHalfWidth),right=angleAtX(t,mouthCenter+mouthHalfWidth);
+  if(a<-halfMouth)a=mix(-Math.PI,left,(a+Math.PI)/(Math.PI-halfMouth));
+  else if(a<=halfMouth)a=mix(left,right,(a+halfMouth)/(halfMouth*2));
+  else a=mix(right,Math.PI,(a-halfMouth)/(Math.PI-halfMouth));
+ }
+ return surface(t,a);
+}
 function faceZ(x,y){const t=(y-.05)/bodyHeight,r=radius(t),xx=(x+.20*t)/r;return r*.68*Math.sqrt(Math.max(.05,1-xx*xx));}
 function patchGeometry(jaw=false,inside=false){
  const pos=[],indices=[];const start=jaw?-halfMouth:-Math.PI,end=jaw?halfMouth:Math.PI,nc=jaw?20:cols,nr=jaw?cutRow:rows;
- for(let r=0;r<=nr;r++){for(let c=0;c<=nc;c++){const p=surface(r/rows,mix(start,end,c/nc));if(inside)p.z-=.15;pos.push(p.x,p.y,p.z);}}
+ for(let r=0;r<=nr;r++){for(let c=0;c<=nc;c++){const p=slotSurface(r/rows,mix(start,end,c/nc));if(inside)p.z-=.15;pos.push(p.x,p.y,p.z);}}
  for(let r=0;r<nr;r++){for(let c=0;c<nc;c++){const angle=mix(start,end,(c+.5)/nc);if(!jaw&&r<cutRow&&Math.abs(angle)<halfMouth-.0001)continue;const a=r*(nc+1)+c,b=a+1,d=a+nc+2,cc=a+nc+1;indices.push(a,b,cc,b,d,cc);}}
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
 }
 const body=mesh(patchGeometry(),rockMaterial,puppet);body.name='Rocky';
 const base=mesh(new THREE.CircleGeometry(radius(0),64),rockMaterial,puppet);base.rotation.x=Math.PI/2;base.scale.y=.68;base.position.y=.05;
-// The mouth is a separate stone flap with an actual hinge and a recessed dark interior.
+// A rigid marionette jaw slides only on Y between two fixed, parallel side seams.
 const cavity=mesh(patchGeometry(true,true),dark,puppet);cavity.material.side=THREE.DoubleSide;
-const pivot=new THREE.Vector3(-.04,.19,.24);
-const hinge=new THREE.Group();hinge.position.copy(pivot);puppet.add(hinge);
-const jaw=new THREE.Group();jaw.position.copy(pivot).multiplyScalar(-1);hinge.add(jaw);
-mesh(patchGeometry(true),rockMaterial,jaw);
-const top=surface(cutRow/rows,0);
-const innerPoints=[];for(let i=0;i<=30;i++){const p=surface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));innerPoints.push(p);}
+const jaw=new THREE.Group();puppet.add(jaw);
+// The panel retracts into the rock base; its hidden lower end never protrudes through the garden.
+const jawFloor=new THREE.Plane(new THREE.Vector3(0,1,0),-.06);
+const jawMaterial=rockMaterial.clone();jawMaterial.onBeforeCompile=rockMaterial.onBeforeCompile;jawMaterial.clippingPlanes=[jawFloor];jawMaterial.clipShadows=true;
+mesh(patchGeometry(true),jawMaterial,jaw);
+const innerPoints=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));innerPoints.push(p);}
 const insidePositions=[];const insideIndices=[];
-for(let i=0;i<=30;i++){const p=innerPoints[i];insidePositions.push(p.x,p.y-.018,p.z,p.x,.27,.32);if(i<30){const a=i*2;insideIndices.push(a,a+1,a+2,a+1,a+3,a+2);}}
+for(let i=0;i<=30;i++){const p=innerPoints[i];insidePositions.push(p.x,p.y-.006,p.z,p.x,p.y-.006,p.z-.18);if(i<30){const a=i*2;insideIndices.push(a,a+1,a+2,a+1,a+3,a+2);}}
 const innerGeo=new THREE.BufferGeometry();innerGeo.setAttribute('position',new THREE.Float32BufferAttribute(insidePositions,3));innerGeo.setIndex(insideIndices);innerGeo.computeVertexNormals();const innerMat=dark.clone();innerMat.side=THREE.DoubleSide;mesh(innerGeo,innerMat,jaw);
-ball(jaw,tongueMat,[-.05,.88,.91],[.28,.028,.16]);
-const upper=[],lower=[];
-for(let i=0;i<=40;i++){const a=mix(-halfMouth,halfMouth,i/40),p=surface(cutRow/rows,a);const cupid=.018*Math.cos(a/halfMouth*Math.PI*2);upper.push([p.x,p.y+.04+cupid,p.z+.045]);lower.push([p.x,p.y-.025,p.z+.05]);}
-tube(upper,.071,lipMat,puppet);tube(lower,.057,lipMat,jaw);
+ball(jaw,tongueMat,[-.05,mouthTop+.002,trackDepth(-.05)-.09],[.22,.018,.07]);
+const mouthLine=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));p.z+=.002;mouthLine.push(p);}tube(mouthLine,.008,dark,puppet);
 for(const side of[-1,1]){
- const seam=[];for(let i=0;i<=24;i++){const p=surface(i/rows,side*halfMouth);p.z+=.013;seam.push(p);}tube(seam,.025,dark,puppet);
- const jawSeam=seam.map(p=>p.clone());tube(jawSeam,.012,stonePlain,jaw);
+ const seam=[];for(let i=0;i<=24;i++){const p=slotSurface(i/rows,side*halfMouth);p.z+=.008;seam.push(p);}tube(seam,.022,dark,puppet);
  // Tiny stitches make the hand-puppet construction visible up close.
- for(let i=4;i<22;i+=4){const p=surface(i/rows,side*halfMouth);tube([[p.x-.045,p.y-.018,p.z+.023],[p.x+.045,p.y+.018,p.z+.023]],.008,mat(0x777968),puppet);}
+ for(let i=4;i<22;i+=4){const p=slotSurface(i/rows,side*halfMouth);tube([[p.x-.045,p.y-.018,p.z+.018],[p.x+.045,p.y+.018,p.z+.018]],.008,mat(0x777968),puppet);}
 }
-const eyes=[];
+// Fixed, open eyes: no blinking or eyelid scaling in any mood.
 for(const side of[-1,1]){
  const x=side*.54-.05,y=1.85+(side===-1?.045:0),z=faceZ(x,y)+.025;
  const eye=new THREE.Group();eye.position.set(x,y,z);eye.rotation.y=side*.15;puppet.add(eye);
  ball(eye,mat(0x101015,.25),[0,0,0],[.205,.235,.095]);
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
  ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
- eyes.push(eye);
-}
-// Raised hot-pink spiral cheeks follow the curvature of the rock.
-for(const side of[-1,1]){
- const cheek=[];const cx=side*1.13-.06,cy=1.42;
- for(let i=0;i<=110;i++){const f=i/110,a=f*Math.PI*3.9,r=.025+f*.255,x=cx+Math.cos(a)*r,y=cy+Math.sin(a)*r*.8;cheek.push([x,y,faceZ(x,y)+.068]);}
- tube(cheek,.033,lipMat,puppet);
 }
 // Small rock companions and plants establish the miniature scale.
 const pebbleMat=mat(0xc8cbb7), darkPebble=mat(0xa1ad88);
@@ -192,7 +235,7 @@ $('#capture').addEventListener('click',()=>{try{renderer.render(scene,camera);co
 
 function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe($('#world'));resize();
-const clock=new THREE.Clock();let lastBlink=0,blinkAt=3.6,firstFrame=true;
+const clock=new THREE.Clock();let firstFrame=true;
 const dayLight=new THREE.Color(0xfff3d9),nightLight=new THREE.Color(0xa8b9f1),dayHemi=new THREE.Color(0xf6fbf0),nightHemi=new THREE.Color(0x8292c9);
 function render(){
  const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt;
@@ -204,13 +247,12 @@ function render(){
  let mouthTarget=state.space?1:state.mouth;
  if(t<state.helloUntil)mouthTarget=Math.max(mouthTarget,.16+.7*Math.pow(Math.sin(t*10),2));
  if(state.mood==='sleepy'&&!reducedMotion)mouthTarget=Math.max(mouthTarget,Math.pow(Math.max(0,Math.sin(t*.6)),14)*.65);
- state.jaw=mix(state.jaw,mouthTarget,eased);hinge.rotation.x=state.jaw*.72;
+ state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*.55;
  const bounce=t<state.tapUntil&&!reducedMotion?Math.abs(Math.sin((state.tapUntil-t)*7))*.16:0;
  puppet.position.y=.54+bounce+(reducedMotion?0:Math.sin(t*1.65)*.012);
  const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
  puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
- if(t>blinkAt){lastBlink=t;blinkAt=t+3.4+Math.random()*3;}const blink=t-lastBlink<.18?Math.sin((t-lastBlink)/.18*Math.PI):0;
- eyes.forEach((eye,i)=>{let eyeScale=state.mood==='sleepy'?.19:state.mood==='curious'?(i===0?1.12:.82):1;eye.scale.y=mix(eye.scale.y,Math.max(.06,eyeScale*(1-blink)),eased);});
+ puppet.updateWorldMatrix(true,false);jawFloor.set(new THREE.Vector3(0,1,0),-.06).applyMatrix4(puppet.matrixWorld);
  plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});
  for(let i=0;i<moteSeeds.length;i++){const[a,r,y]=moteSeeds[i];motePositions[i*3]=Math.cos(a+(reducedMotion?0:t*.018))*r;motePositions[i*3+1]=.7+(y+(reducedMotion?0:t*.055))%3.6;motePositions[i*3+2]=Math.sin(a+(reducedMotion?0:t*.018))*r*.7;}
  moteGeo.attributes.position.needsUpdate=true;
