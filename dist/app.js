@@ -33,7 +33,7 @@ function mesh(geometry,material,parent=scene){const m=new THREE.Mesh(geometry,ma
 function ball(parent,color,position,scale,detail=3){const m=mesh(new THREE.IcosahedronGeometry(1,detail),typeof color==='string'||typeof color==='number'?mat(color):color,parent);m.position.set(...position);m.scale.set(...scale);return m;}
 function tube(points,radius,material,parent,closed=false){const c=new THREE.CatmullRomCurve3(points.map(p=>p.isVector3?p:new THREE.Vector3(...p)),closed);return mesh(new THREE.TubeGeometry(c,Math.max(24,points.length*2),radius,8,closed),material,parent);}
 
-// Pigment is painted into the stone material, with no raised lip or cheek geometry.
+// Rough lipstick pigment follows the stone, including the subtly raised cheeks.
 function lipstickTexture(){
  const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');
  let brushSeed=2718;const rand=()=>{brushSeed=(brushSeed*1664525+1013904223)>>>0;return brushSeed/4294967296;};
@@ -57,8 +57,8 @@ function lipstickTexture(){
  stroke(lips,.18);
  for(const side of[-1,1]){
   const spiral=[],cx=side===-1?-1.13:1.15,cy=1.68;
-  for(let i=0;i<=150;i++){const f=i/150,a=f*Math.PI*3.9,r=.023+f*.255+.006*Math.sin(f*39+side);spiral.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r*.8+.005*Math.sin(f*43)]);}
-  stroke(spiral,.064);
+  for(let i=0;i<=240;i++){const f=i/240,a=f*Math.PI*6.1,r=.017+f*.272+.003*Math.sin(f*39+side);spiral.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r*.92+.003*Math.sin(f*43)]);}
+  stroke(spiral,.047);
  }
  // Fine gaps and dry, streaky edges suggest wax dragged across rough stone.
  ctx.globalCompositeOperation='destination-out';
@@ -220,7 +220,14 @@ function rawSurface(t,a){
  // A small amount of fullness keeps the lower face rounded without a projecting chin.
  const s=THREE.MathUtils.clamp(t/(cutRow/rows),0,1);
  const muzzle=t<cutRow/rows?.20*Math.pow(Math.sin(Math.PI*s),.8)*Math.pow(Math.max(0,Math.cos(a)),3):0;
- return new THREE.Vector3(Math.sin(a)*r*noise-.28*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise+muzzle);
+ const p=new THREE.Vector3(Math.sin(a)*r*noise-.28*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise+muzzle);
+ // Soft cheek domes lift the painted spirals slightly out of the stone.
+ const front=THREE.MathUtils.smoothstep(Math.cos(a),.25,.65);
+ for(const cx of[-1.13,1.15]){
+  const q=((p.x-cx)/.36)**2+((p.y-1.68)/.33)**2;
+  if(q<1)p.z+=.09*(1-q)**2*front;
+ }
+ return p;
 }
 function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
 // Keep each seam beneath its lip corner in the rock's own coordinates.
@@ -288,11 +295,11 @@ for(const side of[-1,1]){
 // The open eyes sit close to the mouth and face the viewer as the camera orbits.
 const trackingEyes=[];
 for(const side of[-1,1]){
- const x=side*.42-.09,y=1.84+(side===-1?.045:0),z=faceZ(x,y)+.055;
+ const x=side*.42-.09,y=1.84+(side===-1?.045:0),z=faceZ(x,y)+.044;
  const eye=new THREE.Group();eye.position.set(x,y,z);puppet.add(eye);trackingEyes.push(eye);
- ball(eye,mat(0x101015,.25),[0,0,0],[.205,.235,.095]);
- ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
- ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
+ ball(eye,mat(0x101015,.25),[0,0,0],[.156,.156,.075]);
+ ball(eye,mat(0xf51528,.36),[0,0,.055],[.084,.084,.029]);
+ ball(eye,mat(0x0a090c,.32),[0,0,.074],[.039,.039,.016]);
 }
 // A small red fabric bow tie sits below the jaw's full travel, attached to the stone.
 const bowTie=new THREE.Group();bowTie.name='Red bow tie';bowTie.position.set(mouthCenter,.40,faceZ(mouthCenter,.40)+.065);jaw.add(bowTie);
