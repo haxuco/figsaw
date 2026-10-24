@@ -1,33 +1,25 @@
 import * as THREE from './vendor/three.module.js';
 
-const $ = (s) => document.querySelector(s);
-const canvas = $('#scene');
-const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const canvas=document.querySelector('#scene');
+const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const homeView={yaw:.64,pitch:.38};
-const state = { mouth:0, jaw:0, mood:'happy', env:'day', dusk:0, yaw:homeView.yaw, pitch:homeView.pitch, zoom:1, drag:false, helloUntil:0, space:false, sound:false, time:0, tapUntil:0 };
-let renderer;
-try { renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true}); }
-catch(error) { $('#loading').classList.add('hidden'); $('#error').classList.remove('hidden'); throw error; }
+const state={yaw:homeView.yaw,pitch:homeView.pitch,zoom:1,jaw:0,space:false,time:0,talkUntil:0};
+const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
 renderer.shadowMap.enabled=true;
-renderer.localClippingEnabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=1.08;
 const scene=new THREE.Scene();
 const camera=new THREE.PerspectiveCamera(36,1,.1,80);
-const cameraTarget=new THREE.Vector3(0,1.90,0);
+const cameraTarget=new THREE.Vector3();
 const hemi=new THREE.HemisphereLight(0xf6fbf0,0x9d9877,2.1);scene.add(hemi);
 const sun=new THREE.DirectionalLight(0xfff3d9,3.3);sun.position.set(-3.5,7,5);sun.castShadow=true;
 sun.shadow.mapSize.set(2048,2048);sun.shadow.camera.left=-6;sun.shadow.camera.right=6;sun.shadow.camera.top=6;sun.shadow.camera.bottom=-6;sun.shadow.normalBias=.035;sun.shadow.bias=-.00015;sun.shadow.radius=4;scene.add(sun);
 const fill=new THREE.DirectionalLight(0xd4e5c7,1.5);fill.position.set(4,3,-3);scene.add(fill);
-const warm=new THREE.PointLight(0xffcb83,0,12);warm.position.set(-2,2,2);scene.add(warm);
 
-let seed=24;
-function random(){ seed=(seed*1664525+1013904223)>>>0;return seed/4294967296; }
 const mix=THREE.MathUtils.lerp;
-const materials={};
 function mat(color,roughness=.9){ return new THREE.MeshStandardMaterial({color,roughness}); }
 function mesh(geometry,material,parent=scene){const m=new THREE.Mesh(geometry,material);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
 function ball(parent,color,position,scale,detail=3){const m=mesh(new THREE.IcosahedronGeometry(1,detail),typeof color==='string'||typeof color==='number'?mat(color):color,parent);m.position.set(...position);m.scale.set(...scale);return m;}
@@ -96,26 +88,10 @@ rockMaterial.onBeforeCompile=(shader)=>{
 };
 const dark=mat(0x201e22,.98), tongueMat=mat(0x702738,.98);
 const cavityMaterial=new THREE.MeshBasicMaterial({color:0x080609,side:THREE.DoubleSide});
-const garden=new THREE.Group();scene.add(garden);
-const islandProfile=[[0,-.05],[2.4,-.05],[2.91,.02],[3.12,.14],[3.17,.29],[3.09,.42],[2.92,.49],[0,.49]].map(p=>new THREE.Vector2(...p));
-const island=mesh(new THREE.LatheGeometry(islandProfile,96),mat(0xbaa784),garden);
-island.scale.set(1,1,.79);
-const grassTop=mesh(new THREE.CylinderGeometry(2.94,3.06,.16,96,1),mat(0x84965b),garden);grassTop.position.y=.44;grassTop.scale.z=.79;
-// A fine, uneven surface gives the miniature garden its felt-like softness.
-const grassGeo=new THREE.SphereGeometry(1,7,5);
-const grassColors=[0x9ba972,0xa8b67e,0x7f9458,0x94a367,0xadb785];
-for(let i=0;i<110;i++){
- const a=random()*Math.PI*2,r=Math.sqrt(random())*2.9;
- const x=Math.cos(a)*r,z=Math.sin(a)*r*.79;
- if(Math.abs(x)<1.65&&Math.abs(z)<1)continue;
- const tuft=mesh(grassGeo,mat(grassColors[i%5]),garden);tuft.position.set(x,.52,z);tuft.scale.set(.12+random()*.23,.018+random()*.025,.08+random()*.15);tuft.rotation.y=random()*6;
-}
-// Broad contact shadow under the floating, rounded island.
-function shadowTexture(){const c=document.createElement('canvas');c.width=c.height=128;const ctx=c.getContext('2d');const g=ctx.createRadialGradient(64,64,0,64,64,63);g.addColorStop(0,'rgba(51,62,28,.25)');g.addColorStop(.45,'rgba(51,62,28,.13)');g.addColorStop(1,'rgba(51,62,28,0)');ctx.fillStyle=g;ctx.fillRect(0,0,128,128);return new THREE.CanvasTexture(c);}
-const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMaterial({map:shadowTexture(),transparent:true,depthWrite:false}));contact.rotation.x=-Math.PI/2;contact.position.y=-.09;scene.add(contact);
+const model=new THREE.Group();model.name='Figsaw and tricycle';scene.add(model);
 
 // A vintage tricycle supports the rock directly on its saddle.
-const tricycle=new THREE.Group();tricycle.name='Rocky’s red tricycle';garden.add(tricycle);
+const tricycle=new THREE.Group();tricycle.name='Figsaw’s red tricycle';model.add(tricycle);
 const enamel=new THREE.MeshStandardMaterial({color:0x982d32,roughness:.48,metalness:.42});
 const chrome=new THREE.MeshStandardMaterial({color:0xaeb5b3,roughness:.34,metalness:.72});
 const spokeMaterial=new THREE.MeshStandardMaterial({color:0x535a59,roughness:.46,metalness:.65});
@@ -211,7 +187,7 @@ function setRollingDistance(distance){
 ball(tricycle,chrome,[-.47,2.76,1.45],[.085,.055,.085]);
 rod(tricycle,[-.47,2.75,1.45],[-.57,2.77,1.45],.016,rubber);
 const riderScale=.72,riderSeatY=2.08;
-const puppet=new THREE.Group();puppet.scale.setScalar(riderScale);puppet.position.set(0,riderSeatY,-.45);garden.add(puppet);
+const puppet=new THREE.Group();puppet.scale.setScalar(riderScale);puppet.position.set(0,riderSeatY,-.45);model.add(puppet);
 const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=8*Math.PI*2/cols;
 const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight,maxMouthTravel=.12;
 function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
@@ -259,7 +235,7 @@ function patchGeometry(jaw=false,inside=false){
 const outlineMaterial=new THREE.MeshBasicMaterial({color:0x171918,side:THREE.BackSide});
 outlineMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normal * 0.058;');};
 function outline(geometry,parent){const o=new THREE.Mesh(geometry,outlineMaterial);o.name='Black stone outline';parent.add(o);return o;}
-const bodyGeometry=patchGeometry();const body=mesh(bodyGeometry,rockMaterial,puppet);body.name='Rocky';outline(bodyGeometry,puppet);
+const bodyGeometry=patchGeometry();const body=mesh(bodyGeometry,rockMaterial,puppet);body.name='Figsaw';outline(bodyGeometry,puppet);
 // The mouth is an opening in the stone. Its dark backing stays deep inside,
 // without dark walls following the projecting muzzle's outer surface.
 const cavity=mesh(patchGeometry(true,true),cavityMaterial,puppet);cavity.castShadow=false;
@@ -319,105 +295,82 @@ for(const side of[-1,1]){
  for(const fold of[-1,1])tube([[side*.09,fold*.026,.08],[side*.19,fold*.055,.087],[side*.34,fold*.11,.088]],.005,creaseMaterial,bowTie);
 }
 const knot=mesh(new THREE.SphereGeometry(1,24,16),ribbonMaterial,bowTie);knot.position.set(0,0,.07);knot.scale.set(.105,.12,.075);
-// Small rock companions and plants establish the miniature scale.
-const pebbleMat=mat(0xc8cbb7), darkPebble=mat(0xa1ad88);
-const rockSpecs=[[-2.1,.65,.65,.42,.28,.33],[2.12,.66,.48,.38,.26,.3],[-1.55,.61,1.54,.25,.17,.2],[1.62,.61,1.7,.32,.17,.2],[2.3,.62,-.8,.24,.18,.22],[-2.4,.61,-.5,.23,.18,.2],[.65,.61,1.93,.16,.12,.14]];
-for(let i=0;i<rockSpecs.length;i++){const[x,y,z,sx,sy,sz]=rockSpecs[i];const p=ball(garden,i%2?darkPebble:pebbleMat,[x,y,z],[sx,sy,sz],2);p.rotation.set(random()*.4,random()*6,random()*.3);}
-const plants=[];
-function plant(x,z,size=1){
- const group=new THREE.Group();group.position.set(x,.53,z);group.rotation.y=random()*6;garden.add(group);plants.push(group);
- for(let j=0;j<5;j++){const a=j/5*Math.PI*2,h=(.25+random()*.24)*size;
- const pts=[[0,0,0],[Math.sin(a)*.06*size,h*.55,Math.cos(a)*.06*size],[Math.sin(a)*.16*size,h,Math.cos(a)*.16*size]];
- tube(pts,.012*size,mat(j%2?0x68844a:0x7e9655),group);
- const leaf=ball(group,mat(j%2?0x9aa960:0x78934f),pts[1],[.035*size,.13*size,.017*size],1);leaf.rotation.z=-Math.sin(a)*.6;leaf.rotation.x=Math.cos(a)*.6;
+
+// Frame just the rock and tricycle, with room for the mouth's vertical travel.
+const bounds=new THREE.Box3().setFromObject(model);
+bounds.getCenter(cameraTarget);
+const fitPoints=[];
+model.traverse(part=>{
+ if(!part.isMesh)return;
+ if(!part.geometry.boundingBox)part.geometry.computeBoundingBox();
+ const box=part.geometry.boundingBox;
+ for(const x of[box.min.x,box.max.x])for(const y of[box.min.y,box.max.y])for(const z of[box.min.z,box.max.z])fitPoints.push(new THREE.Vector3(x,y,z).applyMatrix4(part.matrixWorld).sub(cameraTarget));
+});
+const viewDirection=new THREE.Vector3(Math.sin(homeView.yaw)*Math.cos(homeView.pitch),Math.sin(homeView.pitch),Math.cos(homeView.yaw)*Math.cos(homeView.pitch));
+const viewRight=new THREE.Vector3(Math.cos(homeView.yaw),0,-Math.sin(homeView.yaw));
+const viewUp=new THREE.Vector3().crossVectors(viewDirection,viewRight);
+let baseDistance=8,resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
+function resetView(){resetting=true;}
+
+document.addEventListener('keydown',event=>{
+ if(event.code==='Space'){event.preventDefault();state.space=true;}
+ if(event.code==='KeyR'&&!event.repeat)resetView();
+ if(event.code.startsWith('Arrow')){
+  event.preventDefault();resetting=false;
+  if(event.code==='ArrowLeft')state.yaw+=.08;
+  if(event.code==='ArrowRight')state.yaw-=.08;
+  if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-.06,.95);
+  if(event.code==='ArrowDown')state.pitch=THREE.MathUtils.clamp(state.pitch-.05,-.06,.95);
  }
+});
+document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
+window.addEventListener('blur',()=>{state.space=false;dragPointer=null;});
+canvas.addEventListener('pointerdown',event=>{
+ if(dragPointer!==null)return;
+ canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
+ lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
+});
+canvas.addEventListener('pointermove',event=>{
+ if(event.pointerId!==dragPointer)return;
+ const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
+ state.yaw-=dx*.006;state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.004,-.06,.95);lastPointer={x:event.clientX,y:event.clientY};
+});
+canvas.addEventListener('pointerup',event=>{
+ if(event.pointerId!==dragPointer)return;
+ dragPointer=null;
+ if(pointerDistance<6){
+  const rect=canvas.getBoundingClientRect(),pointer=new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
+  const ray=new THREE.Raycaster();ray.setFromCamera(pointer,camera);
+  if(ray.intersectObject(puppet,true).length)state.talkUntil=state.time+1.8;
+ }
+});
+canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
+canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
+canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0007,.65,1.6);},{passive:false});
+
+function resize(){
+ const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
+ renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
+ const tanV=Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*.86,tanH=tanV*camera.aspect;
+ baseDistance=Math.max(...fitPoints.map(p=>p.dot(viewDirection)+Math.max(Math.abs(p.dot(viewRight))/tanH,Math.abs(p.dot(viewUp))/tanV)));
 }
-for(const p of[[-2,1.25,.8],[2.45,.14,.8],[-2.35,-.83,1.4],[1.85,-1.2,1.3],[-.7,-1.7,1.1],[.9,1.8,.7],[-.45,1.83,.6],[2,-.7,1]])plant(...p);
-const flowers=[];
-function flower(x,z,size=1){
- const g=new THREE.Group();g.position.set(x,.53,z);garden.add(g);flowers.push(g);
- const h=.34*size;tube([[0,0,0],[.025,h*.6,0],[.015,h,0]],.012,mat(0x788e4c),g);
- for(let i=0;i<6;i++){const a=i/6*Math.PI*2;const petal=ball(g,mat(0xfffbed),[.015+Math.cos(a)*.062*size,h+.01,Math.sin(a)*.062*size],[.052*size,.017*size,.025*size],2);petal.rotation.y=-a;}
- ball(g,mat(0xe2b34f),[.015,h+.025,0],[.03*size,.02*size,.03*size],2);
-}
-for(const p of[[-1.8,1.65,1],[1.9,1.15,.9],[2.12,1.3,.7],[-2.5,.1,.8],[-1.7,-1.3,1.15],[.0,2.07,.7]])flower(...p);
-// Airborne pollen becomes softly glowing fireflies after sunset.
-const motePositions=new Float32Array(100*3),moteSeeds=[];
-for(let i=0;i<100;i++){moteSeeds.push([random()*Math.PI*2,random()*3.7,random()*4]);}
-const moteGeo=new THREE.BufferGeometry();moteGeo.setAttribute('position',new THREE.BufferAttribute(motePositions,3));
-const moteMat=new THREE.PointsMaterial({color:0xc4bc89,size:.027,transparent:true,opacity:.55,depthWrite:false});
-const motes=new THREE.Points(moteGeo,moteMat);scene.add(motes);
-const heartShape=new THREE.Shape();heartShape.moveTo(0,.22);heartShape.bezierCurveTo(-.5,.66,-.72,.04,0,-.47);heartShape.bezierCurveTo(.72,.04,.5,.66,0,.22);
-const heartGeo=new THREE.ShapeGeometry(heartShape,18);const hearts=[];
-function heartsBurst(count=7){for(let i=0;i<count;i++){const h=new THREE.Mesh(heartGeo,new THREE.MeshBasicMaterial({color:i%2?0xff728d:0xf94377,transparent:true,side:THREE.DoubleSide,depthWrite:false}));const size=.12+Math.random()*.12;h.scale.setScalar(size);h.position.set((Math.random()-.5)*2,3.5+Math.random()*.7,.8);h.userData={born:state.time,speed:.45+Math.random()*.4,drift:(Math.random()-.5)*.35};scene.add(h);hearts.push(h);}}
-
-let speechTimer,toastTimer;
-function speak(message,duration=3400){$('#speech span').textContent=message;$('#speech').classList.add('visible');clearTimeout(speechTimer);speechTimer=setTimeout(()=>$('#speech').classList.remove('visible'),duration);}
-function toast(message){$('#toast').textContent=message;$('#toast').classList.add('show');clearTimeout(toastTimer);toastTimer=setTimeout(()=>$('#toast').classList.remove('show'),3200);}
-const mouthSlider=$('#mouth');
-function setMouth(value){state.mouth=value;mouthSlider.value=Math.round(value*100);$('#mouth-value').value=Math.round(value*100)+'%';mouthSlider.style.background=`linear-gradient(to right,#7e9463 ${value*100}%,#e5e9dc ${value*100}%)`;}
-mouthSlider.addEventListener('input',()=>setMouth(Number(mouthSlider.value)/100));
-function hello(){state.helloUntil=state.time+3;state.tapUntil=state.time+1.5;speak(['oh, hi there!','you rock. you really do.','a little hello from me ♡','so glad you’re here.'][Math.floor(Math.random()*4)]);heartsBurst(5);if(state.sound)chirp();}
-$('#hello').addEventListener('click',hello);
-document.querySelectorAll('[data-mood]').forEach(button=>button.addEventListener('click',()=>{
- state.mood=button.dataset.mood;document.querySelectorAll('[data-mood]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});
- const messages={happy:'life is good. rock solid, even.',curious:'hmm… what’s over there?',sleepy:'just five more little minutes…',love:'a soft spot, just for you.'};speak(messages[state.mood]);if(state.mood==='love')heartsBurst(10);if(state.mood==='happy')state.tapUntil=state.time+1;
-}));
-document.querySelectorAll('[data-env]').forEach(button=>button.addEventListener('click',()=>{
- state.env=button.dataset.env;document.body.classList.toggle('dusk',state.env==='dusk');document.querySelectorAll('[data-env]').forEach(b=>{b.classList.toggle('active',b===button);b.setAttribute('aria-pressed',String(b===button));});speak(state.env==='dusk'?'stay a little. the stars are out.':'a little sunshine feels nice.');
-}));
-let resetAnimation=0;
-function resetView(){resetAnimation=1;toast('Back to our little corner of the world.');}
-$('#reset').addEventListener('click',resetView);
-$('#help').addEventListener('click',()=>$('#help-dialog').showModal());$('#close-help').addEventListener('click',()=>$('#help-dialog').close());
-$('#help-dialog').addEventListener('click',e=>{if(e.target===$('#help-dialog'))$('#help-dialog').close();});
-document.addEventListener('keydown',e=>{if(/INPUT|TEXTAREA|BUTTON/.test(document.activeElement?.tagName)||$('#help-dialog').open)return;if(e.code==='Space'){e.preventDefault();state.space=true;}if(!e.repeat&&e.code==='KeyH')hello();if(!e.repeat&&e.code==='KeyR')resetView();});
-document.addEventListener('keyup',e=>{if(e.code==='Space')state.space=false;});window.addEventListener('blur',()=>{state.space=false;state.drag=false;});
-let pointerStart=null,lastPointer=null,pointerDistance=0;
-canvas.addEventListener('pointerdown',e=>{canvas.focus({preventScroll:true});state.drag=true;resetAnimation=0;pointerDistance=0;pointerStart=lastPointer={x:e.clientX,y:e.clientY};canvas.setPointerCapture(e.pointerId);});
-canvas.addEventListener('pointermove',e=>{if(!state.drag)return;const dx=e.clientX-lastPointer.x,dy=e.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);state.yaw-=dx*.006;state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.004,-.06,.95);lastPointer={x:e.clientX,y:e.clientY};});
-canvas.addEventListener('pointerup',e=>{state.drag=false;if(pointerDistance<6){const rect=canvas.getBoundingClientRect(),pointer=new THREE.Vector2((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);const ray=new THREE.Raycaster();ray.setFromCamera(pointer,camera);if(ray.intersectObject(puppet,true).length)hello();}pointerStart=null;});
-canvas.addEventListener('pointercancel',()=>{state.drag=false;});
-canvas.addEventListener('wheel',e=>{e.preventDefault();resetAnimation=0;state.zoom=THREE.MathUtils.clamp(state.zoom+e.deltaY*.0007,.7,1.5);},{passive:false});
-
-// Garden ambience is generated locally and starts only after the sound button is pressed.
-let audioContext,master,audioTimer;
-function chirp(){if(!audioContext||!state.sound)return;const now=audioContext.currentTime;const osc=audioContext.createOscillator(),gain=audioContext.createGain();osc.type='sine';osc.frequency.setValueAtTime(1450+Math.random()*600,now);osc.frequency.exponentialRampToValueAtTime(2900,now+.07);osc.frequency.exponentialRampToValueAtTime(1700,now+.15);gain.gain.setValueAtTime(0,now);gain.gain.linearRampToValueAtTime(.025,now+.03);gain.gain.exponentialRampToValueAtTime(.001,now+.25);osc.connect(gain);gain.connect(master);osc.start(now);osc.stop(now+.3);}
-$('#sound').addEventListener('click',async()=>{try{
- if(!audioContext){audioContext=new(window.AudioContext||window.webkitAudioContext)();master=audioContext.createGain();master.gain.value=0;master.connect(audioContext.destination);const buffer=audioContext.createBuffer(1,audioContext.sampleRate*3,audioContext.sampleRate);const data=buffer.getChannelData(0);let last=0;for(let i=0;i<data.length;i++){last=(last+(Math.random()*2-1)*.02)/1.02;data[i]=last*2;}const noise=audioContext.createBufferSource();noise.buffer=buffer;noise.loop=true;const filter=audioContext.createBiquadFilter();filter.type='lowpass';filter.frequency.value=420;noise.connect(filter);filter.connect(master);noise.start();audioTimer=setInterval(()=>{if(state.sound&&Math.random()>.3)chirp();},2600);}
- await audioContext.resume();state.sound=!state.sound;master.gain.setTargetAtTime(state.sound?.4:0,audioContext.currentTime,.4);$('#sound').setAttribute('aria-pressed',String(state.sound));$('#sound').setAttribute('aria-label',state.sound?'Mute garden sounds':'Enable garden sounds');$('#sound').innerHTML=state.sound?'<svg viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5Zm4 3a7 7 0 0 1 0 8m3-11a11 11 0 0 1 0 14"/></svg>':'<svg viewBox="0 0 24 24"><path d="m11 5-5 4H3v6h3l5 4V5Zm4 4 5 6m0-6-5 6"/></svg>';toast(state.sound?'A little breeze. A little birdsong.':'A quiet little world.');if(state.sound)chirp();
- }catch{toast('Audio isn’t available in this browser.');}});
-$('#capture').addEventListener('click',()=>{try{renderer.render(scene,camera);const out=document.createElement('canvas');out.width=canvas.width;out.height=canvas.height;const ctx=out.getContext('2d');ctx.fillStyle=state.env==='day'?'#f4f3e9':'#272d3c';ctx.fillRect(0,0,out.width,out.height);ctx.drawImage(canvas,0,0);ctx.fillStyle=state.env==='day'?'#536746':'#dce2d0';ctx.font=`${Math.max(18,out.width*.023)}px Georgia`;ctx.fillText('a little moment with rocky.',out.width*.06,out.height*.93);out.toBlob(blob=>{if(!blob)return;const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download='a-little-moment-with-rocky.png';a.click();setTimeout(()=>URL.revokeObjectURL(url),1000);toast('A little keepsake, saved.');},'image/png');}catch{toast('Couldn’t save that moment. Please try again.');}});
-
-function resize(){const r=canvas.getBoundingClientRect();renderer.setSize(r.width,r.height,false);camera.aspect=r.width/r.height;camera.updateProjectionMatrix();}
-const resizeObserver=new ResizeObserver(resize);resizeObserver.observe($('#world'));resize();
-const clock=new THREE.Clock();let firstFrame=true;
-const dayLight=new THREE.Color(0xfff3d9),nightLight=new THREE.Color(0xa8b9f1),dayHemi=new THREE.Color(0xf6fbf0),nightHemi=new THREE.Color(0x8292c9);
+const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
+const clock=new THREE.Clock();
 function render(){
- const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt;
- const eased=1-Math.exp(-dt*12);
- state.dusk=mix(state.dusk,state.env==='dusk'?1:0,1-Math.exp(-dt*2));sun.color.copy(dayLight).lerp(nightLight,state.dusk);sun.intensity=mix(3.3,1.65,state.dusk);hemi.color.copy(dayHemi).lerp(nightHemi,state.dusk);hemi.intensity=mix(2.1,1.2,state.dusk);fill.intensity=mix(1.5,2,state.dusk);warm.intensity=state.dusk*5;moteMat.opacity=mix(.55,.95,state.dusk);moteMat.size=mix(.024,.045,state.dusk);moteMat.color.set(state.dusk>.5?0xffdfa0:0xbeb98f);
- if(resetAnimation){state.yaw=mix(state.yaw,homeView.yaw,eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);if(Math.abs(state.yaw-homeView.yaw)+Math.abs(state.pitch-homeView.pitch)+Math.abs(state.zoom-1)<.005)resetAnimation=0;}
- const distance=(camera.aspect<.85?13.8:11.8)*state.zoom;
- camera.position.set(Math.sin(state.yaw)*Math.cos(state.pitch)*distance,cameraTarget.y+Math.sin(state.pitch)*distance,Math.cos(state.yaw)*Math.cos(state.pitch)*distance);camera.lookAt(cameraTarget);
- let mouthTarget=state.space?1:state.mouth;
- if(t<state.helloUntil)mouthTarget=Math.max(mouthTarget,.16+.7*Math.pow(Math.sin(t*10),2));
- if(state.mood==='sleepy'&&!reducedMotion)mouthTarget=Math.max(mouthTarget,Math.pow(Math.max(0,Math.sin(t*.6)),14)*.65);
+ const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt,eased=1-Math.exp(-dt*12);
+ if(resetting){
+  state.yaw=mix(state.yaw,homeView.yaw,eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
+  if(Math.abs(state.yaw-homeView.yaw)+Math.abs(state.pitch-homeView.pitch)+Math.abs(state.zoom-1)<.005)resetting=false;
+ }
+ const distance=baseDistance*state.zoom;
+ camera.position.copy(cameraTarget).add(new THREE.Vector3(Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),Math.cos(state.yaw)*Math.cos(state.pitch)).multiplyScalar(distance));camera.lookAt(cameraTarget);
+ const mouthTarget=state.space?1:t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
- const bounce=t<state.tapUntil&&!reducedMotion?Math.abs(Math.sin((state.tapUntil-t)*7))*.16:0;
- puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale+bounce*.6;
- const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
- puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
+ puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
  for(const eye of trackingEyes)eye.lookAt(camera.position);
  setRollingDistance(reducedMotion?0:t*.85);
- plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});
- for(let i=0;i<moteSeeds.length;i++){const[a,r,y]=moteSeeds[i];motePositions[i*3]=Math.cos(a+(reducedMotion?0:t*.018))*r;motePositions[i*3+1]=.7+(y+(reducedMotion?0:t*.055))%3.6;motePositions[i*3+2]=Math.sin(a+(reducedMotion?0:t*.018))*r*.7;}
- moteGeo.attributes.position.needsUpdate=true;
- for(let i=hearts.length-1;i>=0;i--){const h=hearts[i],age=t-h.userData.born;h.position.y+=dt*h.userData.speed;h.position.x+=dt*h.userData.drift;h.quaternion.copy(camera.quaternion);h.material.opacity=Math.max(0,1-age/3);if(age>3){scene.remove(h);h.material.dispose();hearts.splice(i,1);}}
- renderer.render(scene,camera);
- if(firstFrame){firstFrame=false;$('#loading').style.opacity='0';setTimeout(()=>{$('#loading').classList.add('hidden');speak('oh, hi there!',4200);},600);document.body.dataset.ready='true';}
- requestAnimationFrame(render);
+ renderer.render(scene,camera);requestAnimationFrame(render);
 }
 render();
-canvas.addEventListener('webglcontextlost',e=>{e.preventDefault();$('#error').classList.remove('hidden');});
+canvas.addEventListener('webglcontextlost',event=>event.preventDefault());
 canvas.addEventListener('webglcontextrestored',()=>location.reload());
