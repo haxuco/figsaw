@@ -1,6 +1,6 @@
 # Rocky
 
-A self-contained, interactive WebGL rock puppet garden, built with Three.js. The character has a procedural stone shell, a marionette jaw that slides vertically along fixed side seams, a recessed mouth, flat hand-drawn lipstick and spiral cheeks, fixed black eyes with red irises, and moss patches. The lipstick is a grainy pigment texture applied directly to the stone, with no raised makeup geometry. The eyes never blink or close.
+A self-contained, interactive WebGL rock puppet garden, built with Three.js. The character has a rounded procedural stone shell with a thick black silhouette, a large projecting jaw with vertical puppet motion, curved unstitched mouth seams, flat hand-drawn lipstick and spiral cheeks, fixed black eyes with red irises, moss patches, and a red bow tie. The initial camera shows a slight side view with the lower jaw projecting to the left. The lipstick is a grainy pigment texture applied directly to the stone, with no raised makeup geometry. The eyes never blink or close.
 
 Serve `dist` with any static HTTP server. For example:
 

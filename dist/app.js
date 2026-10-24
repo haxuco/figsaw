@@ -3,7 +3,8 @@ import * as THREE from './vendor/three.module.js';
 const $ = (s) => document.querySelector(s);
 const canvas = $('#scene');
 const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-const state = { mouth:0, jaw:0, mood:'happy', env:'day', dusk:0, yaw:0.12, pitch:0.3, zoom:1, drag:false, helloUntil:0, space:false, sound:false, time:0, tapUntil:0 };
+const homeView={yaw:.48,pitch:.22};
+const state = { mouth:0, jaw:0, mood:'happy', env:'day', dusk:0, yaw:homeView.yaw, pitch:homeView.pitch, zoom:1, drag:false, helloUntil:0, space:false, sound:false, time:0, tapUntil:0 };
 let renderer;
 try { renderer = new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,preserveDrawingBuffer:true}); }
 catch(error) { $('#loading').classList.add('hidden'); $('#error').classList.remove('hidden'); throw error; }
@@ -49,10 +50,10 @@ function lipstickTexture(){
    }
   }
  }
- const lips=[];for(let i=0;i<=80;i++){const u=i/80;lips.push([mix(-.75,.59,u),1.174+.009*Math.sin(u*15)+.012*Math.sin(u*7)]);}
- stroke(lips,.145);
+ const lips=[];for(let i=0;i<=80;i++){const u=i/80;lips.push([mix(-1.13,.88,u),1.452+.009*Math.sin(u*15)+.012*Math.sin(u*7)]);}
+ stroke(lips,.18);
  for(const side of[-1,1]){
-  const spiral=[],cx=side*1.13-.06,cy=1.42;
+  const spiral=[],cx=side===-1?-1.13:1.15,cy=1.68;
   for(let i=0;i<=150;i++){const f=i/150,a=f*Math.PI*3.9,r=.023+f*.255+.006*Math.sin(f*39+side);spiral.push([cx+Math.cos(a)*r,cy+Math.sin(a)*r*.8+.005*Math.sin(f*43)]);}
   stroke(spiral,.064);
  }
@@ -109,62 +110,74 @@ function shadowTexture(){const c=document.createElement('canvas');c.width=c.heig
 const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMaterial({map:shadowTexture(),transparent:true,depthWrite:false}));contact.rotation.x=-Math.PI/2;contact.position.y=-.09;scene.add(contact);
 
 const puppet=new THREE.Group();puppet.position.set(0,.54,0);garden.add(puppet);
-const bodyHeight=2.8,rows=60,cols=160,cutRow=24,halfMouth=10*Math.PI*2/cols;
-const mouthCenter=-.08,mouthHalfWidth=.65,mouthTop=.05+cutRow/rows*bodyHeight;
-function radius(t){return 1.87*Math.pow(Math.max(0,Math.sin(Math.PI*(.15+.85*t))),.57)*(1.06-.22*t);}
-function rawSurface(t,a){const r=radius(t),noise=1+.018*Math.sin(a*5+t*9)+.012*Math.cos(a*9-t*7);return new THREE.Vector3(Math.sin(a)*r*noise-.20*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise);}
-function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
-function trackDepth(x){return rawSurface(cutRow/rows,angleAtX(cutRow/rows,x)).z;}
-function surface(t,a){
- const p=rawSurface(t,a);
- if(t<=cutRow/rows&&Math.cos(a)>0){const blend=1-THREE.MathUtils.smoothstep(Math.abs(p.x-mouthCenter),mouthHalfWidth+.025,mouthHalfWidth+.38);p.z=mix(p.z,trackDepth(p.x),blend);}
- return p;
+const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=13*Math.PI*2/cols;
+const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight;
+function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
+function rawSurface(t,a){
+ const r=radius(t),noise=1+.018*Math.sin(a*5+t*9)+.012*Math.cos(a*9-t*7);
+ // A closed, rounded underside and a broad lower muzzle make a continuous stone silhouette.
+ const s=THREE.MathUtils.clamp(t/(cutRow/rows),0,1);
+ const muzzle=t<cutRow/rows?.91*Math.pow(Math.sin(Math.PI*s),.8)*Math.pow(Math.max(0,Math.cos(a)),3):0;
+ return new THREE.Vector3(Math.sin(a)*r*noise-.28*t,.05+t*bodyHeight,Math.cos(a)*r*.68*noise+muzzle);
 }
+function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
 function slotSurface(t,a){
- if(t<=cutRow/rows){const left=angleAtX(t,mouthCenter-mouthHalfWidth),right=angleAtX(t,mouthCenter+mouthHalfWidth);
+ if(t<=cutRow/rows){const s=t/(cutRow/rows),bend=Math.sin(Math.PI*s);const left=-halfMouth-.045*bend+.018*Math.sin(s*8)*bend,right=halfMouth+.05*bend+.024*Math.sin(s*6)*bend;
   if(a<-halfMouth)a=mix(-Math.PI,left,(a+Math.PI)/(Math.PI-halfMouth));
   else if(a<=halfMouth)a=mix(left,right,(a+halfMouth)/(halfMouth*2));
   else a=mix(right,Math.PI,(a-halfMouth)/(Math.PI-halfMouth));
  }
- return surface(t,a);
+ return rawSurface(t,a);
 }
-function faceZ(x,y){const t=(y-.05)/bodyHeight,r=radius(t),xx=(x+.20*t)/r;return r*.68*Math.sqrt(Math.max(.05,1-xx*xx));}
+function faceZ(x,y){const t=(y-.05)/bodyHeight;return rawSurface(t,angleAtX(t,x)).z;}
 function patchGeometry(jaw=false,inside=false){
  const pos=[],indices=[];const start=jaw?-halfMouth:-Math.PI,end=jaw?halfMouth:Math.PI,nc=jaw?20:cols,nr=jaw?cutRow:rows;
- for(let r=0;r<=nr;r++){for(let c=0;c<=nc;c++){const p=slotSurface(r/rows,mix(start,end,c/nc));if(inside)p.z-=.15;pos.push(p.x,p.y,p.z);}}
+ for(let r=0;r<=nr;r++){for(let c=0;c<=nc;c++){const p=slotSurface(r/rows,mix(start,end,c/nc));if(inside)p.z=Math.min(p.z-.24,.72);pos.push(p.x,p.y,p.z);}}
  for(let r=0;r<nr;r++){for(let c=0;c<nc;c++){const angle=mix(start,end,(c+.5)/nc);if(!jaw&&r<cutRow&&Math.abs(angle)<halfMouth-.0001)continue;const a=r*(nc+1)+c,b=a+1,d=a+nc+2,cc=a+nc+1;indices.push(a,b,cc,b,d,cc);}}
  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(pos,3));geo.setIndex(indices);geo.computeVertexNormals();return geo;
 }
-const body=mesh(patchGeometry(),rockMaterial,puppet);body.name='Rocky';
-const base=mesh(new THREE.CircleGeometry(radius(0),64),rockMaterial,puppet);base.rotation.x=Math.PI/2;base.scale.y=.68;base.position.y=.05;
-// A rigid marionette jaw slides only on Y between two fixed, parallel side seams.
+// An inverted hull gives the stone a thick black outline from every camera angle.
+const outlineMaterial=new THREE.MeshBasicMaterial({color:0x171918,side:THREE.BackSide});
+outlineMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normal * 0.058;');};
+function outline(geometry,parent){const o=new THREE.Mesh(geometry,outlineMaterial);o.name='Black stone outline';parent.add(o);return o;}
+const bodyGeometry=patchGeometry();const body=mesh(bodyGeometry,rockMaterial,puppet);body.name='Rocky';outline(bodyGeometry,puppet);
+// The enlarged jaw keeps vertical marionette motion beneath gently curved, unstitched seams.
 const cavity=mesh(patchGeometry(true,true),dark,puppet);cavity.material.side=THREE.DoubleSide;
+for(const side of[-1,1]){
+ const points=[],indices=[];
+ for(let r=0;r<=cutRow;r++){const p=slotSurface(r/rows,side*halfMouth);points.push(p.x,p.y,p.z-.012,p.x,p.y,Math.min(p.z-.24,.72));if(r<cutRow){const a=r*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}}
+ const wall=new THREE.BufferGeometry();wall.setAttribute('position',new THREE.Float32BufferAttribute(points,3));wall.setIndex(indices);wall.computeVertexNormals();mesh(wall,dark,puppet);
+}
 const jaw=new THREE.Group();puppet.add(jaw);
-// The panel retracts into the rock base; its hidden lower end never protrudes through the garden.
-const jawFloor=new THREE.Plane(new THREE.Vector3(0,1,0),-.06);
-const jawMaterial=rockMaterial.clone();jawMaterial.onBeforeCompile=rockMaterial.onBeforeCompile;jawMaterial.clippingPlanes=[jawFloor];jawMaterial.clipShadows=true;
-mesh(patchGeometry(true),jawMaterial,jaw);
+// Close the jaw's shell so its rounded, projecting underside also gets a silhouette outline.
+function solidJawGeometry(){
+ const front=patchGeometry(true),positions=Array.from(front.attributes.position.array),indices=Array.from(front.index.array),count=front.attributes.position.count;
+ for(let i=0;i<count;i++)positions.push(positions[i*3],positions[i*3+1],positions[i*3+2]-.14);
+ const outerIndices=indices.slice();for(let i=0;i<outerIndices.length;i+=3)indices.push(outerIndices[i]+count,outerIndices[i+2]+count,outerIndices[i+1]+count);
+ const edge=[];for(let c=0;c<=20;c++)edge.push(c);for(let r=1;r<=cutRow;r++)edge.push(r*21+20);for(let c=19;c>=0;c--)edge.push(cutRow*21+c);for(let r=cutRow-1;r>0;r--)edge.push(r*21);
+ for(let i=0;i<edge.length;i++){const a=edge[i],b=edge[(i+1)%edge.length];indices.push(a,a+count,b,b,a+count,b+count);}
+ front.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));front.setIndex(indices);front.deleteAttribute('normal');front.computeVertexNormals();return front;
+}
+const jawGeometry=solidJawGeometry();const jawMaterial=rockMaterial.clone();jawMaterial.onBeforeCompile=rockMaterial.onBeforeCompile;mesh(jawGeometry,jawMaterial,jaw);outline(jawGeometry,jaw);
 const innerPoints=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));innerPoints.push(p);}
 const insidePositions=[];const insideIndices=[];
 for(let i=0;i<=30;i++){const p=innerPoints[i];insidePositions.push(p.x,p.y-.006,p.z,p.x,p.y-.006,p.z-.18);if(i<30){const a=i*2;insideIndices.push(a,a+1,a+2,a+1,a+3,a+2);}}
 const innerGeo=new THREE.BufferGeometry();innerGeo.setAttribute('position',new THREE.Float32BufferAttribute(insidePositions,3));innerGeo.setIndex(insideIndices);innerGeo.computeVertexNormals();const innerMat=dark.clone();innerMat.side=THREE.DoubleSide;mesh(innerGeo,innerMat,jaw);
-ball(jaw,tongueMat,[-.05,mouthTop+.002,trackDepth(-.05)-.09],[.22,.018,.07]);
+ball(jaw,tongueMat,[mouthCenter,mouthTop+.002,faceZ(mouthCenter,mouthTop)-.09],[.29,.018,.07]);
 const mouthLine=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));p.z+=.002;mouthLine.push(p);}tube(mouthLine,.008,dark,puppet);
 for(const side of[-1,1]){
- const seam=[];for(let i=0;i<=24;i++){const p=slotSurface(i/rows,side*halfMouth);p.z+=.008;seam.push(p);}tube(seam,.022,dark,puppet);
- // Tiny stitches make the hand-puppet construction visible up close.
- for(let i=4;i<22;i+=4){const p=slotSurface(i/rows,side*halfMouth);tube([[p.x-.045,p.y-.018,p.z+.018],[p.x+.045,p.y+.018,p.z+.018]],.008,mat(0x777968),puppet);}
+ const seam=[];for(let i=4;i<=cutRow;i++){const p=slotSurface(i/rows,side*halfMouth);p.z+=.009;seam.push(p);}tube(seam,.033,new THREE.MeshBasicMaterial({color:0x171918}),puppet);
 }
 // Fixed, open eyes: no blinking or eyelid scaling in any mood.
 for(const side of[-1,1]){
- const x=side*.54-.05,y=1.85+(side===-1?.045:0),z=faceZ(x,y)+.025;
+ const x=side*.57-.09,y=2.04+(side===-1?.045:0),z=faceZ(x,y)+.025;
  const eye=new THREE.Group();eye.position.set(x,y,z);eye.rotation.y=side*.15;puppet.add(eye);
  ball(eye,mat(0x101015,.25),[0,0,0],[.205,.235,.095]);
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
  ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
 }
 // A small red fabric bow tie sits below the jaw's full travel, attached to the stone.
-const bowTie=new THREE.Group();bowTie.name='Red bow tie';bowTie.position.set(mouthCenter,.29,trackDepth(mouthCenter)+.055);puppet.add(bowTie);
+const bowTie=new THREE.Group();bowTie.name='Red bow tie';bowTie.position.set(mouthCenter,.40,faceZ(mouthCenter,.40)+.065);jaw.add(bowTie);
 const ribbonMaterial=new THREE.MeshPhysicalMaterial({color:0xc71326,roughness:.76,sheen:.55,sheenColor:0xf04a53,sheenRoughness:.82});
 const wingShape=new THREE.Shape();
 wingShape.moveTo(.055,.065);
@@ -259,18 +272,17 @@ function render(){
  const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt;
  const eased=1-Math.exp(-dt*12);
  state.dusk=mix(state.dusk,state.env==='dusk'?1:0,1-Math.exp(-dt*2));sun.color.copy(dayLight).lerp(nightLight,state.dusk);sun.intensity=mix(3.3,1.65,state.dusk);hemi.color.copy(dayHemi).lerp(nightHemi,state.dusk);hemi.intensity=mix(2.1,1.2,state.dusk);fill.intensity=mix(1.5,2,state.dusk);warm.intensity=state.dusk*5;moteMat.opacity=mix(.55,.95,state.dusk);moteMat.size=mix(.024,.045,state.dusk);moteMat.color.set(state.dusk>.5?0xffdfa0:0xbeb98f);
- if(resetAnimation){state.yaw=mix(state.yaw,.12,eased*.5);state.pitch=mix(state.pitch,.3,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);if(Math.abs(state.yaw-.12)+Math.abs(state.pitch-.3)+Math.abs(state.zoom-1)<.005)resetAnimation=0;}
+ if(resetAnimation){state.yaw=mix(state.yaw,homeView.yaw,eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);if(Math.abs(state.yaw-homeView.yaw)+Math.abs(state.pitch-homeView.pitch)+Math.abs(state.zoom-1)<.005)resetAnimation=0;}
  const distance=(camera.aspect<.85?12.6:10.8)*state.zoom;
  camera.position.set(Math.sin(state.yaw)*Math.cos(state.pitch)*distance,cameraTarget.y+Math.sin(state.pitch)*distance,Math.cos(state.yaw)*Math.cos(state.pitch)*distance);camera.lookAt(cameraTarget);
  let mouthTarget=state.space?1:state.mouth;
  if(t<state.helloUntil)mouthTarget=Math.max(mouthTarget,.16+.7*Math.pow(Math.sin(t*10),2));
  if(state.mood==='sleepy'&&!reducedMotion)mouthTarget=Math.max(mouthTarget,Math.pow(Math.max(0,Math.sin(t*.6)),14)*.65);
- state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*.55;
+ state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*.48;
  const bounce=t<state.tapUntil&&!reducedMotion?Math.abs(Math.sin((state.tapUntil-t)*7))*.16:0;
- puppet.position.y=.54+bounce+(reducedMotion?0:Math.sin(t*1.65)*.012);
+ puppet.position.y=.54+state.jaw*.48+bounce+(reducedMotion?0:Math.sin(t*1.65)*.012);
  const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
  puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
- puppet.updateWorldMatrix(true,false);jawFloor.set(new THREE.Vector3(0,1,0),-.06).applyMatrix4(puppet.matrixWorld);
  plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});
  for(let i=0;i<moteSeeds.length;i++){const[a,r,y]=moteSeeds[i];motePositions[i*3]=Math.cos(a+(reducedMotion?0:t*.018))*r;motePositions[i*3+1]=.7+(y+(reducedMotion?0:t*.055))%3.6;motePositions[i*3+2]=Math.sin(a+(reducedMotion?0:t*.018))*r*.7;}
  moteGeo.attributes.position.needsUpdate=true;
