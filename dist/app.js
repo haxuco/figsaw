@@ -163,6 +163,24 @@ for(const side of[-1,1]){
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
  ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
 }
+// A small red fabric bow tie sits below the jaw's full travel, attached to the stone.
+const bowTie=new THREE.Group();bowTie.name='Red bow tie';bowTie.position.set(mouthCenter,.29,trackDepth(mouthCenter)+.055);puppet.add(bowTie);
+const ribbonMaterial=new THREE.MeshPhysicalMaterial({color:0xc71326,roughness:.76,sheen:.55,sheenColor:0xf04a53,sheenRoughness:.82});
+const wingShape=new THREE.Shape();
+wingShape.moveTo(.055,.065);
+wingShape.bezierCurveTo(.18,.085,.32,.185,.43,.19);
+wingShape.quadraticCurveTo(.49,.19,.485,.12);
+wingShape.bezierCurveTo(.47,.03,.50,-.075,.48,-.14);
+wingShape.quadraticCurveTo(.47,-.195,.40,-.175);
+wingShape.bezierCurveTo(.27,-.14,.15,-.07,.055,-.06);
+wingShape.closePath();
+const wingGeometry=new THREE.ExtrudeGeometry(wingShape,{depth:.055,bevelEnabled:true,bevelSize:.018,bevelThickness:.018,bevelSegments:3,steps:1,curveSegments:18});
+for(const side of[-1,1]){
+ const wing=mesh(wingGeometry,ribbonMaterial,bowTie);wing.scale.x=side;wing.rotation.y=-side*.10;
+ const creaseMaterial=mat(0x98101e,.9);
+ for(const fold of[-1,1])tube([[side*.09,fold*.026,.08],[side*.19,fold*.055,.087],[side*.34,fold*.11,.088]],.005,creaseMaterial,bowTie);
+}
+const knot=mesh(new THREE.SphereGeometry(1,24,16),ribbonMaterial,bowTie);knot.position.set(0,0,.07);knot.scale.set(.105,.12,.075);
 // Small rock companions and plants establish the miniature scale.
 const pebbleMat=mat(0xc8cbb7), darkPebble=mat(0xa1ad88);
 const rockSpecs=[[-2.1,.65,.65,.42,.28,.33],[2.12,.66,.48,.38,.26,.3],[-1.55,.61,1.54,.25,.17,.2],[1.62,.61,1.7,.32,.17,.2],[2.3,.62,-.8,.24,.18,.22],[-2.4,.61,-.5,.23,.18,.2],[.65,.61,1.93,.16,.12,.14]];
