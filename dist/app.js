@@ -90,7 +90,8 @@ rockMaterial.onBeforeCompile=(shader)=>{
  diffuseColor.rgb=mix(diffuseColor.rgb,paint.rgb*(.84+grain*.19),pigmentMask);
  `);
 };
-const dark=mat(0x201e22,.98), tongueMat=mat(0xc74568,.7);
+const dark=mat(0x201e22,.98), tongueMat=mat(0x702738,.98);
+const cavityMaterial=new THREE.MeshBasicMaterial({color:0x080609,side:THREE.DoubleSide});
 const garden=new THREE.Group();scene.add(garden);
 const islandProfile=[[0,-.05],[2.4,-.05],[2.91,.02],[3.12,.14],[3.17,.29],[3.09,.42],[2.92,.49],[0,.49]].map(p=>new THREE.Vector2(...p));
 const island=mesh(new THREE.LatheGeometry(islandProfile,96),mat(0xbaa784),garden);
@@ -111,7 +112,7 @@ const contact=new THREE.Mesh(new THREE.PlaneGeometry(9,7),new THREE.MeshBasicMat
 
 const puppet=new THREE.Group();puppet.position.set(0,.54,0);garden.add(puppet);
 const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=13*Math.PI*2/cols;
-const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight;
+const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight,maxMouthTravel=.12;
 function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
 function rawSurface(t,a){
  const r=radius(t),noise=1+.018*Math.sin(a*5+t*9)+.012*Math.cos(a*9-t*7);
@@ -141,13 +142,21 @@ const outlineMaterial=new THREE.MeshBasicMaterial({color:0x171918,side:THREE.Bac
 outlineMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normal * 0.058;');};
 function outline(geometry,parent){const o=new THREE.Mesh(geometry,outlineMaterial);o.name='Black stone outline';parent.add(o);return o;}
 const bodyGeometry=patchGeometry();const body=mesh(bodyGeometry,rockMaterial,puppet);body.name='Rocky';outline(bodyGeometry,puppet);
-// The enlarged jaw keeps vertical marionette motion beneath gently curved, unstitched seams.
-const cavity=mesh(patchGeometry(true,true),dark,puppet);cavity.material.side=THREE.DoubleSide;
-for(const side of[-1,1]){
- const points=[],indices=[];
- for(let r=0;r<=cutRow;r++){const p=slotSurface(r/rows,side*halfMouth);points.push(p.x,p.y,p.z-.012,p.x,p.y,Math.min(p.z-.24,.72));if(r<cutRow){const a=r*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}}
- const wall=new THREE.BufferGeometry();wall.setAttribute('position',new THREE.Float32BufferAttribute(points,3));wall.setIndex(indices);wall.computeVertexNormals();mesh(wall,dark,puppet);
+// The mouth is an opening in the stone. Its dark backing stays deep inside,
+// without dark walls following the projecting muzzle's outer surface.
+const cavity=mesh(patchGeometry(true,true),cavityMaterial,puppet);cavity.castShadow=false;
+function mouthInterior(parent,lower=false){
+ const positions=[],indices=[];
+ for(let i=0;i<=40;i++){
+  const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/40));
+  const y=p.y+(lower?-.008:.008);
+  positions.push(p.x,y,p.z-.075,p.x,y,.70);
+  if(i<40){const a=i*2;indices.push(a,a+1,a+2,a+1,a+3,a+2);}
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();
+ const interior=mesh(geo,cavityMaterial,parent);interior.castShadow=false;
 }
+mouthInterior(puppet);
 const jaw=new THREE.Group();puppet.add(jaw);
 // Close the jaw's shell so its rounded, projecting underside also gets a silhouette outline.
 function solidJawGeometry(){
@@ -159,11 +168,8 @@ function solidJawGeometry(){
  front.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));front.setIndex(indices);front.deleteAttribute('normal');front.computeVertexNormals();return front;
 }
 const jawGeometry=solidJawGeometry();const jawMaterial=rockMaterial.clone();jawMaterial.onBeforeCompile=rockMaterial.onBeforeCompile;mesh(jawGeometry,jawMaterial,jaw);outline(jawGeometry,jaw);
-const innerPoints=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));innerPoints.push(p);}
-const insidePositions=[];const insideIndices=[];
-for(let i=0;i<=30;i++){const p=innerPoints[i];insidePositions.push(p.x,p.y-.006,p.z,p.x,p.y-.006,p.z-.18);if(i<30){const a=i*2;insideIndices.push(a,a+1,a+2,a+1,a+3,a+2);}}
-const innerGeo=new THREE.BufferGeometry();innerGeo.setAttribute('position',new THREE.Float32BufferAttribute(insidePositions,3));innerGeo.setIndex(insideIndices);innerGeo.computeVertexNormals();const innerMat=dark.clone();innerMat.side=THREE.DoubleSide;mesh(innerGeo,innerMat,jaw);
-ball(jaw,tongueMat,[mouthCenter,mouthTop+.002,faceZ(mouthCenter,mouthTop)-.09],[.29,.018,.07]);
+mouthInterior(jaw,true);
+ball(jaw,tongueMat,[mouthCenter,mouthTop-.025,.83],[.25,.016,.055]);
 const mouthLine=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-halfMouth,halfMouth,i/30));p.z+=.002;mouthLine.push(p);}tube(mouthLine,.008,dark,puppet);
 for(const side of[-1,1]){
  const seam=[];for(let i=4;i<=cutRow;i++){const p=slotSurface(i/rows,side*halfMouth);p.z+=.009;seam.push(p);}tube(seam,.033,new THREE.MeshBasicMaterial({color:0x171918}),puppet);
@@ -175,6 +181,29 @@ for(const side of[-1,1]){
  ball(eye,mat(0x101015,.25),[0,0,0],[.205,.235,.095]);
  ball(eye,mat(0xf51528,.36),[0,0,.087],[.107,.125,.036]);
  ball(eye,mat(0x0a090c,.32),[0,0,.119],[.052,.065,.016]);
+}
+// Sculpted white brow ridges taper into the stone and project over the eyes.
+const browMaterial=mat(0xf8f6f0,.88);
+for(const side of[-1,1]){
+ const path=new THREE.CatmullRomCurve3([
+  new THREE.Vector3(-.09+side*.17,2.28,0),
+  new THREE.Vector3(-.09+side*.41,2.43,0),
+  new THREE.Vector3(-.09+side*.70,2.49,0),
+  new THREE.Vector3(-.09+side*1.02,2.36,0)
+ ]);
+ const positions=[],indices=[],segments=48,sides=16;
+ for(let i=0;i<=segments;i++){
+  const t=i/segments,p=path.getPoint(t),tangent=path.getTangent(t);
+  const taper=Math.pow(Math.sin(Math.PI*t),.55),width=.105*taper+.008,depth=.16*taper+.008;
+  for(let j=0;j<=sides;j++){
+   const a=j/sides*Math.PI*2,across=Math.sin(a)*width;
+   const x=p.x-tangent.y*across,y=p.y+tangent.x*across;
+   positions.push(x,y,faceZ(x,y)+.025+Math.cos(a)*depth);
+   if(i<segments&&j<sides){const v=i*(sides+1)+j;indices.push(v,v+sides+1,v+1,v+1,v+sides+1,v+sides+2);}
+  }
+ }
+ const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geo.setIndex(indices);geo.computeVertexNormals();
+ const brow=mesh(geo,browMaterial,puppet);brow.name=side===-1?'Left white eyebrow':'Right white eyebrow';
 }
 // A small red fabric bow tie sits below the jaw's full travel, attached to the stone.
 const bowTie=new THREE.Group();bowTie.name='Red bow tie';bowTie.position.set(mouthCenter,.40,faceZ(mouthCenter,.40)+.065);jaw.add(bowTie);
@@ -278,9 +307,9 @@ function render(){
  let mouthTarget=state.space?1:state.mouth;
  if(t<state.helloUntil)mouthTarget=Math.max(mouthTarget,.16+.7*Math.pow(Math.sin(t*10),2));
  if(state.mood==='sleepy'&&!reducedMotion)mouthTarget=Math.max(mouthTarget,Math.pow(Math.max(0,Math.sin(t*.6)),14)*.65);
- state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*.48;
+ state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  const bounce=t<state.tapUntil&&!reducedMotion?Math.abs(Math.sin((state.tapUntil-t)*7))*.16:0;
- puppet.position.y=.54+state.jaw*.48+bounce+(reducedMotion?0:Math.sin(t*1.65)*.012);
+ puppet.position.y=.54+state.jaw*maxMouthTravel+bounce+(reducedMotion?0:Math.sin(t*1.65)*.012);
  const tilt=state.mood==='curious'?.13:state.mood==='sleepy'?-.06:0;puppet.rotation.z=mix(puppet.rotation.z,tilt+(reducedMotion?0:Math.sin(t*.85)*.009),eased*.25);
  puppet.rotation.y=mix(puppet.rotation.y,state.mood==='curious'?Math.sin(t*.65)*.16:0,eased*.3);
  plants.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.035;});flowers.forEach((p,i)=>{p.rotation.z=reducedMotion?0:Math.sin(t*1.4+i)*.045;});
