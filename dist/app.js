@@ -11,15 +11,15 @@ renderer.shadowMap.enabled=true;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure=1.05;
+renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
 const camera=new THREE.PerspectiveCamera(58,1,.06,35);
 const cameraTarget=new THREE.Vector3(0,1.30,-1.80);
-const hemi=new THREE.HemisphereLight(0xc1c9b7,0x646a59,1.55);scene.add(hemi);
-const fluorescent=new THREE.SpotLight(0xd1dfb9,34,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
+const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
+const fluorescent=new THREE.SpotLight(0xc4d2b0,14,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
 fluorescent.shadow.mapSize.set(2048,2048);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.015;fluorescent.shadow.bias=-.00015;scene.add(fluorescent,fluorescent.target);
-const windowLight=new THREE.DirectionalLight(0xaec4b9,2.6);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=true;windowLight.shadow.mapSize.set(2048,2048);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.012;windowLight.shadow.bias=-.0002;scene.add(windowLight,windowLight.target);
-const doorwayLight=new THREE.PointLight(0xa6b79b,12,10,2);doorwayLight.position.set(-1,2.6,4.0);scene.add(doorwayLight);
+const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=true;windowLight.shadow.mapSize.set(2048,2048);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.012;windowLight.shadow.bias=-.0002;scene.add(windowLight,windowLight.target);
+const doorwayLight=new THREE.PointLight(0x8ea6a4,2.2,10,2);doorwayLight.position.set(-1,2.6,4.0);scene.add(doorwayLight);
 
 const mix=THREE.MathUtils.lerp;
 function mat(color,roughness=.9){ return new THREE.MeshStandardMaterial({color,roughness}); }
@@ -311,8 +311,8 @@ document.addEventListener('keydown',event=>{
   event.preventDefault();resetting=false;
   if(event.code==='ArrowLeft')state.yaw=THREE.MathUtils.clamp(state.yaw+.08,-.46,.46);
   if(event.code==='ArrowRight')state.yaw=THREE.MathUtils.clamp(state.yaw-.08,-.46,.46);
-  if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-.13,.27);
-  if(event.code==='ArrowDown')state.pitch=THREE.MathUtils.clamp(state.pitch-.05,-.13,.27);
+  if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,.04,.27);
+  if(event.code==='ArrowDown')state.pitch=THREE.MathUtils.clamp(state.pitch-.05,.04,.27);
  }
 });
 document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
@@ -325,7 +325,7 @@ canvas.addEventListener('pointerdown',event=>{
 canvas.addEventListener('pointermove',event=>{
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
- state.yaw=THREE.MathUtils.clamp(state.yaw-dx*.004,-.46,.46);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-.13,.27);lastPointer={x:event.clientX,y:event.clientY};
+ state.yaw=THREE.MathUtils.clamp(state.yaw-dx*.004,-.46,.46);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,.04,.27);lastPointer={x:event.clientX,y:event.clientY};
 });
 canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
@@ -338,7 +338,7 @@ canvas.addEventListener('pointerup',event=>{
 });
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.55,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 function resize(){
  const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
