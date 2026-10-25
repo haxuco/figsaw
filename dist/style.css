@@ -1,4 +1,4 @@
-@font-face{font-family:"Grenze Gotisch";src:url("./fonts/grenze-gotisch.woff") format("woff");font-style:normal;font-weight:100 900;font-display:swap}
+@font-face{font-family:"Grenze Gotisch";src:url("./fonts/grenze-gotisch-latin.woff") format("woff");font-style:normal;font-weight:100 900;font-display:swap}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene{display:block;width:100%;height:100%;outline:none;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent}
 #scene:active{cursor:grabbing}
@@ -67,3 +67,12 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #loading-status{position:fixed;inset:0;z-index:30;display:grid;place-items:center;margin:0;background:#161d18;color:#bec8b9;font:14px Georgia,serif;pointer-events:none}
 
 #scene.over-saw:not(:active){cursor:pointer}
+
+#loading-status[hidden]{display:none}
+#loading-status button{pointer-events:auto;background:#252d26;color:#e6e6dd;border:1px solid #667263;border-radius:6px;padding:12px 16px;cursor:pointer}
+
+#touch-navigation{display:none;position:fixed;bottom:max(12px,env(safe-area-inset-bottom));left:max(12px,env(safe-area-inset-left));z-index:12;font:12px system-ui}
+#touch-navigation button{border:1px solid #69726366;background:#101710bf;color:#cad1c5;border-radius:7px;min-width:44px;min-height:44px;padding:8px;touch-action:none}
+#touch-navigation .touch-pad{display:grid;grid-template-columns:repeat(3,44px);gap:5px;margin-top:6px}
+#touch-navigation .touch-pad[hidden]{display:none}
+@media(pointer:coarse),(max-width:700px){#touch-navigation{display:block}#chain-menu button{min-height:48px}#copy-view{min-height:36px}.mug-impact #touch-navigation{display:none}}

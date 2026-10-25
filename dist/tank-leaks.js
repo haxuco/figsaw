@@ -13,6 +13,8 @@ export function createTankLeaks({valves,floorSupport}){
  function corrosionMaterial(original){
   if(materialCopies.has(original))return materialCopies.get(original);
   const copy=original.clone(),before=original.onBeforeCompile,cache=original.customProgramCacheKey();
+  // Keep animated screen fades attached after adding corrosion to the closed lid.
+  if(original.color)copy.color=original.color;if(original.emissive)copy.emissive=original.emissive;
   copy.onBeforeCompile=shader=>{
    before.call(original,shader);shader.uniforms.acidBurn=burnUniform;
    shader.vertexShader='varying vec3 vAcidWorld;\n'+shader.vertexShader;
@@ -40,7 +42,7 @@ export function createTankLeaks({valves,floorSupport}){
     bounds.setFromObject(object);
     if(bounds.min.y<.40&&bounds.max.y>-.01){
      if(bounds.max.y>.02&&bounds.max.y<.65)contactBounds.push(bounds.clone());
-     const convert=mat=>mat.isMeshStandardMaterial||mat.isMeshBasicMaterial||mat.isMeshToonMaterial?corrosionMaterial(mat):mat;
+     const convert=mat=>mat.isMeshStandardMaterial||mat.isMeshLambertMaterial||mat.isMeshPhongMaterial||mat.isMeshBasicMaterial||mat.isMeshToonMaterial?corrosionMaterial(mat):mat;
      object.material=Array.isArray(object.material)?object.material.map(convert):convert(object.material);
     }
    }

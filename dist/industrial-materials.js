@@ -23,7 +23,7 @@ export function weatheredMetal(color=0xffffff){
   const roughnessMap=properties,metalnessMap=properties,bumpMap=properties;
   cachedMetal={map,roughnessMap,metalnessMap,bumpMap};
  }
- return new THREE.MeshStandardMaterial({color,...cachedMetal,roughness:1,metalness:1,bumpScale:.0035,envMapIntensity:.7});
+ return new THREE.MeshStandardMaterial({color,...cachedMetal,roughness:1,metalness:1,bumpScale:quality.mobile?0:.0035,envMapIntensity:.7});
 }
 export function createTankMaterials(){
  const grimeField=(u,v)=>{
@@ -38,12 +38,12 @@ export function createTankMaterials(){
  const hazeMap=pixels((u,v,x,y)=>{const {dirt,fog,runs,scale,tide}=grimeField(u,v),droplet=Math.pow(noise(u*105,v*69),12)*.65,k=(y*quality.textureSize+x)*2;packed[k]=.4+dirt*.10+runs*.09+scale*.025+droplet;packed[k+1]=.08+fog*.36+dirt*.43+runs*.10;return [.59-dirt*.30,.63-dirt*.30,.48-dirt*.30,clamp(.03+fog*.23+dirt*.55+tide*.12+scale*.025)];},quality.textureSize,true);
  const glassBump=pixels((u,v,x,y)=>{const k=(y*quality.textureSize+x)*2;return [packed[k],packed[k+1],0];});
  const roughnessMap=glassBump;
- const glass=new THREE.MeshPhysicalMaterial({color:0xdde4cd,roughness:.7,roughnessMap,metalness:0,transparent:true,opacity:.17,depthWrite:false,clearcoat:1,clearcoatRoughness:.14,bumpMap:glassBump,bumpScale:.003,side:THREE.DoubleSide,envMapIntensity:.85});
- const haze=new THREE.MeshStandardMaterial({map:hazeMap,roughness:.9,bumpMap:glassBump,bumpScale:.002,transparent:true,depthWrite:false,side:THREE.DoubleSide});
+ const glass=new THREE.MeshPhysicalMaterial({color:0xdde4cd,roughness:.7,roughnessMap,metalness:0,transparent:true,opacity:.17,depthWrite:false,clearcoat:quality.mobile?0:1,clearcoatRoughness:.14,bumpMap:quality.mobile?null:glassBump,bumpScale:.003,side:quality.mobile?THREE.FrontSide:THREE.DoubleSide,envMapIntensity:.85});
+ const haze=new THREE.MeshStandardMaterial({map:hazeMap,roughness:.9,bumpMap:quality.mobile?null:glassBump,bumpScale:.002,transparent:true,depthWrite:false,side:quality.mobile?THREE.FrontSide:THREE.DoubleSide});
  const waterMap=pixels((u,v)=>{const n=grain(u+11,v+7),m=noise(u*12,v*9);return [.11+n*.19,.24+n*.35,.026+m*.08];},quality.textureSize/2,true);
  const sedimentMap=pixels((u,v)=>{const n=grain(u+5,v+3),s=smooth(v);return [.10+n*.12+s*.06,.17+n*.22+s*.12,.025+n*.055,.93-s*.43];},quality.textureSize/2,true);
- const fluid=new THREE.MeshPhysicalMaterial({map:sedimentMap,color:0xc9db91,roughness:.26,transparent:true,opacity:.76,depthWrite:false,side:THREE.DoubleSide,emissive:0x1e3b05,emissiveIntensity:.48,envMapIntensity:.35});
- const liquidTop=new THREE.MeshPhysicalMaterial({map:waterMap,color:0xffffff,roughness:.17,metalness:0,ior:1.333,clearcoat:1,clearcoatRoughness:.12,side:THREE.DoubleSide,emissive:0x243b07,emissiveIntensity:.30,envMapIntensity:1.15});
+ const fluid=new THREE.MeshPhysicalMaterial({map:sedimentMap,color:0xc9db91,roughness:.26,transparent:true,opacity:.76,depthWrite:false,side:quality.mobile?THREE.FrontSide:THREE.DoubleSide,emissive:0x1e3b05,emissiveIntensity:.48,envMapIntensity:.35});
+ const liquidTop=new THREE.MeshPhysicalMaterial({map:waterMap,color:0xffffff,roughness:.17,metalness:0,ior:1.333,clearcoat:quality.mobile?0:1,clearcoatRoughness:.12,side:quality.mobile?THREE.FrontSide:THREE.DoubleSide,emissive:0x243b07,emissiveIntensity:.30,envMapIntensity:1.15});
  // Slow advecting currents in the colour map; geometric waves supply moving normals.
  const waterTime={value:0};
  liquidTop.onBeforeCompile=shader=>{shader.uniforms.waterTime=waterTime;shader.fragmentShader='uniform float waterTime;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP
@@ -52,7 +52,7 @@ export function createTankMaterials(){
  #endif`);};
  liquidTop.customProgramCacheKey=()=> 'slow-water-currents-v1';
  const foam=new THREE.MeshStandardMaterial({color:0x91a96a,roughness:.79,transparent:true,opacity:.75,depthWrite:false,emissive:0x263209,emissiveIntensity:.12});
- const bubble=new THREE.MeshPhysicalMaterial({color:0xc7db99,roughness:.07,metalness:0,transparent:true,opacity:.23,depthWrite:false,clearcoat:1,clearcoatRoughness:.04,envMapIntensity:1.25});
- const ripple=new THREE.MeshBasicMaterial({color:0xbed18a,transparent:true,opacity:.18,depthWrite:false,side:THREE.DoubleSide});
+ const bubble=new THREE.MeshPhysicalMaterial({color:0xc7db99,roughness:.07,metalness:0,transparent:true,opacity:.23,depthWrite:false,clearcoat:quality.mobile?0:1,clearcoatRoughness:.04,envMapIntensity:1.25});
+ const ripple=new THREE.MeshBasicMaterial({color:0xbed18a,transparent:true,opacity:.18,depthWrite:false,side:quality.mobile?THREE.FrontSide:THREE.DoubleSide});
  return {glass,haze,fluid,liquidTop,foam,bubble,ripple,waterTime};
 }

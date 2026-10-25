@@ -1,3 +1,5 @@
+import {renderQuality as quality} from './render-quality.js';
+import {batchStaticScenery} from './static-batching.js';
 import * as THREE from './vendor/three.module.js';
 import { createCountdownClock, formatCountdown } from './countdown-clock.js';
 
@@ -41,7 +43,7 @@ export function createFloorTimer(viewerPosition,position){
  const patterns=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
  const positions={a:[0,.058,0],b:[.036,.029,1],c:[.036,-.029,1],d:[0,-.058,0],e:[-.036,-.029,1],f:[-.036,.029,1],g:[0,0,0]};
  const digits=[];
- for(const x of[-.187,-.081,.081,.187]){
+ for(const x of quality.mobile?[]:[-.187,-.081,.081,.187]){
   const digit=new THREE.Group();digit.position.set(x,-.005,.106);caseGroup.add(digit);const segments=[];
   for(const [key,[sx,sy,vertical]] of Object.entries(positions)){
    const segment=mesh(segmentGeometry,unlit,digit);segment.position.set(sx,sy,0);segment.rotation.z=vertical?Math.PI/2:0;segment.scale.x=vertical?.76:1;segment.castShadow=false;
@@ -52,11 +54,25 @@ export function createFloorTimer(viewerPosition,position){
  }
  for(const y of[-.025,.015]){const dot=mesh(new THREE.CircleGeometry(.005,16),lit);dot.position.set(0,y,.106);dot.castShadow=false;}
  const spill=new THREE.PointLight(0xff1a08,.12,.70,2);spill.position.set(0,.06,.16);caseGroup.add(spill);
+ // One texture replaces 56 separate LED/glow meshes on phones; redraw once a second.
+ let mobileDisplay=null,mobilePaint=null,mobileMap=null;
+ if(quality.mobile){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=160;mobilePaint=canvas.getContext('2d');mobileMap=new THREE.CanvasTexture(canvas);mobileMap.colorSpace=THREE.SRGBColorSpace;mobileMap.generateMipmaps=false;mobileMap.minFilter=THREE.LinearFilter;
+ mobileDisplay=mesh(new THREE.PlaneGeometry(.46,.136),new THREE.MeshBasicMaterial({map:mobileMap,toneMapped:false}));mobileDisplay.position.set(0,-.005,.108);mobileDisplay.castShadow=false;spill.visible=false;}
+ batchStaticScenery(group,{minObjects:2,exclude:[...caseGroup.children.filter(c=>c.isGroup),mobileDisplay],dispose:false});
  let lastSeconds=-1;
  function update(){
   const seconds=clock.remainingSeconds;
   if(seconds!==lastSeconds){
    const text=formatCountdown(seconds).replace(':','');
+   if(mobilePaint){
+    const ctx=mobilePaint;ctx.fillStyle='#100302';ctx.fillRect(0,0,512,160);ctx.shadowColor='#ff1907';
+    [-.187,-.081,.081,.187].forEach((x,i)=>{const active=patterns[Number(text[i])];
+     for(const[key,[sx,sy,vertical]]of Object.entries(positions)){
+      const on=active.includes(key);ctx.save();ctx.translate(256+(x+sx)*1050,85-sy*1050);ctx.scale(1050,-1050);if(vertical)ctx.rotate(Math.PI/2);ctx.scale(vertical?.76:1,1);
+      ctx.beginPath();ctx.moveTo(-length/2,0);ctx.lineTo(-length/2+b,thickness/2);ctx.lineTo(length/2-b,thickness/2);ctx.lineTo(length/2,0);ctx.lineTo(length/2-b,-thickness/2);ctx.lineTo(-length/2+b,-thickness/2);ctx.closePath();ctx.fillStyle=on?'#ff3928':'#230705';ctx.shadowBlur=on?7:0;ctx.fill();ctx.restore();
+     }
+    });ctx.fillStyle='#ff3928';for(const y of[65,105]){ctx.beginPath();ctx.arc(256,y,4,0,Math.PI*2);ctx.fill();}ctx.shadowBlur=0;mobileMap.needsUpdate=true;
+   }
    digits.forEach((segments,i)=>{const pattern=patterns[Number(text[i])];for(const part of segments){const on=pattern.includes(part.key);part.segment.material=on?lit:unlit;part.glow.visible=on;}});
    lastSeconds=seconds;
   }

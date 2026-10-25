@@ -5,7 +5,7 @@ import {createMacBookAdapter,createPowerStrip,createMainsLeadGeometry} from './c
 
 export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  const group=new THREE.Group();group.name='Interactive MacBook charging kit';group.userData.ignoreAcid=true;
- const rearBounce=new THREE.PointLight(0xa4b4a5,1.5,2.8,2);rearBounce.position.set(1.55,1.25,3.25);group.add(rearBounce);
+ const rearBounce=new THREE.PointLight(0xa4b4a5,1.5,2.8,2);rearBounce.position.set(1.55,1.25,3.25);rearBounce.userData.mobileEssential=true;group.add(rearBounce);
  const state=createChargingState(),ivory=new THREE.MeshStandardMaterial({color:0xd9d4c4,roughness:.51}),white=new THREE.MeshStandardMaterial({color:0xe6e3d9,roughness:.42}),rubber=new THREE.MeshStandardMaterial({color:0x252821,roughness:.88}),metal=new THREE.MeshStandardMaterial({color:0x8a9595,roughness:.4,metalness:.7});
  const cableMaterial=white.clone(),burnPoint={value:new THREE.Vector3()},burnAmount={value:0};
  cableMaterial.onBeforeCompile=shader=>{

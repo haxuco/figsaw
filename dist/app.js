@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {renderQuality as quality} from './render-quality.js';
+import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
 import {batchStaticScenery} from './static-batching.js';
 import {createRoomReflections} from './room-reflections.js';
 import {createPerformanceReport} from './performance-report.js';
@@ -17,6 +17,12 @@ import { createSawTrap } from './saw-trap.js';
 import { createMugImpactOverlay } from './mug-impact.js';
 import { createMugTrap } from './mug-trap.js?v=locked-mug';
 
+import {createTouchNavigation} from './touch-navigation.js';
+import {createContactShadows} from './contact-shadows.js';
+import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
+import {installGraphicsRecovery} from './graphics-recovery.js';
+const loadingStatus=document.querySelector('#loading-status');
+const yieldStartup=async message=>{if(loadingStatus)loadingStatus.textContent=message;await new Promise(resolve=>setTimeout(resolve,0));};
 const canvas=document.querySelector('#scene');
 const initialCanvasDescription=canvas.getAttribute('aria-label');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -25,10 +31,10 @@ const homePosition=new THREE.Vector3(...homeCamera.position);
 const homeDirection=new THREE.Vector3(...homeCamera.lookAt).sub(homePosition).normalize();
 const homeView={yaw:Math.atan2(-homeDirection.x,-homeDirection.z),pitch:Math.asin(homeDirection.y)};
 const state={yaw:homeView.yaw,pitch:homeView.pitch,zoom:1,jaw:0,space:false,time:0,talkUntil:0};
-const renderer=new THREE.WebGLRenderer({canvas,antialias:!quality.mobile,alpha:false,powerPreference:'high-performance'});
+const renderer=new THREE.WebGLRenderer({canvas,antialias:!quality.mobile,alpha:false,powerPreference:quality.mobile?'default':'high-performance'});
 renderer.setPixelRatio(quality.pixelRatio);
 renderer.localClippingEnabled=true;
-renderer.shadowMap.enabled=true;
+renderer.shadowMap.enabled=quality.shadows;
 renderer.shadowMap.autoUpdate=false;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
@@ -40,22 +46,22 @@ const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
 const arrivalCameraMove=createArrivalCameraMove(homeCamera.fov);
 const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDirection=new THREE.Vector3();
-const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
+const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);hemi.userData.mobileEssential=true;scene.add(hemi);
 const fluorescentPower=17.5;
-const fluorescent=new THREE.SpotLight(0xc4d2b0,fluorescentPower,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
-fluorescent.shadow.mapSize.set(quality.shadowSize,quality.shadowSize);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.0025;fluorescent.shadow.bias=-.00005;scene.add(fluorescent,fluorescent.target);
-const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=!quality.mobile;windowLight.shadow.mapSize.set(1024,1024);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.003;windowLight.shadow.bias=-.00006;scene.add(windowLight,windowLight.target);
+const fluorescent=new THREE.SpotLight(0xc4d2b0,fluorescentPower,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=quality.shadows;
+fluorescent.shadow.mapSize.set(quality.shadowSize,quality.shadowSize);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.0025;fluorescent.shadow.bias=-.00005;fluorescent.userData.mobileEssential=true;scene.add(fluorescent,fluorescent.target);
+const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=!quality.mobile;windowLight.shadow.mapSize.set(1024,1024);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.003;windowLight.shadow.bias=-.00006;windowLight.userData.mobileEssential=true;scene.add(windowLight,windowLight.target);
 const doorwayLight=new THREE.PointLight(0x8ea6a4,2.2,10,2);doorwayLight.position.set(-1,2.6,4.0);scene.add(doorwayLight);
 
 const mix=THREE.MathUtils.lerp;
-function mat(color,roughness=.9){ return new THREE.MeshStandardMaterial({color,roughness}); }
+function mat(color,roughness=.9){ return quality.mobile?new THREE.MeshLambertMaterial({color}):new THREE.MeshStandardMaterial({color,roughness}); }
 function mesh(geometry,material,parent=scene){const m=new THREE.Mesh(geometry,material);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
-function ball(parent,color,position,scale,detail=3){const m=mesh(new THREE.IcosahedronGeometry(1,detail),typeof color==='string'||typeof color==='number'?mat(color):color,parent);m.position.set(...position);m.scale.set(...scale);return m;}
-function tube(points,radius,material,parent,closed=false){const c=new THREE.CatmullRomCurve3(points.map(p=>p.isVector3?p:new THREE.Vector3(...p)),closed);return mesh(new THREE.TubeGeometry(c,Math.max(24,points.length*2),radius,8,closed),material,parent);}
+function ball(parent,color,position,scale,detail=3){const m=mesh(new THREE.IcosahedronGeometry(1,quality.mobile?Math.min(detail,2):detail),typeof color==='string'||typeof color==='number'?mat(color):color,parent);m.position.set(...position);m.scale.set(...scale);return m;}
+function tube(points,radius,material,parent,closed=false){const c=new THREE.CatmullRomCurve3(points.map(p=>p.isVector3?p:new THREE.Vector3(...p)),closed);return mesh(new THREE.TubeGeometry(c,Math.max(quality.mobile?12:24,points.length*2),radius,quality.mobile?5:8,closed),material,parent);}
 
 // Rough lipstick pigment follows the stone, including the subtly raised cheeks.
 function lipstickTexture(){
- const c=document.createElement('canvas');c.width=c.height=1024;const ctx=c.getContext('2d');
+ const c=document.createElement('canvas');c.width=c.height=quality.mobile?512:1024;const ctx=c.getContext('2d');
  let brushSeed=2718;const rand=()=>{brushSeed=(brushSeed*1664525+1013904223)>>>0;return brushSeed/4294967296;};
  const project=([x,y])=>[(x+2)/4*c.width,(1-y/3)*c.height];
  function stroke(points,width,colors=['rgba(211,12,57,.66)','rgba(227,17,62,.50)']){
@@ -84,7 +90,7 @@ function lipstickTexture(){
  ctx.globalCompositeOperation='destination-out';
  for(let i=0;i<14000;i++){ctx.fillStyle=`rgba(0,0,0,${.08+rand()*.48})`;const x=rand()*c.width,y=rand()*c.height;ctx.fillRect(x,y,.35+rand()*1.2,.4+rand()*1.8);}
  for(let i=0;i<1600;i++){ctx.strokeStyle=`rgba(0,0,0,${.05+rand()*.17})`;ctx.lineWidth=.4+rand()*.7;const x=rand()*c.width,y=rand()*c.height;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2+rand()*6,y+rand()*2-1);ctx.stroke();}
- const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=renderer.capabilities.getMaxAnisotropy();return texture;
+ const texture=new THREE.CanvasTexture(c);texture.colorSpace=THREE.SRGBColorSpace;texture.anisotropy=Math.min(quality.mobile?2:8,renderer.capabilities.getMaxAnisotropy());return texture;
 }
 const pigment=lipstickTexture();
 // Sculpted stone and moss remain procedural beneath the flat lipstick pigment.
@@ -216,7 +222,7 @@ ball(tricycle,chrome,[-.47,2.76,1.45],[.085,.055,.085]);
 rod(tricycle,[-.47,2.75,1.45],[-.57,2.77,1.45],.016,rubber);
 const riderScale=.72,riderSeatY=2.08;
 const puppet=new THREE.Group();puppet.scale.setScalar(riderScale);puppet.position.set(0,riderSeatY,-.45);model.add(puppet);
-const bodyHeight=2.8,rows=64,cols=160,cutRow=32,halfMouth=8*Math.PI*2/cols;
+const bodyHeight=2.8,rows=quality.mobile?32:64,cols=quality.mobile?80:160,cutRow=rows/2,halfMouth=Math.PI/10;
 const mouthCenter=-.13,mouthTop=.05+cutRow/rows*bodyHeight,maxMouthTravel=.12;
 function radius(t){return 2.05*Math.pow(Math.max(0,Math.sin(Math.PI*t)),.40)*(1.19-.45*t);}
 function rawSurface(t,a){
@@ -381,8 +387,10 @@ function updateEntrance(time){
 }
 updateEntrance(0);
 profiler.mark('characterBuilt');
-const {group:office,laptop,catMug,handsaw,acidLeaks,chargingKit,fireHazard,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
+await yieldStartup('Building the office…');
+const {group:office,laptop,catMug,handsaw,acidLeaks,chargingKit,fireHazard,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=await createOffice(renderer,homePosition,yieldStartup);scene.add(office);
 profiler.mark('officeBuilt');
+await yieldStartup('Preparing the room…');
 const restraint=createPlayerRestraint(camera,{canDetach:()=>ketchupKey.hasKey});scene.add(restraint.group);
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
 const drawerCamera=createDrawerCamera({position:cameraPosition,state,getView:chargingKit.getDrawerView});
@@ -404,8 +412,14 @@ const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpal
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 const displayEnvironment=createRoomReflections(renderer);
 setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);
+applySceneBudget(scene);
 acidLeaks.bindTargets([office,model]);
-batchStaticScenery(office,{exclude:[laptop.object,catMug,handsaw,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group]});
+for(const rigid of[...spinningWheels,...pedalPlatforms,bowTie])batchStaticScenery(rigid,{minObjects:2,dispose:false});
+batchStaticScenery(crank,{exclude:pedalPlatforms,minObjects:2,dispose:false});
+batchStaticScenery(tricycle,{exclude:[...spinningWheels,crank],minObjects:2,dispose:false});
+batchStaticScenery(office,{exclude:[laptop.object,catMug,handsaw,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group],minObjects:2,palette:quality.mobile});
+const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
+useMobileMaterials(scene);
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
  if(!entranceArrived||finale.active){arrivalDialogue.hidden=true;return;}
@@ -416,7 +430,7 @@ function updateArrivalDialogue(time){
  const horizontalMargin=Math.min(.7,.40/(camera.position.distanceTo(dialogueAnchor)*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect));
  if(dialogueProjection.z<-1||dialogueProjection.z>1||Math.abs(dialogueProjection.x)>1+horizontalMargin||Math.abs(dialogueProjection.y)>1){arrivalDialogue.hidden=true;return;}
  if(time>=nextDialogueVisibilityCheck){
-  nextDialogueVisibilityCheck=time+.12;
+  nextDialogueVisibilityCheck=time+(quality.mobile?.4:.12);
   dialogueDirection.copy(dialogueAnchor).sub(camera.position);const distance=dialogueDirection.length();
   dialogueRay.set(camera.position,dialogueDirection.normalize());dialogueRay.near=.06;dialogueRay.far=Math.max(.06,distance-.035);
   dialogueOccluded=dialogueRay.intersectObject(office,true).length>0;
@@ -597,6 +611,7 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('keyup',event=>{pressedKeys.delete(event.code);if(event.code==='Space')state.space=false;});
 window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
+createTouchNavigation({canvas,state,keys:pressedKeys,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;},canInteract:()=>!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
  if(mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
@@ -671,23 +686,24 @@ copyViewButton.addEventListener('click',async()=>{
 });
 document.querySelector('#close-copy').addEventListener('click',()=>{copyFallback.hidden=true;copyViewButton.focus();});
 
+let requestedPixelRatio=quality.pixelRatio;
 function resize(){
  const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
- renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=homeCamera.fov*state.zoom;camera.updateProjectionMatrix();
+ renderer.setPixelRatio(drawingPixelRatio(quality,width,height,requestedPixelRatio));renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=homeCamera.fov*state.zoom;camera.updateProjectionMatrix();
 }
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
-let sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
-function scheduleFrame(){if(sceneReady&&!frameRequest&&!document.hidden)frameRequest=requestAnimationFrame(render);}
+let contextLost=false,sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
+function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.hidden)frameRequest=requestAnimationFrame(render);}
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
- frameRequest=0;if(document.hidden)return;
+ frameRequest=0;if(document.hidden||contextLost)return;
  if(gameEnded){clock.getDelta();return;}
  const cpuStart=performance.now();
  const frameInterval=lastRenderAt?cpuStart-lastRenderAt:0;
  if(lastRenderAt&&frameInterval<1000/quality.maxFps-1){scheduleFrame();return;}
  lastRenderAt=cpuStart;
- const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt,eased=1-Math.exp(-dt*12);
+ const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(resetting){
   state.yaw=wrapAngle(state.yaw+wrapAngle(homeView.yaw-state.yaw)*eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
   cameraPosition.lerp(homePosition,eased*.5);
@@ -695,7 +711,7 @@ function render(){
    state.yaw=homeView.yaw;state.pitch=homeView.pitch;state.zoom=1;cameraPosition.copy(homePosition);resetting=false;
   }
  }
- updateEntrance(t);
+ updateEntrance(t);contactShadows?.update();
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
@@ -767,15 +783,23 @@ function render(){
   previousEyeRotation.copy(eye.quaternion);eye.lookAt(gazeTarget);
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
- if(t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
+ if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
  renderer.render(scene,camera);updateArrivalDialogue(t);hangingPleas.update(t,finale.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
-  if(frameSamples>30&&slowFrames/frameSamples>.65&&renderer.getPixelRatio()>quality.minPixelRatio){renderer.setPixelRatio(Math.max(quality.minPixelRatio,renderer.getPixelRatio()-.25));resize();}
+  if(frameSamples>30&&slowFrames/frameSamples>.65&&requestedPixelRatio>quality.minPixelRatio){requestedPixelRatio=Math.max(quality.minPixelRatio,requestedPixelRatio-.2);resize();}
   lastQualityCheck=t;slowFrames=0;frameSamples=0;
  }
  scheduleFrame();
 }
-renderer.compileAsync(scene,camera).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();document.querySelector('#loading-status')?.remove();}).catch(error=>{console.error(error);const status=document.querySelector('#loading-status');if(status)status.textContent='The room could not load. Please reload to try again.';});
-canvas.addEventListener('webglcontextlost',event=>event.preventDefault());
-canvas.addEventListener('webglcontextrestored',()=>location.reload());
+await yieldStartup('Warming up the lights…');
+camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera.lookAt));camera.updateMatrixWorld(true);
+// On phones compile only what the first render actually uses. Precompiling the
+// entire scene also compiles hidden traps/skeletons and duplicates clipping variants.
+(quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();loadingStatus.hidden=true;}).catch(error=>{console.error(error);const status=document.querySelector('#loading-status');if(status)status.textContent='The room could not load. Please reload to try again.';});
+installGraphicsRecovery(canvas,{
+ status:loadingStatus,
+ pause(){contextLost=true;cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},
+ lowerQuality(){renderer.shadowMap.enabled=false;requestedPixelRatio=Math.min(requestedPixelRatio,.6);resize();},
+ resume(){contextLost=false;lastRenderAt=0;clock.getDelta();scheduleFrame();}
+});

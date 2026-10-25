@@ -1,3 +1,4 @@
+import {renderQuality as quality} from './render-quality.js';
 import * as THREE from './vendor/three.module.js';
 import {weatheredMetal} from './industrial-materials.js?v=brighter-liquid';
 import {createRestraintState} from './restraint-state.js?v=key-lock';
@@ -8,7 +9,7 @@ const UP=new THREE.Vector3(0,1,0);
 export function createPlayerRestraint(camera,options={}){
  const group=new THREE.Group();group.name='Player forearm chained to the rear pipes';
  const space=new THREE.Group();space.name='Camera-relative reaching hand';group.add(space);
- const state=createRestraintState(options),sphere=new THREE.SphereGeometry(1,24,16);
+ const state=createRestraintState(options),sphere=new THREE.SphereGeometry(1,quality.mobile?12:24,quality.mobile?8:16);
  // Rounded proportions and a fine ink edge match the character, with smooth
  // matte shading so the arm reads as a volume rather than a faceted stick.
  const skin=new THREE.MeshStandardMaterial({color:0xd3aa87,roughness:.86,metalness:0,emissive:0x684333,emissiveIntensity:.025});
@@ -100,9 +101,9 @@ export function createPlayerRestraint(camera,options={}){
  const pipeAnchor=new THREE.Vector3(3.30,2.08,4.10),pipeHook=new THREE.Vector3();
  const anchorRing=mesh(new THREE.TorusGeometry(.055,.009,8,24),edge,pipes);anchorRing.name='Raised wrist-chain pipe anchor';anchorRing.position.copy(pipeAnchor);anchorRing.rotation.y=Math.PI/2;
  const linkPoints=[];for(let i=0;i<48;i++){const a=i/48*Math.PI*2;linkPoints.push(new THREE.Vector3(Math.cos(a)*.017,Math.sin(a)*.028,0));}
- const linkGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),32,.0055,6,true);
- const links=new THREE.InstancedMesh(linkGeo,polished,360);links.name='Heavy interlocking wrist chain';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;restraint.add(links);
- const pickLinks=new THREE.InstancedMesh(new THREE.SphereGeometry(1,8,6),invisible,360);pickLinks.frustumCulled=false;restraint.add(pickLinks);
+ const linkGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),quality.mobile?12:32,.0055,quality.mobile?4:6,true);
+ const links=new THREE.InstancedMesh(linkGeo,polished,180);links.name='Heavy interlocking wrist chain';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;restraint.add(links);
+ const pickLinks=new THREE.InstancedMesh(new THREE.SphereGeometry(1,8,6),invisible,180);pickLinks.frustumCulled=false;restraint.add(pickLinks);
  const wrist=new THREE.Vector3(),elbow=new THREE.Vector3(),shoulder=new THREE.Vector3(),start=new THREE.Vector3(),delta=new THREE.Vector3(),tangent=new THREE.Vector3(),dummy=new THREE.Object3D();
  // A shorter reach keeps the hand close and the elbow below the camera frame.
  const restWrist=new THREE.Vector3(.29,-.36,-.73),restElbow=new THREE.Vector3(.45,-.65,-.50);
@@ -117,7 +118,7 @@ export function createPlayerRestraint(camera,options={}){
  function chainPoint(t,amplitude,out){out.copy(start).lerp(pipeHook,t);out.addScaledVector(sideways,Math.sin(Math.PI*t)*amplitude);out.y-=Math.sin(Math.PI*t)*amplitude*.9;worldPoint.copy(out);space.localToWorld(worldPoint);worldPoint.y=Math.max(.032,worldPoint.y);space.worldToLocal(worldPoint);out.copy(worldPoint);return out;}
  function updateChain(){
   let lo=0,hi=1.5;for(let iteration=0;iteration<9;iteration++){const a=(lo+hi)/2;let len=0;for(let j=0;j<samples.length;j++){chainPoint(j/(samples.length-1),a,samples[j]);if(j)len+=samples[j].distanceTo(samples[j-1]);}if(len>chainLength)hi=a;else lo=a;}
-  const curve=new THREE.CatmullRomCurve3(samples),length=curve.getLength(),count=Math.min(360,Math.max(2,Math.ceil(length/.043)));links.count=pickLinks.count=count;
+  const curve=new THREE.CatmullRomCurve3(samples),length=curve.getLength(),count=Math.min(180,Math.max(2,Math.ceil(length/.043)));links.count=pickLinks.count=count;
   for(let i=0;i<count;i++){
    const u=i/(count-1);curve.getPointAt(u,dummy.position);curve.getTangentAt(u,tangent);dummy.quaternion.setFromUnitVectors(UP,tangent);if(i%2)dummy.rotateY(Math.PI/2);dummy.scale.set(1,1,1);dummy.updateMatrix();links.setMatrixAt(i,dummy.matrix);
    dummy.scale.set(.032,.026,.032);dummy.updateMatrix();pickLinks.setMatrixAt(i,dummy.matrix);

@@ -1,11 +1,13 @@
+import {artCanvas} from './texture-budget.js';
+import {renderQuality as quality} from './render-quality.js';
 import * as THREE from './vendor/three.module.js';
 
 // A laminated display stack: damaged LCD, reflective cover, then hairline glass edges.
 export function createDisplayFactory(renderer){
  const W=1024,H=576,glassMaterials=[],cache=new Map();let nextDisplay=0;
  const plane=new THREE.PlaneGeometry(.735,.410);
- function surface(){const c=document.createElement('canvas');c.width=W;c.height=H;return[c,c.getContext('2d')];}
- function tex(c,color=true){const t=new THREE.CanvasTexture(c);if(color)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t;}
+ function surface(){return artCanvas(W,H);}
+ function tex(c,color=true){const t=new THREE.CanvasTexture(c);if(color)t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(quality.mobile?2:8,renderer.capabilities.getMaxAnisotropy());return t;}
  function build(type,variant){
   let state=13817+variant*7319+(type==='hole'?20001:type==='live'?481:0);
   const rand=()=>{state=(state*1664525+1013904223)>>>0;return state/4294967296;},between=(a,b)=>a+(b-a)*rand();
@@ -77,7 +79,8 @@ export function createDisplayFactory(renderer){
   for(let j=0;j<70;j++){const x=rand()*W,y=rand()*H;stroke([[x,y],[x+between(3,31),y+between(-8,8)]],dust,'rgba(189,189,189,.35)',.7);}
   // Fine perimeter grime and trapped dust under the bezel.
   edge.strokeStyle='rgba(89,93,83,.50)';edge.lineWidth=2.4;edge.strokeRect(1,1,W-2,H-2);
-  const lcdMap=tex(lcd),roughMap=tex(roughness,false),bumpMap=tex(relief,false);
+  if(quality.mobile)ctx.drawImage(cracks,0,0,W,H);
+  const lcdMap=tex(lcd),roughMap=quality.mobile?null:tex(roughness,false),bumpMap=quality.mobile?null:tex(relief,false);
   const lcdMaterial=new THREE.MeshStandardMaterial({map:lcdMap,roughness:.62,metalness:0,emissiveMap:lcdMap,emissive:0xffffff,emissiveIntensity:type==='live'?.52:powered?.28:.025});
   const glass=new THREE.MeshPhysicalMaterial({color:0x9aaeb3,metalness:.08,roughness:.36,roughnessMap:roughMap,bumpMap,bumpScale:.00038,transparent:true,opacity:.27,depthWrite:false,clearcoat:1,clearcoatRoughness:.19,clearcoatRoughnessMap:roughMap,ior:1.52,envMapIntensity:.85,side:THREE.FrontSide});
   glassMaterials.push(glass);
@@ -85,12 +88,13 @@ export function createDisplayFactory(renderer){
   return{lcdMaterial,glass,cracksMaterial,holes};
  }
  function add(group,type){
-  const variant=nextDisplay++%3,key=`${type}-${variant}`;if(!cache.has(key))cache.set(key,build(type,variant));const materials=cache.get(key);
+  const variant=nextDisplay++%(quality.mobile?1:3),key=`${type}-${variant}`;if(!cache.has(key))cache.set(key,build(type,variant));const materials=cache.get(key);
   for(const[material,z,name]of[[materials.lcdMaterial,.019,'Damaged liquid-crystal panel'],[materials.glass,.0205,'Reflective laminated screen glass'],[materials.cracksMaterial,.0213,'Fine branching glass fractures']]){
+   if(quality.mobile&&material===materials.cracksMaterial)continue;
    const layer=new THREE.Mesh(plane,material);layer.position.set(0,.381,z);layer.name=name;layer.castShadow=false;layer.receiveShadow=true;group.add(layer);
   }
   // A handful of minute, tilted chips catch practical light differently from the flat panel.
-  for(const points of materials.holes){
+  for(const points of quality.mobile?[]:materials.holes){
    const vertices=points.flatMap(([x,y],i)=>[(x/W-.5)*.735,(.5-y/H)*.410+.381,.0215+(i===1?.0018:0)]),g=new THREE.BufferGeometry();g.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));g.computeVertexNormals();
    const chip=new THREE.Mesh(g,materials.glass);chip.castShadow=false;group.add(chip);
   }

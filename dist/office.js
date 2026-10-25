@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {artCanvas,fitTextureImage} from './texture-budget.js';
 import {renderQuality as quality} from './render-quality.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=no-skulls';
@@ -16,16 +17,16 @@ import { createKetchupKey } from './ketchup-key.js';
 import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
 
-export function createOffice(renderer,viewerPosition){
+export async function createOffice(renderer,viewerPosition,onProgress=async()=>{}){
  const office=new THREE.Group();office.name='Abandoned technology office';
  const floorProps=[],floorCables=[];
  const onFloor=object=>{floorProps.push(object);return object;};
  let seed=87021;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const range=(a,b)=>a+(b-a)*random();
- function canvas(size=512){const c=document.createElement('canvas');c.width=c.height=size;return[c,c.getContext('2d')];}
- function texture(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());return t;}
+ const canvas=artCanvas;
+ function texture(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(quality.mobile?2:8,renderer.capabilities.getMaxAnisotropy());return t;}
  function cloud(ctx,x,y,r,color,alpha){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${color},${alpha})`);g.addColorStop(1,`rgba(${color},0)`);ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
- function speckle(ctx,size,n,color,alpha){for(let i=0;i<n;i++){ctx.fillStyle=`rgba(${color},${random()*alpha})`;ctx.fillRect(random()*size,random()*size,range(.4,2.2),range(.4,2));}}
+ function speckle(ctx,size,n,color,alpha){for(let i=0;i<n;i++){ctx.fillStyle=`rgba(${color},${random()*alpha})`;const x=random()*size,y=random()*size,w=range(.4,2.2),h=range(.4,2);if(!quality.mobile||i%4===0)ctx.fillRect(x,y,w,h);}}
  function weathered(base,kind='paint'){
   const[c,ctx]=canvas();ctx.fillStyle=base;ctx.fillRect(0,0,512,512);
   for(let i=0;i<210;i++)cloud(ctx,random()*512,random()*512,range(4,70),i%3?'27,33,23':'110,83,48',range(.025,.15));
@@ -36,15 +37,16 @@ export function createOffice(renderer,viewerPosition){
   return texture(c);
  }
  const plasterMap=weathered('#8b8c77'),plasticMap=weathered('#b2b09a'),woodMap=weathered('#817157','wood'),metalMap=weathered('#4e5550','metal'),fabricMap=weathered('#44534b'),floorMap=weathered('#66695a');
- const material=(color,roughness=.88,map=null,metalness=0)=>new THREE.MeshStandardMaterial({color,roughness,map,bumpMap:map,bumpScale:map?.008:0,metalness});
+ const materialCache=new Map();
+ const material=(color,roughness=.88,map=null,metalness=0)=>{const key=[color,roughness,map?.uuid,metalness].join('|');if(!materialCache.has(key))materialCache.set(key,quality.mobile&&metalness===0?new THREE.MeshLambertMaterial({color,map}):new THREE.MeshStandardMaterial({color,roughness,map,bumpMap:quality.mobile?null:map,bumpScale:map?.008:0,metalness}));return materialCache.get(key);};
  const plaster=material(0xffffff,.98,plasterMap),wood=material(0xffffff,.86,woodMap),plastic=material(0xffffff,.80,plasticMap),steel=material(0xffffff,.73,metalMap,.42),fabric=material(0xffffff,.95,fabricMap),black=material(0x171c19,.86),rubber=material(0x101512,.95),concrete=material(0xffffff,.98,floorMap),silver=material(0x828c86,.4,null,.8);
  function mesh(geometry,mat,parent=office){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  function box(size,pos,mat=steel,parent=office){const m=mesh(new THREE.BoxGeometry(...size),mat,parent);m.position.set(...pos);return m;}
- const sphereGeometry=new THREE.SphereGeometry(1,20,12);
+ const sphereGeometry=new THREE.SphereGeometry(1,quality.mobile?12:20,quality.mobile?8:12);
  function sphere(size,pos,mat,parent=office){const m=mesh(sphereGeometry,mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
- function cylinder(radius,height,pos,mat=steel,parent=office,segments=12){const m=mesh(new THREE.CylinderGeometry(radius,radius,height,segments),mat,parent);m.position.set(...pos);return m;}
+ function cylinder(radius,height,pos,mat=steel,parent=office,segments=12){const m=mesh(new THREE.CylinderGeometry(radius,radius,height,quality.mobile?Math.min(segments,12):segments),mat,parent);m.position.set(...pos);return m;}
  function rod(a,b,r=.015,mat=steel,parent=office){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start);const m=cylinder(r,direction.length(),start.clone().add(end).multiplyScalar(.5).toArray(),mat,parent);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());return m;}
- function cable(points,r=.008,mat=black,parent=office){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const wire=mesh(new THREE.TubeGeometry(curve,Math.max(20,points.length*8),r,6,false),mat,parent);if(parent===office&&points.some(p=>p[1]<.06))floorCables.push(wire);return wire;}
+ function cable(points,r=.008,mat=black,parent=office){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const wire=mesh(new THREE.TubeGeometry(curve,Math.max(12,points.length*(quality.mobile?3:8)),r,quality.mobile?4:6,false),mat,parent);if(parent===office&&points.some(p=>p[1]<.06))floorCables.push(wire);return wire;}
  function bevelBox(w,h,d,r=.025){r=Math.min(r,w*.45,h*.45);const s=new THREE.Shape();const x=w/2,y=h/2;s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.quadraticCurveTo(x,-y,x,-y+r);s.lineTo(x,y-r);s.quadraticCurveTo(x,y,x-r,y);s.lineTo(-x+r,y);s.quadraticCurveTo(-x,y,-x,y-r);s.lineTo(-x,-y+r);s.quadraticCurveTo(-x,-y,-x+r,-y);const b=Math.min(.012,w/6,h/6,d/6),g=new THREE.ExtrudeGeometry(s,{depth:d-b*2,bevelEnabled:true,bevelSize:b,bevelThickness:b,bevelSegments:2,steps:1,curveSegments:4});g.translate(0,0,-d/2+b);return g;}
  function rounded(size,pos,mat,parent=office){const m=mesh(bevelBox(...size),mat,parent);m.position.set(...pos);return m;}
  function dirtOverlay(width,height,parent,floor=false){const[c,ctx]=canvas(1024);
@@ -86,6 +88,7 @@ export function createOffice(renderer,viewerPosition){
  for(const x of[-.86,.86])cable([[x,.80,.15],[x,.12,.16],[x,-.77,.15]],.005,black,windowGroup);
  cable([[1.35,.83,.12],[1.4,-.7,.14],[1.32,-1.10,.18]],.006,black,windowGroup);
 
+ await onProgress('Setting up the workstations…');
  // Separate LCD damage from the laminated glass and its room reflections.
  const displays=createDisplayFactory(renderer);
  // Keep the established furniture and clutter layout independent of display texture changes.
@@ -303,7 +306,7 @@ export function createOffice(renderer,viewerPosition){
  const figmaMap=texture(logoCanvas),figmaMat=new THREE.MeshStandardMaterial({map:figmaMap,transparent:true,alphaTest:.1,roughness:.64,metalness:.03,emissiveMap:figmaMap,emissive:0xffffff,emissiveIntensity:.14});
  const lidEmblem=mesh(new THREE.PlaneGeometry(.115,.1725),figmaMat,laptopLid);lidEmblem.name='Off-center Figma vinyl sticker';lidEmblem.position.set(.265,.365,-.0108);lidEmblem.rotation.set(0,Math.PI,-.14);lidEmblem.castShadow=false;
 
- const[cDisplay,display]=canvas(1024);cDisplay.height=640;
+ const[cDisplay,display]=canvas(1024,640);
  display.fillStyle='#111b22';display.fillRect(0,0,1024,640);
  display.fillStyle='#222e36';display.fillRect(0,0,1024,38);display.fillRect(0,38,140,602);display.fillRect(894,38,130,602);
  drawFigmaMark(display,15,6,17);
@@ -321,7 +324,7 @@ export function createOffice(renderer,viewerPosition){
  const displayMap=texture(cDisplay),displayMat=new THREE.MeshBasicMaterial({map:displayMap,color:0x7f9296});
  const laptopScreen=mesh(new THREE.PlaneGeometry(.823,.525),displayMat,laptopLid);laptopScreen.position.set(0,.300,.013);laptopScreen.castShadow=false;
  box([.076,.014,.002],[0,.556,.014],keyBlack,laptopLid);sphere([.003,.003,.001],[0,.553,.0155],material(0x1e3038,.2),laptopLid);
- const[cLabel,label]=canvas(512);cLabel.height=64;label.font='22px sans-serif';label.textAlign='center';label.fillStyle='#9ca5a6';label.fillText('MacBook Pro',256,40);
+ const[cLabel,label]=canvas(512,64);label.font='22px sans-serif';label.textAlign='center';label.fillStyle='#9ca5a6';label.fillText('MacBook Pro',256,40);
  const wordmark=mesh(new THREE.PlaneGeometry(.14,.018),new THREE.MeshBasicMaterial({map:texture(cLabel),transparent:true}),laptopLid);wordmark.position.set(0,.025,.013);wordmark.castShadow=false;
  const[cKeys,kctx]=canvas(1024);kctx.fillStyle='#151b1e';kctx.fillRect(0,0,1024,1024);kctx.strokeStyle='#3e494d';kctx.fillStyle='#9ca5a6';kctx.font='25px sans-serif';kctx.textAlign='center';
  const labels=['1234567890-=','QWERTYUIOP[]','ASDFGHJKL;’','ZXCVBNM,./'];
@@ -478,6 +481,7 @@ export function createOffice(renderer,viewerPosition){
  const deskLamp=new THREE.Group();deskLamp.position.set(-2.1,.88,-3.20);backDesk.parent.add(deskLamp);cylinder(.11,.035,[0,0,0],black,deskLamp);rod([0,0,0],[.05,.31,0],.016,steel,deskLamp);rod([.05,.31,0],[.22,.40,.02],.013,steel,deskLamp);const shade=mesh(new THREE.ConeGeometry(.12,.13,20,1,true),steel,deskLamp);shade.position.set(.23,.37,.02);sphere([.04,.025,.04],[.23,.32,.02],new THREE.MeshBasicMaterial({color:0xe6c184}),deskLamp);
  const taskLight=new THREE.PointLight(0xe6bd7e,1.2,2.5,2);taskLight.position.set(-1.87,1.19,-3.18);office.add(taskLight);
  const deskInsects=createLightInsects({flies:5,moths:3,spread:[.28,.10,.22],seed:113,sizeScale:.55,dive:.10});deskInsects.group.position.set(-1.87,1.14,-3.02);office.add(deskInsects.group);
+ await onProgress('Placing the objects…');
  // Two discarded ketchup bottles, based on the glass and squeeze-bottle reference.
  const ketchup=new THREE.MeshPhysicalMaterial({color:0xd72e13,roughness:.31,clearcoat:1,clearcoatRoughness:.18});
  const bottleGlass=new THREE.MeshPhysicalMaterial({color:0xf0f1dc,roughness:.13,transparent:true,opacity:.16,depthWrite:false,clearcoat:1,clearcoatRoughness:.08});
@@ -485,8 +489,8 @@ export function createOffice(renderer,viewerPosition){
  // Distinct front and neck artwork follows the supplied 750 ml / 500 mL reference.
  const labelLoader=new THREE.TextureLoader();
  function ketchupLabel(file){
-  const map=labelLoader.load(new URL(`./labels/${file}.svg`,import.meta.url).href);
-  map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  const map=labelLoader.load(new URL(`./labels/${file}.svg`,import.meta.url).href,loaded=>{if(quality.mobile)fitTextureImage(loaded,256);});
+  map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=Math.min(quality.mobile?2:8,renderer.capabilities.getMaxAnisotropy());
   return new THREE.MeshStandardMaterial({map,transparent:true,alphaTest:.15,roughness:.72,side:THREE.DoubleSide});
  }
  const glassLabel=ketchupLabel('ketchup-glass'),squeezeLabel=ketchupLabel('ketchup-squeeze'),neckLabel=ketchupLabel('ketchup-neck');
@@ -521,7 +525,7 @@ export function createOffice(renderer,viewerPosition){
  box([.031,.018,.008],[0,.040,-.050],capSeam,squeezeKetchup);
  placeBottle(squeezeKetchup,1.95,2.45,[-Math.PI/2,0,-.45],.225,.80);
  // A tipped blue animal mug with pointed ceramic ears and coffee running from its rim.
- const[cMug,mugPaint]=canvas(1024);cMug.height=512;
+ const[cMug,mugPaint]=canvas(1024,512);
  mugPaint.fillStyle='#86b0b2';mugPaint.fillRect(0,0,1024,512);
  for(let i=0;i<180;i++)cloud(mugPaint,random()*1024,random()*512,range(5,55),i%2?'225,229,207':'83,125,129',range(.035,.14));
  mugPaint.lineCap='round';
@@ -533,7 +537,7 @@ export function createOffice(renderer,viewerPosition){
  speckle(mugPaint,512,2300,'112,124,109',.07);
  const mugGlaze=new THREE.MeshPhysicalMaterial({map:texture(cMug),roughness:.29,clearcoat:1,clearcoatRoughness:.16});
  const blueGlaze=new THREE.MeshPhysicalMaterial({color:0x8ab7b9,roughness:.25,clearcoat:1,clearcoatRoughness:.14});
- const[cInside,insidePaint]=canvas(1024);cInside.height=512;insidePaint.fillStyle='#e8dcba';insidePaint.fillRect(0,0,1024,512);
+ const[cInside,insidePaint]=canvas(1024,512);insidePaint.fillStyle='#e8dcba';insidePaint.fillRect(0,0,1024,512);
  for(let i=0;i<18;i++){const x=i*1024/18;insidePaint.fillStyle=i%2?'#93b8ae':'#7ca6a5';insidePaint.beginPath();insidePaint.moveTo(x-12,0);insidePaint.bezierCurveTo(x-20,170,x+4,310,x-12,512);insidePaint.lineTo(x+12,512);insidePaint.bezierCurveTo(x+26,310,x+8,170,x+17,0);insidePaint.closePath();insidePaint.fill();}
  const coffeeRing=insidePaint.createLinearGradient(0,220,0,512);coffeeRing.addColorStop(0,'rgba(103,62,27,0)');coffeeRing.addColorStop(.7,'rgba(103,62,27,.09)');coffeeRing.addColorStop(1,'rgba(74,39,14,.48)');insidePaint.fillStyle=coffeeRing;insidePaint.fillRect(0,0,1024,512);
  const innerGlaze=new THREE.MeshPhysicalMaterial({map:texture(cInside),roughness:.34,clearcoat:.8,side:THREE.DoubleSide});
@@ -609,7 +613,7 @@ export function createOffice(renderer,viewerPosition){
  box([1.51,.10,.045],[0,.05,.19],shelfWood,library);
  const titles=[['The Design of Everyday Things','#b5ad86'],["Don't Make Me Think",'#bd8b36'],['Thinking with Type','#9f392f'],['Grid Systems','#adaf9a'],['Designing Interfaces','#54796f'],['About Face','#393e3e'],['The Elements of User Experience','#758b9d'],['Sprint','#b3a847'],['Universal Principles of Design','#b8b5a4'],['Designing for Interaction','#80665b'],['Sketching User Experiences','#456976'],['The Shape of Design','#bcb296']];
  const spines=titles.map(([title,color],i)=>{
-  const[c,ctx]=canvas(128);c.height=1024;ctx.fillStyle=color;ctx.fillRect(0,0,128,1024);
+  const[c,ctx]=canvas(128,1024);ctx.fillStyle=color;ctx.fillRect(0,0,128,1024);
   const shade=ctx.createLinearGradient(0,0,128,0);shade.addColorStop(0,'rgba(0,0,0,.35)');shade.addColorStop(.25,'rgba(0,0,0,0)');shade.addColorStop(.86,'rgba(230,219,175,.12)');shade.addColorStop(1,'rgba(0,0,0,.2)');ctx.fillStyle=shade;ctx.fillRect(0,0,128,1024);
   ctx.save();ctx.translate(76,70);ctx.rotate(Math.PI/2);ctx.fillStyle=[2,4,5,6,9,10].includes(i)?'#ded9c5':'#262b26';ctx.font='600 47px Georgia,serif';ctx.fillText(title,0,0,820);ctx.restore();
   ctx.fillStyle='rgba(217,210,181,.55)';ctx.fillRect(14,947,100,3);ctx.fillRect(14,963,100,3);speckle(ctx,128,400,'22,24,17',.22);
@@ -632,6 +636,7 @@ export function createOffice(renderer,viewerPosition){
  for(const y of[.14,.68,1.22,1.76,2.30])box([1.44,.002,.035],[0,y,.196],material(0x6d6e59,.99),library);
  const looseBook=box([.32,.055,.24],[.41,2.327,.03],material(0x6a4538,.95),library);looseBook.rotation.y=.17;
 
+ await onProgress('Finishing the office…');
  // High-resolution concrete wear: old spills, ground-in dirt, caster marks and fine cracks.
  const[cWear,wear]=canvas(2048);wear.fillStyle='#66695d';wear.fillRect(0,0,2048,2048);
  for(let i=0;i<1250;i++)cloud(wear,random()*2048,random()*2048,range(4,125),i%4?'34,31,21':'135,131,110',range(.035,.22));
@@ -691,7 +696,7 @@ export function createOffice(renderer,viewerPosition){
  rod([.36,.90,.095],[.36,1.05,.095],.017,silver,door);rod([.36,1.03,.095],[.20,1.03,.12],.015,silver,door);
  for(const y of[.35,1.20,2.07]){box([.07,.10,.034],[-.515,y,.064],steel,door);cylinder(.012,.12,[-.53,y,.08],silver,door);}
  function wallLabel(text,w,h,parent,pos,background='#74796b',ink='#d0cdb8'){
-  const[c,ctx]=canvas(512);c.height=128;ctx.fillStyle=background;ctx.fillRect(0,0,512,128);ctx.fillStyle=ink;ctx.font='600 50px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(text,256,82,470);speckle(ctx,512,1500,'14,20,15',.2);
+  const[c,ctx]=canvas(512,128);ctx.fillStyle=background;ctx.fillRect(0,0,512,128);ctx.fillStyle=ink;ctx.font='600 50px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(text,256,82,470);speckle(ctx,512,1500,'14,20,15',.2);
   const label=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture(c),roughness:.9}),parent);label.position.set(...pos);label.castShadow=false;return label;
  }
  wallLabel('STAFF ONLY',.40,.10,door,[0,1.12,.055]);
@@ -712,7 +717,7 @@ export function createOffice(renderer,viewerPosition){
  // A weak remaining task tube reveals the pinboard without lifting the room's darkness.
  box([.94,.065,.13],[-.95,2.78,.11],steel,rear);
  const rearTube=cylinder(.013,.82,[-.95,2.741,.14],new THREE.MeshBasicMaterial({color:0x738b85}),rear,12);rearTube.rotation.z=Math.PI/2;rearTube.castShadow=false;
- const rearTask=new THREE.SpotLight(0x92aaa0,3.4,3.6,1.0,.85,2);rearTask.position.set(-.95,2.72,.36);rearTask.target.position.set(-1.12,1.35,.04);rear.add(rearTask,rearTask.target);
+ const rearTask=new THREE.SpotLight(0x92aaa0,3.4,3.6,1.0,.85,2);rearTask.position.set(-.95,2.72,.36);rearTask.target.position.set(-1.12,1.35,.04);rear.add(rearTask,rearTask.target);if(quality.mobile)rearTask.visible=false;
  const rearInsects=createLightInsects({flies:7,moths:3,spread:[.48,.14,.22],seed:71,sizeScale:.50,dive:.22});rearInsects.group.position.set(-.95,2.52,.43);rear.add(rearInsects.group);
  // Old drawers, a box of abandoned prototypes and dangling network leads below the board.
  const filing=new THREE.Group();filing.name='Damaged filing cabinets';filing.position.set(-1.12,0,.26);rear.add(filing);
@@ -753,6 +758,7 @@ export function createOffice(renderer,viewerPosition){
  }
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
  office.add(createFallenMobile(viewerPosition,floorSupport));
+ await onProgress('Preparing the tanks…');
  const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);

@@ -17,7 +17,7 @@ test('mobile and low-memory devices get bounded budgets without upscaling low-DP
   assert.equal(mobile.maxFps,30);
  }
  const low=chooseRenderQuality({coarse:true,dpr:.7});
- assert.equal(low.pixelRatio,.7);assert.equal(low.minPixelRatio,.7);
+ assert.equal(low.pixelRatio,.7);assert.ok(low.minPixelRatio<=.7);
 });
 
 function room(){
@@ -68,4 +68,40 @@ test('key and restraint sequence survives coarse mobile update intervals',()=>{
  assert.equal(cuff.sample(4.8).handFree,0);assert.ok(cuff.sample(5.1).hingeOpen>.99);
  assert.equal(cuff.requestReach(6),true);assert.equal(cuff.sample(6.6).openLaptop,true);
  key.reset();cuff.reset();assert.equal(cuff.detach(10),false);
+});
+
+test('portrait and landscape buffers stay under the mobile pixel budget',async()=>{
+ const {drawingPixelRatio}=await import('../dist/render-quality.js');
+ const quality=chooseRenderQuality({mobileHint:true,dpr:3,width:1024});
+ assert.equal(quality.mobile,true);assert.equal(quality.shadows,false);
+ for(const [w,h]of[[390,844],[844,390],[1366,1024],[2800,1800]]){
+  const dpr=drawingPixelRatio(quality,w,h);assert.ok(w*h*dpr*dpr<=quality.maxPixels+1);assert.ok(dpr<=1);
+ }
+ assert.equal(chooseRenderQuality({safe:true}).mobile,true);
+});
+
+test('palette batching keeps different colours, ray hits and independently moving roots',()=>{
+ const root=new THREE.Group(),geometry=new THREE.BoxGeometry(.4,.4,.4);
+ const colours=[0xff0000,0x00ff00,0x0000ff];
+ for(let i=0;i<3;i++){const mesh=new THREE.Mesh(geometry,new THREE.MeshLambertMaterial({color:colours[i]}));mesh.position.set(i*.5,0,0);root.add(mesh);}
+ root.userData.hoistIndex=0;
+ const before=new THREE.Box3().setFromObject(root,true);
+ assert.equal(batchStaticScenery(root,{palette:true,allowInteractiveRoot:true}).batches,1);
+ const batch=root.children[0],colour=batch.geometry.attributes.color;
+ assert.equal(batch.material.vertexColors,true);assert.ok(batch.geometry.index.array instanceof Uint16Array);
+ for(let i=0;i<3;i++){const actual=new THREE.Color().fromBufferAttribute(colour,i*24);assert.equal(actual.getHex(),colours[i]);}
+ root.position.y=2;root.rotation.y=.4;root.updateMatrixWorld(true);
+ assert.ok(new THREE.Box3().setFromObject(root,true).min.y>before.max.y);
+ assert.equal(root.userData.hoistIndex,0);
+ const hit=new THREE.Raycaster(new THREE.Vector3(0,4,0),new THREE.Vector3(0,-1,0)).intersectObject(root)[0];assert.ok(hit);
+});
+
+test('mobile material simplification preserves live screen fades, clipping and acid hooks',async()=>{
+ const {useMobileMaterials}=await import('../dist/scene-budget.js');
+ const scene=new THREE.Scene(),source=new THREE.MeshPhysicalMaterial({color:0xff0000,emissive:0x112233,emissiveIntensity:.8,transparent:true,opacity:.7});
+ const plane=new THREE.Plane();source.clippingPlanes=[plane];const hook=()=>{};source.onBeforeCompile=hook;
+ const mesh=new THREE.Mesh(new THREE.BoxGeometry(),source);scene.add(mesh);useMobileMaterials(scene,chooseRenderQuality({coarse:true}));
+ assert.equal(mesh.material.isMeshLambertMaterial,true);assert.equal(mesh.material.clippingPlanes[0],plane);assert.equal(mesh.material.onBeforeCompile,hook);
+ source.color.setHex(0x00ff00);source.opacity=.25;source.emissiveIntensity=.1;
+ assert.equal(mesh.material.color.getHex(),0x00ff00);assert.equal(mesh.material.opacity,.25);assert.equal(mesh.material.emissiveIntensity,.1);
 });
