@@ -95,9 +95,9 @@ export function createTankLeaks({valves,floorSupport}){
   }
   burnMap.needsUpdate=true;
  }
- function update(time,dt,viewer,camera,reducedMotion=false){
+ function update(time,dt,viewer,camera,reducedMotion=false,options={}){
   if(!flow.leaks.length)return false;
-  const finished=flow.update(time,dt,viewer),t=reducedMotion?0:time;timeUniform.value=t;camera.getWorldQuaternion(cameraRotation);
+  const finished=flow.update(time,dt,viewer,options),t=reducedMotion?0:time;timeUniform.value=t;camera.getWorldQuaternion(cameraRotation);
   let bubbleCount=0,smokeCount=0,dropCount=0,rippleCount=0;
   for(const leak of flow.leaks){
    valves[leak.index].setOpen(reducedMotion?1:THREE.MathUtils.smootherstep(leak.progress,0,1));
@@ -135,5 +135,5 @@ export function createTankLeaks({valves,floorSupport}){
   for(const valve of valves)valve.setOpen(0);
   burn.clearRect(0,0,512,512);burn.fillStyle='#000';burn.fillRect(0,0,512,512);burnMap.needsUpdate=true;lastPaint=-Infinity;
  }
- return {group,open,update,reset,bindTargets,setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
+ return {group,open,update,reset,bindTargets,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
 }

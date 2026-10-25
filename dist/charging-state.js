@@ -3,6 +3,7 @@ export function createChargingState(){
  function use(action,locked=false){
   if(locked)return 'Detach your shackle before using the charger.';
   if(action==='drawer'){drawerOpen=!drawerOpen;return drawerOpen?'Drawer opened. Take the MacBook charger and cable.':'Drawer closed.';}
+  if(phase==='damaged')return 'The charger cable has burned through. It cannot charge the MacBook.';
   if(action==='charger'){
    if(phase!=='drawer')return 'You already collected the charger.';
    if(!drawerOpen)return 'Open the rear drawer first.';
@@ -20,5 +21,5 @@ export function createChargingState(){
   }
   return '';
  }
- return {use,update(dt){if(phase==='charging')battery=Math.min(100,battery+Math.max(0,dt)*.65);},reset(){phase='drawer';drawerOpen=false;battery=8;},get phase(){return phase;},get drawerOpen(){return drawerOpen;},get battery(){return battery;},get nextAction(){return phase==='drawer'?(drawerOpen?'charger':'drawer'):phase==='carrying'?'strip':phase==='powered'?'laptop':null;}};
+ return {use,damageCable(){if(phase==='powered'||phase==='charging')phase='damaged';},update(dt){if(phase==='charging')battery=Math.min(100,battery+Math.max(0,dt)*.65);},reset(){phase='drawer';drawerOpen=false;battery=8;},get phase(){return phase;},get drawerOpen(){return drawerOpen;},get battery(){return battery;},get nextAction(){return phase==='drawer'?(drawerOpen?'charger':'drawer'):phase==='carrying'?'strip':phase==='powered'?'laptop':null;}};
 }

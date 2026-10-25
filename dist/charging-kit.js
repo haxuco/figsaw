@@ -4,9 +4,21 @@ import {createChargerCableGeometry} from './charger-cable.js';
 import {createMacBookAdapter,createPowerStrip,createMainsLeadGeometry} from './charging-hardware.js';
 
 export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
- const group=new THREE.Group();group.name='Interactive MacBook charging kit';
+ const group=new THREE.Group();group.name='Interactive MacBook charging kit';group.userData.ignoreAcid=true;
  const rearBounce=new THREE.PointLight(0xa4b4a5,1.5,2.8,2);rearBounce.position.set(1.55,1.25,3.25);group.add(rearBounce);
  const state=createChargingState(),ivory=new THREE.MeshStandardMaterial({color:0xd9d4c4,roughness:.51}),white=new THREE.MeshStandardMaterial({color:0xe6e3d9,roughness:.42}),rubber=new THREE.MeshStandardMaterial({color:0x252821,roughness:.88}),metal=new THREE.MeshStandardMaterial({color:0x8a9595,roughness:.4,metalness:.7});
+ const cableMaterial=white.clone(),burnPoint={value:new THREE.Vector3()},burnAmount={value:0};
+ cableMaterial.onBeforeCompile=shader=>{
+  shader.uniforms.cableBurnPoint=burnPoint;shader.uniforms.cableBurnAmount=burnAmount;
+  shader.vertexShader='uniform vec3 cableBurnPoint;uniform float cableBurnAmount;varying float vCableBurn;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>',`#include <begin_vertex>
+   vCableBurn=(1.0-smoothstep(.025,.18,distance((modelMatrix*vec4(position,1.0)).xyz,cableBurnPoint)))*cableBurnAmount;
+   transformed-=normal*vCableBurn*.0025;`);
+  shader.fragmentShader='varying float vCableBurn;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
+   diffuseColor.rgb=mix(diffuseColor.rgb,vec3(.055,.026,.012),vCableBurn);`);
+ };
+ cableMaterial.customProgramCacheKey=()=> 'melting-charger-insulation-v1';
  const amber=new THREE.MeshBasicMaterial({color:0xffb335}),green=new THREE.MeshBasicMaterial({color:0x8fc788});
  function mesh(geometry,material,parent=group){const m=new THREE.Mesh(geometry,material);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  function box(size,pos,material,parent){const m=mesh(new THREE.BoxGeometry(...size),material,parent);m.position.set(...pos);return m;}
@@ -34,7 +46,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  const adapterText=label('96W USB-C',.077,.018,[0,.082,-.034],brick);adapterText.rotation.y=Math.PI;adapterText.material.color.setHex(0x999b92);
  const coil=new THREE.Group();coil.name='Coiled charger cable';coil.userData.chargingAction='charger';drawer.add(coil);coil.position.set(-.145,-.127,.06);
  const coiled=[];for(let i=0;i<=120;i++){const a=i/120*Math.PI*6;coiled.push([Math.cos(a)*(.086+i*.00012),i*.000045,Math.sin(a)*.060]);}
- tube(coiled,.0045,white,coil);rounded([.041,.014,.019],[.12,.01,0],white,coil);box([.014,.009,.014],[.145,.01,0],metal,coil);
+ const coilWire=tube(coiled,.0045,cableMaterial,coil);rounded([.041,.014,.019],[.12,.01,0],white,coil);box([.014,.009,.014],[.145,.01,0],metal,coil);
  const {group:strip,leadExit,adapterSeat}=createPowerStrip();
  strip.position.set(1.94,floorSupport(1.94,3.72)+.032,3.72);strip.rotation.y=-.16;group.add(strip);
  label('SURGE',.040,.012,[.253,.043,-.042],strip).rotation.x=-Math.PI/2;
@@ -54,12 +66,16 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  const batteryCanvas=document.createElement('canvas');batteryCanvas.width=512;batteryCanvas.height=96;const batteryPaint=batteryCanvas.getContext('2d'),batteryMap=new THREE.CanvasTexture(batteryCanvas);batteryMap.colorSpace=THREE.SRGBColorSpace;
  const batteryOverlay=mesh(new THREE.PlaneGeometry(.245,.046),new THREE.MeshBasicMaterial({map:batteryMap}),laptop.screen);batteryOverlay.name='MacBook battery charge readout';batteryOverlay.position.set(.282,.235,.001);batteryOverlay.visible=false;batteryOverlay.castShadow=false;
  let drawerProgress=0,plugStarted=-Infinity,connectStarted=-Infinity,wire=null,lastWireProgress=-1,lastBatteryLabel='',lastTime=null;
- const point=new THREE.Vector3(),plugTarget=new THREE.Vector3();
+ const point=new THREE.Vector3(),plugTarget=new THREE.Vector3(),cablePoints=[];
+ function sampleCable(geometry,object){
+  object.updateWorldMatrix(true,false);cablePoints.length=0;
+  for(let i=0;i<=96;i++){const p=geometry.parameters.path.getPoint(i/96).applyMatrix4(object.matrixWorld);if(p.y<floorSupport(p.x,p.z)+.035)cablePoints.push(p);}
+ }
  function updateWire(progress){
   const geometry=wire?.geometry;
   const next=createChargerCableGeometry({adapterExit,connectorExit,laptop:laptop.object,floorSupport,strip});
-  if(!wire){wire=mesh(next,white);wire.name='Charging cable resting across the floor';wire.raycast=()=>{};}else{wire.geometry=next;geometry.dispose();}
-  lastWireProgress=progress;
+  if(!wire){wire=mesh(next,cableMaterial);wire.name='Charging cable resting across the floor';wire.raycast=()=>{};}else{wire.geometry=next;geometry.dispose();}
+  sampleCable(next,wire);lastWireProgress=progress;
  }
  function use(action,time,locked=false){
   const before=state.phase,message=state.use(action,locked);
@@ -67,7 +83,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
   if(before==='drawer'&&state.phase==='carrying'){brick.visible=false;coil.visible=false;}
   if(before==='carrying'&&state.phase==='powered'){
    strip.add(brick);brick.visible=true;brick.rotation.set(0,0,0);brick.position.copy(adapterSeat.position);plugStarted=time;
-   group.add(coil);coil.visible=true;coil.rotation.set(0,.4,0);coil.position.set(1.70,floorSupport(1.70,3.42)+.008,3.42);
+   group.add(coil);coil.visible=true;coil.rotation.set(0,.4,0);coil.position.set(1.70,floorSupport(1.70,3.42)+.008,3.42);sampleCable(coilWire.geometry,coilWire);
   }
   if(before==='powered'&&state.phase==='charging'){connectStarted=time;connector.visible=true;adapterPlug.visible=true;coil.visible=false;}
   return message;
@@ -90,8 +106,9 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
    batteryPaint.strokeStyle=charging?'#93dba3':'#e3b36d';batteryPaint.lineWidth=5;batteryPaint.strokeRect(405,25,72,44);batteryPaint.fillRect(480,37,7,19);batteryPaint.fillRect(413,33,56*level/100,28);batteryMap.needsUpdate=true;
   }
  }
- function reset(){state.reset();drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.copy(drawerBrickPosition);brick.rotation.set(Math.PI/2,0,0);coil.position.set(-.145,-.127,.06);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
+ function reset(){state.reset();cablePoints.length=0;burnAmount.value=0;led.visible=true;drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.copy(drawerBrickPosition);brick.rotation.set(Math.PI/2,0,0);coil.position.set(-.145,-.127,.06);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
  function hint(action){
+  if(state.phase==='damaged')return 'Charger cable burned through';
   if(action==='drawer')return state.drawerOpen?'Close charger drawer':'Open charger drawer';
   if(action==='charger')return 'Take MacBook charger + cable';
   if(action==='strip')return state.phase==='carrying'?'Plug charger into power strip':'Powered power strip';
@@ -103,5 +120,6 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
   filing.localToWorld(position.set(drawer.position.x,drawer.position.y+.94,1.08));
   filing.localToWorld(lookAt.set(drawer.position.x,drawer.position.y-.085,.48));
  }
- update(0);return {group,use,update,reset,hint,getDrawerView,get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
+ function meltCable(position,amount){burnPoint.value.copy(position);burnAmount.value=amount;if(amount>=1){state.damageCable();led.visible=false;}}
+ update(0);return {group,use,update,reset,hint,getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
 }

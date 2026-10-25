@@ -8,13 +8,13 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
   if(locked||hitAt!==null||leaks.some(leak=>leak.index===index))return false;
   leaks.push({index,openedAt:time,progress:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
  }
- function update(time,dt,viewer){
+ function update(time,dt,viewer,{target=viewer}={}){
   if(finished)return false;
   for(const leak of leaks){
    leak.progress=clamp((time-leak.openedAt)/1.35,0,1);
    if(time-leak.openedAt<.48)continue;
    if(!leak.points.length)leak.points.push({...leak.head,born:time,radius:.13});
-   const dx=viewer.x-leak.head.x,dz=viewer.z-leak.head.z,distance=Math.hypot(dx,dz),step=Math.min(distance,speed*clamp(dt,0,.08));
+   const dx=target.x-leak.head.x,dz=target.z-leak.head.z,distance=Math.hypot(dx,dz),step=Math.min(distance,speed*clamp(dt,0,.08));
    if(distance>.001){
     // A gentle wandering front makes a rivulet while still creeping toward the player.
     const side=.18*Math.sin((time-leak.openedAt)*.85+leak.index*1.9),length=Math.sqrt(1+side*side);
