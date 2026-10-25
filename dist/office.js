@@ -9,7 +9,8 @@ import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-cont
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
-import { createFloorRodents } from './floor-rodents.js';
+import { createFloorRodents } from './floor-rodents.js?v=smaller-critters';
+import { createChargingKit } from './charging-kit.js';
 import { createTankLeaks } from './tank-leaks.js';
 
 export function createOffice(renderer,viewerPosition){
@@ -328,7 +329,6 @@ export function createOffice(renderer,viewerPosition){
  const speakerDots=new THREE.InstancedMesh(new THREE.CircleGeometry(.0012,5),black,480);
  for(let i=0;i<480;i++){const o=new THREE.Object3D(),side=i<240?-1:1,j=i%240;o.position.set(side*(.355+(j%8)*.006),.017,-.196+Math.floor(j/8)*.0085);o.rotation.x=-Math.PI/2;o.updateMatrix();speakerDots.setMatrixAt(i,o.matrix);}laptop.add(speakerDots);
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
- const charger=cable([[-.445,.002,-.19],[-.56,-.010,-.20],[-.72,-.016,-.06],[-.83,-.016,.21],[-1.12,-.016,.48]],.006,black,laptop);charger.userData.ignoreFloorContact=true;charger.userData.anchorStart=true;floorCables.push(charger);
  const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
  const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
  let laptopOpened=false,laptopProgress=0,manualOpening=false;
@@ -470,12 +470,12 @@ export function createOffice(renderer,viewerPosition){
 
  // One crooked overhead light and a small desk lamp provide practical light sources.
  const ceilingFixture=createFailingFluorescent();office.add(ceilingFixture.group);
- const ceilingInsects=createLightInsects({flies:14,moths:7,spread:[.88,.23,.50],sizeScale:1.25,dive:.65});ceilingInsects.group.position.y=-.40;ceilingFixture.group.add(ceilingInsects.group);
+ const ceilingInsects=createLightInsects({flies:14,moths:7,spread:[.88,.23,.50],sizeScale:.55,dive:.65});ceilingInsects.group.position.y=-.40;ceilingFixture.group.add(ceilingInsects.group);
  for(const x of[-.66,.66])rod([x,3.30,-.55],[x,2.98,-.55],.006,black);
  cable([[.85,3.30,-.6],[1.03,2.8,-.65],[1.26,2.86,-.7],[1.30,3.30,-.7]],.007,black);
  const deskLamp=new THREE.Group();deskLamp.position.set(-2.1,.88,-3.20);backDesk.parent.add(deskLamp);cylinder(.11,.035,[0,0,0],black,deskLamp);rod([0,0,0],[.05,.31,0],.016,steel,deskLamp);rod([.05,.31,0],[.22,.40,.02],.013,steel,deskLamp);const shade=mesh(new THREE.ConeGeometry(.12,.13,20,1,true),steel,deskLamp);shade.position.set(.23,.37,.02);sphere([.04,.025,.04],[.23,.32,.02],new THREE.MeshBasicMaterial({color:0xe6c184}),deskLamp);
  const taskLight=new THREE.PointLight(0xe6bd7e,1.2,2.5,2);taskLight.position.set(-1.87,1.19,-3.18);office.add(taskLight);
- const deskInsects=createLightInsects({flies:5,moths:3,spread:[.28,.10,.22],seed:113,sizeScale:1.25,dive:.10});deskInsects.group.position.set(-1.87,1.14,-3.02);office.add(deskInsects.group);
+ const deskInsects=createLightInsects({flies:5,moths:3,spread:[.28,.10,.22],seed:113,sizeScale:.55,dive:.10});deskInsects.group.position.set(-1.87,1.14,-3.02);office.add(deskInsects.group);
  // Two discarded ketchup bottles, based on the glass and squeeze-bottle reference.
  const ketchup=new THREE.MeshPhysicalMaterial({color:0xd72e13,roughness:.31,clearcoat:1,clearcoatRoughness:.18});
  const bottleGlass=new THREE.MeshPhysicalMaterial({color:0xf0f1dc,roughness:.13,transparent:true,opacity:.16,depthWrite:false,clearcoat:1,clearcoatRoughness:.08});
@@ -706,12 +706,15 @@ export function createOffice(renderer,viewerPosition){
  box([.94,.065,.13],[-.95,2.78,.11],steel,rear);
  const rearTube=cylinder(.013,.82,[-.95,2.741,.14],new THREE.MeshBasicMaterial({color:0x738b85}),rear,12);rearTube.rotation.z=Math.PI/2;rearTube.castShadow=false;
  const rearTask=new THREE.SpotLight(0x92aaa0,3.4,3.6,1.0,.85,2);rearTask.position.set(-.95,2.72,.36);rearTask.target.position.set(-1.12,1.35,.04);rear.add(rearTask,rearTask.target);
- const rearInsects=createLightInsects({flies:7,moths:3,spread:[.48,.14,.22],seed:71,sizeScale:1.15,dive:.22});rearInsects.group.position.set(-.95,2.52,.43);rear.add(rearInsects.group);
+ const rearInsects=createLightInsects({flies:7,moths:3,spread:[.48,.14,.22],seed:71,sizeScale:.50,dive:.22});rearInsects.group.position.set(-.95,2.52,.43);rear.add(rearInsects.group);
  // Old drawers, a box of abandoned prototypes and dangling network leads below the board.
  const filing=new THREE.Group();filing.name='Damaged filing cabinets';filing.position.set(-1.12,0,.26);rear.add(filing);
- box([1.52,.77,.43],[0,.385,0],doorPaint,filing);box([1.56,.035,.46],[0,.795,0],steel,filing);
+ box([1.52,.77,.028],[0,.385,-.20],doorPaint,filing);box([1.56,.035,.46],[0,.795,0],steel,filing);
+ for(const x of[-.745,0,.745])box([.025,.77,.43],[x,.385,0],doorPaint,filing);
+ for(const y of[.018,.385])box([1.52,.025,.43],[0,y,0],steel,filing);
  for(const x of[-.38,.38])for(const y of[.20,.56]){
-  const pulled=x<0&&y>.4?.12:0;box([.71,.32,.025],[x,y,.231+pulled],steel,filing);rod([x-.10,y+.04,.26+pulled],[x+.10,y+.04,.26+pulled],.011,silver,filing);
+  if(x<0&&y>.4)continue;
+  const pulled=0;box([.71,.32,.025],[x,y,.231+pulled],steel,filing);rod([x-.10,y+.04,.26+pulled],[x+.10,y+.04,.26+pulled],.011,silver,filing);
   box([.16,.055,.004],[x,y-.06,.248+pulled],plastic,filing);
   if(pulled){box([.68,.014,.35],[x,y-.16,.20],steel,filing);box([.012,.28,.34],[x-.34,y,.20],steel,filing);}
  }
@@ -745,8 +748,9 @@ export function createOffice(renderer,viewerPosition){
  office.add(createFallenMobile(viewerPosition,floorSupport));
  const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
+ const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const rodents=createFloorRodents({room:office,floorSupport});office.add(rodents.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);return level;}
- return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,chargingKit,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

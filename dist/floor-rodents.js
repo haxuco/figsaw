@@ -66,7 +66,7 @@ export function createFloorRodents({room,floorSupport,seed=Math.floor(Math.rando
  const colors=[0x857766,0xb2a491,0x5c5952,0x8f806c,0xaaa9a0,0x6c6256];
  const animals=starts.map(([x,z],i)=>{
   const cell=routes.closest(x,z),mouse=i%2===1;
-  return {mouse,cell:cell.id,x:cell.x,z:cell.z,territory:i<2?{x:cell.x,z:cell.z,radius:1.5}:null,yaw:random()*Math.PI*2,size:mouse?.58+random()*.08:.92+random()*.12,color:new THREE.Color(colors[i]),phase:random()*6.28,speed:mouse?.95+random()*.35:.66+random()*.28,route:[],pause:i===0?.1:.4+random()*2.3,gait:0,moving:false};
+  return {mouse,cell:cell.id,x:cell.x,z:cell.z,territory:i<2?{x:cell.x,z:cell.z,radius:1.5}:null,yaw:random()*Math.PI*2,size:.5*(mouse?.58+random()*.08:.92+random()*.12),color:new THREE.Color(colors[i]),phase:random()*6.28,speed:mouse?.95+random()*.35:.66+random()*.28,route:[],pause:i===0?.1:.4+random()*2.3,gait:0,moving:false};
  });
  const pink=new THREE.Color(0xa47770),noseColor=new THREE.Color(0x765552),eyeColor=new THREE.Color(0x11110e);
  let lastTime=null;
