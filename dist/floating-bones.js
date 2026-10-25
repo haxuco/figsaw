@@ -4,17 +4,18 @@ import { createLongBone, createRib, createFigpalSkull, createJaw, createSpine, c
 // Deliberately different remains in each vessel; every path stays in the liquid.
 const layouts=[
  [
-  {kind:'pudding-skull',x:-.12,y:.81,z:.17,tilt:-.24,yaw:.30,scale:.34},
+  {kind:'pudding-skull',x:0,y:.67,z:.20,tilt:-.10,yaw:.08,scale:.40,framed:true},
   {kind:'femur',x:.14,y:.46,z:.15,tilt:1.1,yaw:-.3,scale:.90}
  ],
  [
-  {kind:'ribs',x:.02,y:.82,z:.20,tilt:.30,yaw:-.20,scale:1.08},
-  {kind:'spine',x:-.16,y:.44,z:.13,tilt:-.50,yaw:.4,scale:.90},
-  {kind:'rib',x:.16,y:.36,z:.17,tilt:.9,yaw:-.4,scale:.72}
+  {kind:'sushi-skull',x:0,y:.67,z:.20,tilt:.08,yaw:-.08,scale:.40,framed:true},
+  {kind:'ribs',x:.02,y:.40,z:.10,tilt:.30,yaw:-.20,scale:.78},
+  {kind:'spine',x:-.16,y:.40,z:-.08,tilt:-.50,yaw:.4,scale:.75},
+  {kind:'rib',x:.16,y:.34,z:.17,tilt:.9,yaw:-.4,scale:.64}
  ],
  [
-  {kind:'sushi-skull',x:.08,y:.86,z:.17,tilt:.51,yaw:-.45,scale:.29},
-  {kind:'forearm',x:-.13,y:.58,z:.16,tilt:-.68,yaw:.20,scale:.95},
+  {kind:'sushi-skull',x:0,y:.67,z:.20,tilt:-.13,yaw:.13,scale:.38,framed:true},
+  {kind:'forearm',x:-.13,y:.42,z:.16,tilt:-.68,yaw:.20,scale:.88},
   {kind:'jaw',x:.09,y:.32,z:.16,tilt:-.18,yaw:.6,scale:1.04}
  ]
 ];
@@ -29,8 +30,10 @@ export function createFloatingBones(index){
   const t=reducedMotion?0:time;
   for(const bone of bones){
    const phase=bone.phase;
-   bone.object.position.set(bone.x+.022*Math.sin(t*.27+phase),bone.y+.014*Math.sin(t*.57+phase),bone.z+.018*Math.cos(t*.23+phase));
-   bone.object.rotation.set(.10*Math.sin(t*.19+phase),bone.yaw+.46*Math.sin(t*.17+phase),bone.tilt+.11*Math.sin(t*.31+phase),'YXZ');
+   // Keep the skull portraits within the clear center of the fixed glass decals.
+   const drift=bone.framed?.012:.022,turn=bone.framed?.13:.46;
+   bone.object.position.set(bone.x+drift*Math.sin(t*.27+phase),bone.y+.014*Math.sin(t*.57+phase),bone.z+.018*Math.cos(t*.23+phase));
+   bone.object.rotation.set(.10*Math.sin(t*.19+phase),bone.yaw+turn*Math.sin(t*.17+phase),bone.tilt+(bone.framed?.06:.11)*Math.sin(t*.31+phase),'YXZ');
   }
  }
  update(0);return {group,update};

@@ -1,11 +1,12 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 import { figpalSwayPose } from './character-motion.js';
-import { createFloatingBones } from './floating-bones.js?v=figpal-identity';
+import { createFloatingBones } from './floating-bones.js?v=tank-decal';
 import { createFigpalTransformation } from './figpal-transformation.js?v=figpal-identity';
+import { createTankDecalFactory } from './tank-decal.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
-// All shapes, markings, glass, liquid and wear are local procedural assets.
+// Shapes, glass, liquid and wear are procedural; the supplied tank decal is bundled.
 export function createFigpalVats(){
  const group=new THREE.Group();group.name='Three suspended Figpals over bubbling green canisters';
  const TAU=Math.PI*2;
@@ -119,6 +120,7 @@ export function createFigpalVats(){
   return {object:links,setPoints};
  }
  const tankMaterials=createTankMaterials();
+ const createTankDecal=createTankDecalFactory();
  const {glass,haze,fluid,liquidTop,foam:foamMat,bubble:bubbleMat,ripple:rippleMat,waterTime}=tankMaterials;
  const rigs=[],vats=[],speechAnchors=[],dummy=new THREE.Object3D();
  // A staggered left-hand bay leaves Figsaw and his dialogue clear in the saved view.
@@ -132,6 +134,7 @@ export function createFigpalVats(){
   for(let j=0;j<8;j++){const a=j/8*TAU;ball([Math.cos(a)*.49,.15,Math.sin(a)*.49],[.022,.022,.022],fastener,vat);}
   const shell=cylinder(.485,1.02,[0,.72,0],glass,vat,true);shell.castShadow=false;shell.renderOrder=6;
   const deposits=cylinder(.487,1.02,[0,.72,0],haze,vat,true);deposits.name='Condensation, mineral streaks and algae tide marks';deposits.castShadow=false;deposits.renderOrder=7;
+  vat.add(createTankDecal());
   const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.castShadow=false;liquid.renderOrder=2;
   const floatingBones=createFloatingBones(i);vat.add(floatingBones.group);
   cylinder(.444,.018,[0,.215,0],liquidTop,vat);
