@@ -1,6 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js?v=left-chain-hoists';
+import { createFigpalVats } from './figpal-vats.js?v=weathered-industrial';
+
+import { createFailingFluorescent } from './failing-fluorescent.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -441,8 +443,7 @@ export function createOffice(renderer,viewerPosition){
  for(let i=0;i<4;i++){const fallenNote=sticky(office,-1.70-i*.30,.005,-.38+i*.26,33+i);fallenNote.rotation.set(-Math.PI/2,0,.6+i*.73);const p=fallenNote.geometry.attributes.position;for(let j=0;j<p.count;j++)p.setZ(j,p.getZ(j)*.10);floorPapers.push(fallenNote);}
 
  // One crooked overhead light and a small desk lamp provide practical light sources.
- const lamp=new THREE.Group();lamp.position.set(.22,2.98,-.55);lamp.rotation.set(.02,.12,-.075);office.add(lamp);box([1.50,.09,.28],[0,0,0],steel,lamp);
- const glow=new THREE.MeshBasicMaterial({color:0x899479});for(const z of[-.075,.075]){const tube=cylinder(.022,1.34,[0,-.065,z],glow,lamp,16);tube.rotation.z=Math.PI/2;tube.castShadow=false;}
+ const ceilingFixture=createFailingFluorescent();office.add(ceilingFixture.group);
  for(const x of[-.66,.66])rod([x,3.30,-.55],[x,2.98,-.55],.006,black);
  cable([[.85,3.30,-.6],[1.03,2.8,-.65],[1.26,2.86,-.7],[1.30,3.30,-.7]],.007,black);
  const deskLamp=new THREE.Group();deskLamp.position.set(-2.1,.88,-3.20);backDesk.parent.add(deskLamp);cylinder(.11,.035,[0,0,0],black,deskLamp);rod([0,0,0],[.05,.31,0],.016,steel,deskLamp);rod([.05,.31,0],[.22,.40,.02],.013,steel,deskLamp);const shade=mesh(new THREE.ConeGeometry(.12,.13,20,1,true),steel,deskLamp);shade.position.set(.23,.37,.02);sphere([.04,.025,.04],[.23,.32,.02],new THREE.MeshBasicMaterial({color:0xe6c184}),deskLamp);
@@ -712,5 +713,7 @@ export function createOffice(renderer,viewerPosition){
  box([.11,.025,.055],[.015,.56,0],black,extinguisher);rod([0,.51,0],[0,.57,0],.018,silver,extinguisher);cable([[.035,.52,0],[.12,.47,.02],[.13,.19,.06]],.012,black,extinguisher);
  wallLabel('FIRE',.12,.14,extinguisher,[0,.27,.097],'#b4ac8c','#33382d');
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
- return {group:office,laptop:laptopControl,setDisplayEnvironment:displays.setEnvironment,update:figpalVats.update,toggleHoist:figpalVats.toggleHoist};
+ function setEnvironment(map){displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
+ function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
+ return {group:office,laptop:laptopControl,setDisplayEnvironment:setEnvironment,update,toggleHoist:figpalVats.toggleHoist};
 }

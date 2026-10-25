@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { weatheredMetal, createTankMaterials } from './industrial-materials.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // All shapes, markings, glass, liquid and wear are local procedural assets.
@@ -90,35 +91,32 @@ export function createFigpalVats(){
   return {object:g,propeller};
  }
 
- const c=document.createElement('canvas');c.width=c.height=512;const ctx=c.getContext('2d');ctx.fillStyle='#424b42';ctx.fillRect(0,0,512,512);
- for(let i=0;i<1800;i++){const x=random()*512,y=random()*512,r=random()*8+.4;ctx.fillStyle=i%3?'rgba(21,27,19,.15)':'rgba(131,67,28,.37)';ctx.beginPath();ctx.arc(x,y,r,0,TAU);ctx.fill();}
- for(let i=0;i<55;i++){ctx.strokeStyle='rgba(190,190,159,.18)';ctx.lineWidth=random()+.4;const x=random()*512,y=random()*512;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+random()*75,y+random()*8);ctx.stroke();}
- const metalMap=new THREE.CanvasTexture(c);metalMap.colorSpace=THREE.SRGBColorSpace;
- const steel=new THREE.MeshStandardMaterial({map:metalMap,roughness:.67,metalness:.48,bumpMap:metalMap,bumpScale:.004});
- const darkMetal=material(0x202b27,.56,0),fastener=new THREE.MeshStandardMaterial({color:0x869486,metalness:.7,roughness:.4});
- const chainMetal=new THREE.MeshStandardMaterial({color:0x747972,metalness:.72,roughness:.47});
- const chainGeometry=new THREE.TorusGeometry(.021,.0055,6,12);
+ const steel=weatheredMetal(0xe1ddd0),darkMetal=weatheredMetal(0x92958c),fastener=weatheredMetal(0xe5e0d4),chainMetal=weatheredMetal(0xd5d0c6);
+ chainMetal.bumpScale=.0007;chainMetal.envMapIntensity=.85;
+ const grease=new THREE.MeshStandardMaterial({color:0x151811,roughness:.29,metalness:.08});
+ // Oval welded links have straight shanks, rounded ends, and alternating planes.
+ const linkPoints=[];
+ for(let j=0;j<=12;j++){const a=j/12*Math.PI;linkPoints.push(new THREE.Vector3(Math.cos(a)*.015,.010+Math.sin(a)*.015,0));}
+ for(let j=0;j<=12;j++){const a=Math.PI+j/12*Math.PI;linkPoints.push(new THREE.Vector3(Math.cos(a)*.015,-.010+Math.sin(a)*.015,0));}
+ const chainGeometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),32,.0048,6,true);
  const chainDummy=new THREE.Object3D(),chainUp=new THREE.Vector3(0,1,0),chainTwist=new THREE.Quaternion();
  function chainRun(points,parent,maxLinks=null){
   const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),length=curve.getLength();
   const count=maxLinks??Math.max(2,Math.ceil(length/.033));
   const links=new THREE.InstancedMesh(chainGeometry,chainMetal,count);links.name='Interlocking steel chain links';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;parent.add(links);
+  for(let j=0;j<count;j++)links.setColorAt(j,new THREE.Color().setRGB(.67+random()*.30,.58+random()*.30,.45+random()*.34));
   function setPoints(a,b){
    const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start),distance=direction.length();
    const n=Math.min(count,Math.max(2,Math.ceil(distance/.033)));links.count=n;direction.normalize();
-   for(let j=0;j<n;j++){chainDummy.position.copy(start).lerp(end,j/(n-1));chainDummy.quaternion.setFromUnitVectors(chainUp,direction);chainTwist.setFromAxisAngle(chainUp,j%2?Math.PI/2:0);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.set(.78,1.16,1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
+   for(let j=0;j<n;j++){chainDummy.position.copy(start).lerp(end,j/(n-1));chainDummy.quaternion.setFromUnitVectors(chainUp,direction);chainTwist.setFromAxisAngle(chainUp,(j%2?Math.PI/2:0)+Math.sin(j*7.17)*.07);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.setScalar(1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
    links.instanceMatrix.needsUpdate=true;
   }
   if(maxLinks){links.instanceMatrix.setUsage(THREE.DynamicDrawUsage);setPoints(points[0],points.at(-1));}
-  else for(let j=0;j<count;j++){const t=j/(count-1);chainDummy.position.copy(curve.getPointAt(t));chainDummy.quaternion.setFromUnitVectors(chainUp,curve.getTangentAt(t));chainTwist.setFromAxisAngle(chainUp,j%2?Math.PI/2:0);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.set(.78,1.16,1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
+  else for(let j=0;j<count;j++){const t=j/(count-1);chainDummy.position.copy(curve.getPointAt(t));chainDummy.quaternion.setFromUnitVectors(chainUp,curve.getTangentAt(t));chainTwist.setFromAxisAngle(chainUp,(j%2?Math.PI/2:0)+Math.sin(j*7.17)*.07);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.setScalar(1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
   return {object:links,setPoints};
  }
- const glass=new THREE.MeshPhysicalMaterial({color:0xc4ebbc,roughness:.16,metalness:.05,transparent:true,opacity:.12,depthWrite:false,clearcoat:1,clearcoatRoughness:.12,side:THREE.DoubleSide});
- const fluid=new THREE.MeshStandardMaterial({color:0x55ad13,emissive:0x367d08,emissiveIntensity:.8,roughness:.21,transparent:true,opacity:.60,depthWrite:false,side:THREE.DoubleSide});
- const liquidTop=new THREE.MeshStandardMaterial({color:0x83d629,emissive:0x4c8d0d,emissiveIntensity:.75,roughness:.19,metalness:.12,side:THREE.DoubleSide});
- const foamMat=new THREE.MeshStandardMaterial({color:0xc3ed62,emissive:0x6fa527,emissiveIntensity:.38,roughness:.24,transparent:true,opacity:.84,depthWrite:false});
- const bubbleMat=new THREE.MeshPhysicalMaterial({color:0xc3f87b,emissive:0x66aa1c,emissiveIntensity:.42,roughness:.08,transparent:true,opacity:.5,depthWrite:false,clearcoat:1});
- const rippleMat=new THREE.MeshBasicMaterial({color:0xb9ea55,transparent:true,opacity:.38,depthWrite:false,side:THREE.DoubleSide});
+ const tankMaterials=createTankMaterials();
+ const {glass,haze,fluid,liquidTop,foam:foamMat,bubble:bubbleMat,ripple:rippleMat,waterTime}=tankMaterials;
  const rigs=[],vats=[],dummy=new THREE.Object3D();
  // A staggered left-hand bay leaves Figsaw and his dialogue clear in the saved view.
  const stations=[{x:-3.05,z:-1.05,height:2.02,winchY:2.80},{x:-2.85,z:.30,height:1.84,winchY:2.65},{x:-2.15,z:1.45,height:1.60,winchY:2.38}];
@@ -130,19 +128,20 @@ export function createFigpalVats(){
   cylinder(.515,.16,[0,.10,0],steel,vat);cylinder(.46,.035,[0,.025,0],darkMetal,vat);
   for(let j=0;j<8;j++){const a=j/8*TAU;ball([Math.cos(a)*.49,.15,Math.sin(a)*.49],[.022,.022,.022],fastener,vat);}
   const shell=cylinder(.485,1.02,[0,.72,0],glass,vat,true);shell.castShadow=false;shell.renderOrder=6;
+  const deposits=cylinder(.487,1.02,[0,.72,0],haze,vat,true);deposits.name='Condensation, mineral streaks and algae tide marks';deposits.castShadow=false;deposits.renderOrder=7;
   const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.castShadow=false;liquid.renderOrder=2;
   cylinder(.444,.018,[0,.215,0],liquidTop,vat);
   for(const y of[.225,1.235]){ring(.484,.036,y,steel,vat);ring(.454,.010,y-.018,darkMetal,vat);}
   for(const a of[.15,2.24,4.34]){const px=Math.cos(a)*.485,pz=Math.sin(a)*.485;rod([px,.22,pz],[px,1.23,pz],.021,steel,vat);}
   for(const side of[-1,1]){line([[side*.47,.96,0],[side*.58,.96,0],[side*.58,.74,0],[side*.48,.74,0]],.022,steel,vat);}
   // A wet, uneven open meniscus, rather than a solid lid.
-  const surfaceGeometry=new THREE.CircleGeometry(.444,64);surfaceGeometry.rotateX(-Math.PI/2);
+  const surfaceGeometry=new THREE.RingGeometry(0,.444,64,16);surfaceGeometry.rotateX(-Math.PI/2);
   const surface=mesh(surfaceGeometry,liquidTop,vat);surface.position.y=1.074;surface.castShadow=false;surface.renderOrder=4;
-  ring(.441,.009,1.075,foamMat,vat).renderOrder=4;
-  const bubbleData=Array.from({length:28},()=>({x:(random()-.5)*.61,z:(random()-.5)*.61,r:.014+random()*.027,phase:random(),speed:.15+random()*.17}));
+  ring(.441,.006,1.075,liquidTop,vat).renderOrder=4;
+  const bubbleData=Array.from({length:48},()=>({x:(random()-.5)*.61,z:(random()-.5)*.61,r:.007+random()**2*.023,phase:random(),speed:.15+random()*.17}));
   const bubbles=new THREE.InstancedMesh(new THREE.SphereGeometry(1,12,8),bubbleMat,bubbleData.length);bubbles.name='Rising liquid bubbles';bubbles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);bubbles.frustumCulled=false;bubbles.renderOrder=3;vat.add(bubbles);
-  const foam=[];for(let j=0;j<9;j++){const a=random()*TAU,r=random()*.36,baseRadius=.024+random()*.026;const m=ball([Math.cos(a)*r,1.074,Math.sin(a)*r],[baseRadius,baseRadius*.65,baseRadius],foamMat,vat);m.castShadow=false;m.renderOrder=5;foam.push({mesh:m,baseRadius,phase:random()*TAU});}
-  const ripples=[];for(let j=0;j<5;j++){const m=mesh(new THREE.RingGeometry(.82,1,32),rippleMat,vat);m.rotation.x=-Math.PI/2;m.position.set((random()-.5)*.45,1.078,(random()-.5)*.45);m.castShadow=false;m.renderOrder=5;ripples.push({mesh:m,phase:random()});}
+  const foam=[];for(let j=0;j<24;j++){const a=random()*TAU,r=j<18?.40+random()*.025:random()*.34,baseRadius=.006+random()*.016;const m=ball([Math.cos(a)*r,1.074,Math.sin(a)*r],[baseRadius,baseRadius*.65,baseRadius],foamMat,vat);m.castShadow=false;m.renderOrder=5;foam.push({mesh:m,baseRadius,phase:random()*TAU});}
+  const ripples=[];for(let j=0;j<5;j++){const m=mesh(new THREE.RingGeometry(.96,1,40),rippleMat.clone(),vat);m.rotation.x=-Math.PI/2;m.position.set((random()-.5)*.45,1.078,(random()-.5)*.45);m.castShadow=false;m.renderOrder=5;ripples.push({mesh:m,phase:random()});}
   // Stenciled identification, a pressure gauge and weathered lower-band stripes.
   const labelCanvas=document.createElement('canvas');labelCanvas.width=256;labelCanvas.height=128;const labelCtx=labelCanvas.getContext('2d');labelCtx.fillStyle='#bec39f';labelCtx.fillRect(0,0,256,128);labelCtx.fillStyle='#242c22';labelCtx.font='bold 67px monospace';labelCtx.textAlign='center';labelCtx.fillText(`0${i+1}`,128,87);
   const labelMap=new THREE.CanvasTexture(labelCanvas);labelMap.colorSpace=THREE.SRGBColorSpace;
@@ -153,7 +152,7 @@ export function createFigpalVats(){
   const dial=mesh(new THREE.CircleGeometry(.052,24),cream,vat);dial.position.set(.32,1.19,.391);line([[.32,1.19,.395],[.30,1.219,.395]],.003,ink,vat);
   const drain=cylinder(.038,.17,[.37,.25,.37],steel,vat);drain.rotation.x=Math.PI/2;
   const valve=mesh(new THREE.TorusGeometry(.068,.008,6,24),ribOrange,vat);valve.position.set(.37,.25,.47);rod([.31,.25,.47],[.43,.25,.47],.006,ribOrange,vat);
-  const glow=new THREE.PointLight(0x86d82c,.55,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
+  const glow=new THREE.PointLight(0x6b9c25,.42,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
   vats.push({surface,bubbles,bubbleData,foam,ripples,phase:i*1.7});
 
   const facing=Math.atan2(1.85221-x,3.1149-tankZ);
@@ -163,21 +162,37 @@ export function createFigpalVats(){
   for(const side of[-1,1]){rod([side*.16,3.12,0],[side*.16,winchY+.10,0],.023,steel,rig);ball([side*.16,3.12,.08],[.026,.026,.026],fastener,rig);}
   const winch=new THREE.Group();winch.name=`Winch ${i+1}: lower or raise Figpal`;winch.position.y=winchY;winch.userData.hoistIndex=i;rig.add(winch);
   box([.46,.12,.30],[0,.10,-.03],steel,winch);
+  // Bolted bearing cheeks, grease seals, and a battered motor junction box.
+  for(const side of[-1,1]){
+   box([.035,.22,.27],[side*.191,.012,-.01],steel,winch);
+   const collar=cylinder(.057,.055,[side*.205,0,0],grease,winch);collar.rotation.z=Math.PI/2;
+   for(const y of[-.073,.093])for(const z of[-.106,.096]){
+    const bolt=mesh(new THREE.CylinderGeometry(.013,.013,.018,6),fastener,winch);bolt.position.set(side*.215,y,z);bolt.rotation.z=Math.PI/2;
+   }
+  }
+  box([.105,.09,.11],[.30,.15,-.035],darkMetal,winch);
+  line([[.30,.18,.01],[.38,.21,.06],[.43,.12,.10],[.40,-.04,.07]],.008,grease,winch);
+  const serviceCanvas=document.createElement('canvas');serviceCanvas.width=256;serviceCanvas.height=128;
+  const sc=serviceCanvas.getContext('2d');sc.fillStyle='#817653';sc.fillRect(0,0,256,128);sc.fillStyle='#2a2b24';sc.font='bold 22px monospace';sc.fillText('CHAIN HOIST',15,30);sc.font='18px monospace';sc.fillText('250 KG / 1978',15,62);sc.fillText('SERVICE OVERDUE',15,103);
+  for(let d=0;d<90;d++){sc.fillStyle=d%2?'rgba(42,25,12,.48)':'rgba(170,156,116,.7)';sc.fillRect(random()*256,random()*128,random()*17,random()*3);}
+  const serviceMap=new THREE.CanvasTexture(serviceCanvas);serviceMap.colorSpace=THREE.SRGBColorSpace;
+  const servicePlate=mesh(new THREE.PlaneGeometry(.25,.10),new THREE.MeshStandardMaterial({map:serviceMap,roughness:.87}),winch);servicePlate.position.set(-.005,.10,.124);servicePlate.rotation.z=.028;
+
   const drumMount=new THREE.Group();drumMount.rotation.z=Math.PI/2;winch.add(drumMount);
   const drum=new THREE.Group();drum.name='Rotating chain sprocket';drumMount.add(drum);
   cylinder(.10,.28,[0,0,0],darkMetal,drum);
   for(const side of[-1,1]){cylinder(.136,.026,[0,side*.16,0],steel,drum);for(let j=0;j<12;j++){const a=j/12*TAU;box([.026,.03,.032],[Math.cos(a)*.13,side*.16,Math.sin(a)*.13],fastener,drum);}}
-  for(let j=0;j<9;j++){const wrap=ring(.106,.007,0,chainMetal,drum);wrap.position.y=-.11+j*.027;}
+  const winding=[];for(let j=0;j<=120;j++){const a=j/120*TAU*4;winding.push([Math.cos(a)*.106,-.10+j/120*.20,Math.sin(a)*.106]);}chainRun(winding,drum).object.name='Greasy chain wound around the drum';
   const motor=cylinder(.105,.24,[.30,.015,-.04],darkMetal,winch);motor.rotation.z=Math.PI/2;
   for(let j=0;j<6;j++){const fin=cylinder(.115,.009,[.215+j*.033,.015,-.04],steel,winch);fin.rotation.z=Math.PI/2;}
   const crank=new THREE.Group();crank.position.set(-.22,0,0);winch.add(crank);rod([0,0,0],[0,-.13,0],.014,steel,crank);rod([0,-.13,0],[-.09,-.13,0],.021,darkMetal,crank);
-  const inspectionLight=new THREE.PointLight(0xbcc7ad,.40,.85,2);inspectionLight.position.set(0,.17,.28);winch.add(inspectionLight);
+  const inspectionLight=new THREE.PointLight(0xbcc7ad,.40,.85,2);inspectionLight.position.set(-.24,.12,.36);winch.add(inspectionLight);
   ball([0,.17,.28],[.018,.011,.012],new THREE.MeshBasicMaterial({color:0x76866b}),winch);
   const hanger=new THREE.Group();hanger.name=`Suspended Figpal ${i+1}`;hanger.position.y=height;rig.add(hanger);
   const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
   // A spreader and two linked chain slings support the body, leaving its face clear.
   rod([-.22,.45,0],[.22,.45,0],.019,steel,hanger);
-  const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,hanger);hook.position.set(0,.49,0);hook.rotation.z=-.5;
+  const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,hanger);hook.position.set(0,.49,0);hook.rotation.z=-.5;rod([-.028,.476,.008],[.016,.511,.008],.004,darkMetal,hanger);
   for(const side of[-1,1])chainRun([[side*.21,.45,0],[side*.245,.11,0],[side*.23,-.12,.015],[side*.16,-.205,.04],[0,-.222,.045]],hanger);
   const loadChain=chainRun([[0,winchY-.10,.025],[0,height+.52,0]],rig,72);
   const returnChain=chainRun([[-.10,winchY-.01,-.11],[-.11,winchY-.36,-.12],[-.16,winchY-.40,-.10],[-.20,winchY-.05,-.08]],rig);
@@ -193,7 +208,7 @@ export function createFigpalVats(){
  let lastTime=0;
  function update(time,reducedMotion=false){
   const dt=Math.max(0,Math.min(.05,time-lastTime));lastTime=time;
-  const t=reducedMotion?0:time;
+  const t=reducedMotion?0:time;waterTime.value=t;
   for(const rig of rigs){
    const delta=rig.targetHeight-rig.height;rig.height=reducedMotion?rig.targetHeight:rig.height+Math.sign(delta)*Math.min(Math.abs(delta),dt*.15);
    rig.hanger.position.y=rig.height;rig.hanger.rotation.z=Math.sin(t*.65+rig.phase)*.006;
@@ -203,13 +218,20 @@ export function createFigpalVats(){
   }
   for(const vat of vats){
    const positions=vat.surface.geometry.attributes.position;
-   for(let j=0;j<positions.count;j++){const x=positions.getX(j),z=positions.getZ(j);positions.setY(j,Math.sin(x*17+t*2+vat.phase)*Math.cos(z*14-t*1.5)*.004);}
-   positions.needsUpdate=true;
+   const normals=vat.surface.geometry.attributes.normal;
+   for(let j=0;j<positions.count;j++){
+    const x=positions.getX(j),z=positions.getZ(j),a=x*17+t*1.4+vat.phase,b=z*14-t*1.1,c=(x+z)*28-t*2.1;
+    positions.setY(j,Math.sin(a)*Math.cos(b)*.0035+Math.sin(c)*.0012);
+    const dx=Math.cos(a)*Math.cos(b)*.0595+Math.cos(c)*.0336,dz=-Math.sin(a)*Math.sin(b)*.049+Math.cos(c)*.0336;
+    const length=Math.hypot(dx,1,dz);normals.setXYZ(j,-dx/length,1/length,-dz/length);
+   }
+   positions.needsUpdate=true;normals.needsUpdate=true;
    vat.bubbleData.forEach((bubble,j)=>{const life=(t*bubble.speed+bubble.phase)%1;dummy.position.set(bubble.x+Math.sin(t*1.3+j)*.012,.25+life*.84,bubble.z+Math.cos(t+j)*.009);dummy.scale.setScalar(bubble.r*(.65+life*.5));dummy.updateMatrix();vat.bubbles.setMatrixAt(j,dummy.matrix);});vat.bubbles.instanceMatrix.needsUpdate=true;
-   for(const foam of vat.foam){const pulse=(Math.sin(t*2.4+foam.phase)+1)*.5;foam.mesh.scale.set(foam.baseRadius,foam.baseRadius*(.2+pulse*.85),foam.baseRadius);}
-   for(const ripple of vat.ripples){const life=(t*.48+ripple.phase)%1;const size=.012+life*.075;ripple.mesh.scale.setScalar(size);ripple.mesh.visible=life<.88;}
+   for(const foam of vat.foam){const pulse=(Math.sin(t*2.4+foam.phase)+1)*.5;foam.mesh.scale.set(foam.baseRadius,foam.baseRadius*(.12+pulse*.28),foam.baseRadius);}
+   for(const ripple of vat.ripples){const life=(t*.48+ripple.phase)%1;const size=.012+life*.075;ripple.mesh.scale.setScalar(size);ripple.mesh.visible=life<.88;ripple.mesh.material.opacity=(1-life)*.16;}
   }
  }
  update(0);
- return {group,update,toggleHoist};
+ function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
+ return {group,update,toggleHoist,setEnvironment};
 }

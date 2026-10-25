@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=left-chain-hoists';
+import { createOffice } from './office.js?v=weathered-industrial';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 
 const canvas=document.querySelector('#scene');
@@ -508,7 +508,7 @@ function render(){
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
  laptop.update(dt,reducedMotion);
- updateOffice(t,reducedMotion);
+ fluorescent.intensity=14*updateOffice(t,reducedMotion);
  model.updateMatrixWorld(true);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
  renderer.render(scene,camera);updateArrivalDialogue(t);requestAnimationFrame(render);
