@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {weatheredMetal} from './industrial-materials.js?v=brighter-liquid';
 import {createRestraintState} from './restraint-state.js?v=key-lock';
 import {createReachingForearm,solveReachElbow} from './reaching-arm.js';
+import {addHandleCurl} from './handle-grip.js';
 
 const UP=new THREE.Vector3(0,1,0);
 export function createPlayerRestraint(camera,options={}){
@@ -43,13 +44,15 @@ export function createPlayerRestraint(camera,options={}){
  const forearmShape=createReachingForearm(skin,ink);arm.add(forearmShape.mesh);
  const forearmRotation=new THREE.Quaternion();
  const hand=new THREE.Group();hand.name='Cartoon right hand';arm.add(hand);
+ const handleContact=new THREE.Object3D();handleContact.name='Mug handle contact';handleContact.position.set(0,-.036,-.145);hand.add(handleContact);
  // A narrow wrist joins the fuller palm; the cuff sits behind the palm flare.
  skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.030,-.005,0,.059,.036],[-.066,-.005,0,.071,.040],[-.108,-.002,-.002,.071,.037],[-.140,.002,-.003,.065,.031],[-.160,.004,-.004,.051,.022],[-.170,.004,-.004,.006,.004]],40);
- const fingers=[];
+ const fingers=[],fingerCurls=[];
  for(const [i,x,length,spread]of[[0,-.056,.120,.19],[1,-.018,.136,.055],[2,.023,.128,-.08],[3,.060,.100,-.23]]){
   const finger=new THREE.Group();finger.position.set(x,-.002,-.137+(i===3?.013:0));finger.rotation.y=spread;hand.add(finger);fingers.push(finger);
   const r=i===3?.0175:.020;
-  skinForm(finger,[[.014,0,0,r*.92,r*.90],[0,0,0,r,r],[-length*.22,0,-.002,r,r*.98],[-length*.48,0,-.005,r*.96,r*.94],[-length*.70,0,-.009,r*.92,r*.90],[-length*.84,0,-.012,r*.86,r*.84],[-length*.94,0,-.014,r*.64,r*.64],[-length*.985,0,-.014,r*.30,r*.30],[-length,0,-.014,.0003,.0003]]);
+  const digit=skinForm(finger,[[.014,0,0,r*.92,r*.90],[0,0,0,r,r],[-length*.22,0,-.002,r,r*.98],[-length*.48,0,-.005,r*.96,r*.94],[-length*.70,0,-.009,r*.92,r*.90],[-length*.84,0,-.012,r*.86,r*.84],[-length*.94,0,-.014,r*.64,r*.64],[-length*.985,0,-.014,r*.30,r*.30],[-length,0,-.014,.0003,.0003]]);
+  digit.name=`Finger ${i+1}`;fingerCurls.push(addHandleCurl(digit,length));
   finger.userData.spread=spread;
  }
  const fingertip=new THREE.Object3D();fingertip.name='Lid contact fingertip';fingertip.position.set(0,-.014,-.136);fingers[1].add(fingertip);
@@ -153,18 +156,20 @@ export function createPlayerRestraint(camera,options={}){
   hand.position.copy(wrist);hand.quaternion.copy(forearmRotation);hand.rotateX(-.12+reach*.08);hand.rotateY(.13-reach*.06);hand.rotateZ(-.04);
   if(releaseActive)hand.quaternion.slerp(releasedRotation,1-pose.handFree);
   fingers.forEach((f,i)=>{f.rotation.x=-.06+(1-reach)*(.11+i*.015);});
-  thumb.rotation.x=0;thumb.rotation.y=.88;
+  thumb.rotation.x=0;thumb.rotation.y=.88;thumb.rotation.z=-.26;
+  fingerCurls.forEach(curl=>curl(0));
   if(lidHand){
    const blend=lidHand.blend,grip=lidHand.grip,holdingMug=lidHand.gripKind==='handle';
    fingers.forEach((finger,i)=>{
-    finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,(holdingMug?-.96:-.46)+(i===0?.08:0),grip);
+    finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,(holdingMug?-.16:-.46)+(i===0?.08:0),grip);
     finger.rotation.y=THREE.MathUtils.lerp(finger.userData.spread,finger.userData.spread*.30,grip);
    });
-   thumb.rotation.x=.28*grip;thumb.rotation.y=.88-.28*grip;
+   thumb.rotation.x=(holdingMug?.42:.28)*grip;thumb.rotation.y=.88-(holdingMug?.58:.28)*grip;
+   if(holdingMug){fingerCurls.forEach(curl=>curl(grip));thumb.rotation.z=-.26+.18*grip;}
    // Solve the wrist from the grip point: fingertips for the lid, palm for
    // the mug handle. The hand stays attached as either prop moves.
    fingers[1].updateMatrix();
-   if(holdingMug)gripOffset.set(0,-.008,-.18);
+   if(holdingMug)gripOffset.copy(handleContact.position);
    else gripOffset.copy(fingertip.position).applyMatrix4(fingers[1].matrix);
    cameraInverse.copy(camera.quaternion).invert();gripRotation.copy(cameraInverse).multiply(lidHand.quaternion);
    gripPosition.copy(lidHand.position);space.worldToLocal(gripPosition);

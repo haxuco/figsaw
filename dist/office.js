@@ -546,6 +546,7 @@ export function createOffice(renderer,viewerPosition){
  const mugFoot=mesh(new THREE.TorusGeometry(.102,.004,8,48),innerGlaze,earMug);mugFoot.rotation.x=Math.PI/2;mugFoot.position.y=.012;
  for(const side of[-1,1]){
   const ear=new THREE.Group();ear.position.set(side*.095,.235,.103);ear.rotation.set(-.06,side*Math.atan2(.095,.103),-side*.10);earMug.add(ear);
+  const tip=new THREE.Object3D();tip.name=side<0?'Mug left ear tip':'Mug right ear tip';tip.position.y=.142;ear.add(tip);
   const shape=new THREE.Shape();shape.moveTo(-.047,0);shape.bezierCurveTo(-.044,.046,-.015,.112,0,.142);shape.bezierCurveTo(.018,.125,.046,.045,.047,0);shape.closePath();
   const geo=new THREE.ExtrudeGeometry(shape,{depth:.013,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.005,bevelThickness:.005,curveSegments:12});geo.translate(0,0,-.0065);mesh(geo,blueGlaze,ear);
   cable([[-.028,.018,.014],[-.025,.057,.014],[0,.113,.014],[.027,.036,.014]],.0019,material(0x4c615b,.62),ear);
@@ -553,6 +554,7 @@ export function createOffice(renderer,viewerPosition){
  const[cHandle,handlePaint]=canvas(256);handlePaint.fillStyle='#e8dfc6';handlePaint.fillRect(0,0,256,256);handlePaint.fillStyle='#84adb0';for(const x of[0,95,200])handlePaint.fillRect(x,0,47,256);
  const handleGlaze=new THREE.MeshPhysicalMaterial({map:texture(cHandle),roughness:.28,clearcoat:1});
  cable([[.129,.211,0],[.195,.222,0],[.249,.188,0],[.257,.130,0],[.229,.075,0],[.178,.057,0],[.125,.076,0]],.014,handleGlaze,earMug);
+ const mugGrip=new THREE.Object3D();mugGrip.name='Mug handle grip';mugGrip.position.set(.249,.141,0);earMug.add(mugGrip);
  const noseShape=new THREE.Shape();noseShape.moveTo(-.021,.010);noseShape.quadraticCurveTo(0,.021,.021,.010);noseShape.quadraticCurveTo(.021,-.003,0,-.019);noseShape.quadraticCurveTo(-.022,-.004,-.021,.010);
  const nose=mesh(new THREE.ExtrudeGeometry(noseShape,{depth:.012,bevelEnabled:true,bevelSize:.003,bevelThickness:.003,bevelSegments:2,curveSegments:8}),new THREE.MeshPhysicalMaterial({color:0x292823,roughness:.30,clearcoat:1}),earMug);nose.position.set(0,.129,.142);
  const mugPose=new THREE.Group();mugPose.name='Spilled animal mug in the left foreground';mugPose.add(earMug);earMug.position.y=-.135;office.add(mugPose);

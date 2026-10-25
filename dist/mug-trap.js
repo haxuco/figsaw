@@ -9,7 +9,10 @@ export function createMugTrap({mug,camera,restraint}){
  const eyePosition=new THREE.Vector3(),eyeRotation=new THREE.Quaternion();
  const heldPosition=new THREE.Vector3(),drinkPosition=new THREE.Vector3(),worldPosition=new THREE.Vector3();
  const worldRotation=new THREE.Quaternion(),localRotation=new THREE.Quaternion(),parentRotation=new THREE.Quaternion();
- const drinkRotation=new THREE.Quaternion(),handleRotation=new THREE.Quaternion().setFromEuler(new THREE.Euler(0,Math.PI/2,-.12));
+ const drinkRotation=new THREE.Quaternion(),halfTurn=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.PI);
+ const handleRotation=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),-Math.PI/2);
+ const handle=mug.getObjectByName('Mug handle grip'),earTips=['Mug left ear tip','Mug right ear tip'].map(name=>mug.getObjectByName(name));
+ const earCenter=new THREE.Vector3(),earPoint=new THREE.Vector3(),mugScale=new THREE.Vector3();
  const hand={position:new THREE.Vector3(),quaternion:new THREE.Quaternion(),blend:0,grip:0,reveal:0,gripKind:'handle'};
  let startedAt=null,finished=false,blackout=0;
  function start(time){
@@ -17,7 +20,15 @@ export function createMugTrap({mug,camera,restraint}){
   mug.updateWorldMatrix(true,false);mug.getWorldPosition(floorPosition);mug.getWorldQuaternion(floorRotation);
   camera.updateWorldMatrix(true,false);camera.getWorldPosition(eyePosition);camera.getWorldQuaternion(eyeRotation);
   heldPosition.set(.03,-.25,-.52).applyQuaternion(eyeRotation).add(eyePosition);
-  drinkPosition.set(0,-.082,-.205).applyQuaternion(eyeRotation).add(eyePosition);
+  // Turn the cat face away, putting the ears on the far rim as in a real sip.
+  // Land the actual ear tips at eye level rather than guessing the mug center.
+  earCenter.set(0,0,0);
+  for(const tip of earTips){tip.getWorldPosition(earPoint);mug.worldToLocal(earPoint);earCenter.add(earPoint);}
+  earCenter.multiplyScalar(.5);mug.getWorldScale(mugScale);
+  drinkRotation.setFromAxisAngle(new THREE.Vector3(1,0,0),.82);
+  localRotation.copy(eyeRotation).multiply(drinkRotation).multiply(halfTurn);
+  drinkPosition.set(0,0,-.055).applyQuaternion(eyeRotation).add(eyePosition)
+   .sub(earCenter.multiply(mugScale).applyQuaternion(localRotation));
   startedAt=time;blackout=0;hand.blend=hand.grip=hand.reveal=0;return true;
  }
  function update(time,reducedMotion=false){
@@ -32,16 +43,17 @@ export function createMugTrap({mug,camera,restraint}){
    worldPosition.y+=Math.sin(Math.PI*lift)*.13;
    worldPosition.lerp(drinkPosition,sip);
    drinkRotation.setFromAxisAngle(new THREE.Vector3(1,0,0),.82*sip);
-   localRotation.copy(eyeRotation).multiply(drinkRotation);
+   localRotation.copy(eyeRotation).multiply(drinkRotation).multiply(halfTurn);
    worldRotation.slerpQuaternions(floorRotation,localRotation,lift);
    mug.position.copy(worldPosition);mug.parent.worldToLocal(mug.position);
    mug.parent.getWorldQuaternion(parentRotation);mug.quaternion.copy(parentRotation.invert()).multiply(worldRotation);
    mug.updateWorldMatrix(true,false);
-   // The handle is on the mug's right side; the palm and curled fingers follow it.
-   mug.localToWorld(hand.position.set(.235,0,0));
-   hand.quaternion.copy(worldRotation).multiply(handleRotation);
+   handle.getWorldPosition(hand.position);
+   // Thumb up, fingers stacked vertically around the handle. Counter the cup's
+   // half-turn so the wrist still points back toward the viewer's forearm.
+   hand.quaternion.copy(worldRotation).multiply(halfTurn).multiply(handleRotation);
    hand.blend=smooth(elapsed,0,.72);hand.grip=smooth(elapsed,.48,.80);hand.reveal=smooth(elapsed,0,.22);
-   blackout=smooth(elapsed,3.26,3.52);
+   blackout=smooth(elapsed,3.16,3.36);
    if(elapsed<3.72)return false;
   }
   finished=true;blackout=1;restraint.endReach();return true;
