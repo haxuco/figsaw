@@ -317,10 +317,14 @@ function updateEntrance(time){
  const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,8.5);
  entrancePath.getPointAt(progress,ridePoint);entrancePath.getTangentAt(progress,rideDirection);
  model.position.copy(ridePoint);model.rotation.y=Math.atan2(rideDirection.x,rideDirection.z);
+ // Turn the stone partly toward the saved viewpoint while the wheels follow the route.
+ const viewerYaw=Math.atan2(homePosition.x-ridePoint.x,homePosition.z-ridePoint.z);
+ const relativeYaw=THREE.MathUtils.euclideanModulo(viewerYaw-model.rotation.y+Math.PI,Math.PI*2)-Math.PI;
+ puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70);
  setRollingDistance(progress*entranceLength/modelScale);
 }
 updateEntrance(0);
-const {group:office,laptop}=createOffice(renderer);scene.add(office);
+const {group:office,laptop}=createOffice(renderer,homePosition);scene.add(office);
 const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
 function interactionAt(event,laptopOnly=false){
  const rect=canvas.getBoundingClientRect();

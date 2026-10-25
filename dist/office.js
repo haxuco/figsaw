@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 
-export function createOffice(renderer){
+export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
  let seed=87021;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const range=(a,b)=>a+(b-a)*random();
@@ -268,14 +268,17 @@ export function createOffice(renderer){
  for(const z of[-1.07,1.07]){rod([-.32,1.27,z],[.32,1.27,z],.008,silver,game);for(let i=0;i<5;i++)sphere([.025,.03,.025],[-.25+i*.07,1.27,z],players[z>0?1:0],game);}
 
  // The MacBook rests directly on the floor in front of the viewer's prone eye position.
- const laptop=new THREE.Group();laptop.name='MacBook Pro on the floor';laptop.position.set(.45,.027,2.18);laptop.rotation.y=.10;office.add(laptop);
+ const laptop=new THREE.Group();laptop.name='MacBook Pro on the floor';laptop.position.set(.45,.027,2.18);laptop.rotation.y=Math.atan2(viewerPosition.x-laptop.position.x,viewerPosition.z-laptop.position.z);office.add(laptop);
  const aluminum=material(0x879194,.35,null,.72),keyBlack=material(0x101517,.70);
- rounded([.88,.026,.59],[0,0,0],aluminum,laptop);
- rounded([.66,.006,.275],[0,.016,-.065],keyBlack,laptop);
- const hinge=cylinder(.018,.77,[0,.025,-.272],black,laptop,20);hinge.rotation.z=Math.PI/2;
- const laptopLid=new THREE.Group();laptopLid.position.set(0,.045,-.274);laptopLid.rotation.x=Math.PI/2;laptop.add(laptopLid);
- rounded([.88,.565,.018],[0,.283,0],aluminum,laptopLid);
- rounded([.856,.542,.007],[0,.286,.013],keyBlack,laptopLid);
+ // Both halves share the same rounded footprint, including the bevel's outer extent.
+ function devicePanel(w,h,t,pos,mat,parent,flat=false){const b=Math.min(.012,w/6,h/6,t/6),part=mesh(bevelBox(w-2*b,h-2*b,t,.026-b),mat,parent);part.position.set(...pos);if(flat)part.rotation.x=-Math.PI/2;return part;}
+ devicePanel(.88,.59,.026,[0,0,0],aluminum,laptop,true);
+ devicePanel(.66,.275,.003,[0,.0145,-.065],keyBlack,laptop,true);
+ const hinge=cylinder(.013,.77,[0,.020,-.281],black,laptop,20);hinge.rotation.z=Math.PI/2;
+ const laptopLid=new THREE.Group();laptopLid.position.set(0,.034,-.295);laptopLid.rotation.x=Math.PI/2;laptop.add(laptopLid);
+ devicePanel(.88,.59,.018,[0,.295,0],aluminum,laptopLid);
+ devicePanel(.856,.566,.005,[0,.295,.010],keyBlack,laptopLid);
+ for(const x of[-.34,.34])for(const z of[-.21,.21])sphere([.025,.006,.025],[x,-.014,z],rubber,laptop);
  // The dark inset emblem faces outward on the closed aluminum lid.
  const emblem=new THREE.Shape();emblem.moveTo(0,.027);emblem.bezierCurveTo(-.019,.043,-.045,.022,-.042,-.004);emblem.bezierCurveTo(-.04,-.025,-.022,-.052,-.010,-.044);emblem.bezierCurveTo(0,-.037,.005,-.037,.018,-.044);emblem.bezierCurveTo(.030,-.049,.043,-.024,.046,-.016);emblem.bezierCurveTo(.023,-.009,.024,.015,.043,.021);emblem.bezierCurveTo(.029,.040,.014,.032,0,.027);
  const lidEmblem=mesh(new THREE.ShapeGeometry(emblem),keyBlack,laptopLid);lidEmblem.position.set(0,.30,-.010);lidEmblem.rotation.y=Math.PI;lidEmblem.castShadow=false;
@@ -295,15 +298,15 @@ export function createOffice(renderer){
  }
  for(let i=0;i<12;i++){display.fillStyle='#50666e';display.fillRect(912,84+i*31,range(35,90),3);}
  const displayMap=texture(cDisplay),displayMat=new THREE.MeshBasicMaterial({map:displayMap,color:0x7f9296});
- const laptopScreen=mesh(new THREE.PlaneGeometry(.823,.505),displayMat,laptopLid);laptopScreen.position.set(0,.289,.018);laptopScreen.castShadow=false;
- box([.076,.014,.004],[0,.536,.021],keyBlack,laptopLid);sphere([.003,.003,.002],[0,.532,.024],material(0x1e3038,.2),laptopLid);
+ const laptopScreen=mesh(new THREE.PlaneGeometry(.823,.525),displayMat,laptopLid);laptopScreen.position.set(0,.300,.013);laptopScreen.castShadow=false;
+ box([.076,.014,.002],[0,.556,.014],keyBlack,laptopLid);sphere([.003,.003,.001],[0,.553,.0155],material(0x1e3038,.2),laptopLid);
  const[cLabel,label]=canvas(512);cLabel.height=64;label.font='22px sans-serif';label.textAlign='center';label.fillStyle='#9ca5a6';label.fillText('MacBook Pro',256,40);
- const wordmark=mesh(new THREE.PlaneGeometry(.14,.018),new THREE.MeshBasicMaterial({map:texture(cLabel),transparent:true}),laptopLid);wordmark.position.set(0,.025,.021);wordmark.castShadow=false;
+ const wordmark=mesh(new THREE.PlaneGeometry(.14,.018),new THREE.MeshBasicMaterial({map:texture(cLabel),transparent:true}),laptopLid);wordmark.position.set(0,.025,.013);wordmark.castShadow=false;
  const[cKeys,kctx]=canvas(1024);kctx.fillStyle='#151b1e';kctx.fillRect(0,0,1024,1024);kctx.strokeStyle='#3e494d';kctx.fillStyle='#9ca5a6';kctx.font='25px sans-serif';kctx.textAlign='center';
  const labels=['1234567890-=','QWERTYUIOP[]','ASDFGHJKL;’','ZXCVBNM,./'];
  for(let row=0;row<4;row++)for(let col=0;col<12;col++){const x=18+col*83,y=74+row*181;kctx.strokeRect(x,y,72,145);kctx.fillText(labels[row][col]||'',x+36,y+86);}
- kctx.strokeRect(250,825,524,125);const keyboardSurface=mesh(new THREE.PlaneGeometry(.635,.257),new THREE.MeshStandardMaterial({map:texture(cKeys),roughness:.7}),laptop);keyboardSurface.rotation.x=-Math.PI/2;keyboardSurface.position.set(0,.021,-.065);
- const trackpad=rounded([.34,.003,.17],[0,.016,.174],material(0x667478,.44,null,.62),laptop);
+ kctx.strokeRect(250,825,524,125);const keyboardSurface=mesh(new THREE.PlaneGeometry(.635,.257),new THREE.MeshStandardMaterial({map:texture(cKeys),roughness:.7}),laptop);keyboardSurface.rotation.x=-Math.PI/2;keyboardSurface.position.set(0,.0165,-.065);
+ const trackpad=devicePanel(.34,.17,.001,[0,.0135,.174],material(0x667478,.44,null,.62),laptop,true);
  const speakerDots=new THREE.InstancedMesh(new THREE.CircleGeometry(.0012,5),black,480);
  for(let i=0;i<480;i++){const o=new THREE.Object3D(),side=i<240?-1:1,j=i%240;o.position.set(side*(.355+(j%8)*.006),.017,-.196+Math.floor(j/8)*.0085);o.rotation.x=-Math.PI/2;o.updateMatrix();speakerDots.setMatrixAt(i,o.matrix);}laptop.add(speakerDots);
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
@@ -327,16 +330,20 @@ export function createOffice(renderer){
 
  // Paperwork, circuit boards, cables and broken casing fragments cover the floor.
  function paperMap(){const[c,ctx]=canvas();ctx.fillStyle='#b2af94';ctx.fillRect(0,0,512,512);ctx.fillStyle='#4f584c';for(let i=0;i<35;i++){const y=35+i*12;ctx.fillRect(30,y,range(100,430),range(1,3));}ctx.strokeStyle='rgba(64,54,28,.4)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(345,130,61,0,Math.PI*2);ctx.stroke();speckle(ctx,512,8000,'49,45,27',.16);return texture(c);}
- const paper=material(0xffffff,.99,paperMap()),board=material(0x2b4834,.88),debrisMats=[plastic,steel,wood,material(0x838575,.97)];
+ const paper=material(0xffffff,.99,paperMap()),board=material(0x2b4834,.88),debrisMats=[plastic,steel,wood,material(0x838575,.97)],floorPapers=[],carpetPatches=[];
  for(let i=0;i<82;i++){
   let x=range(-3.62,3.58),z=range(-3.75,4.0);if(Math.abs(x)<.65&&z<.8&&z>-.9)x-=1.2;
-  const sheet=mesh(new THREE.PlaneGeometry(range(.13,.29),range(.17,.37),1,1),paper);sheet.rotation.set(-Math.PI/2+range(-.10,.10),range(-.07,.07),random()*Math.PI*2);sheet.position.set(x,range(.012,.038),z);sheet.material.side=THREE.DoubleSide;
+  const sheet=mesh(new THREE.PlaneGeometry(range(.13,.29),range(.17,.37),4,4),paper);
+  const crease=range(-.10,.10),curl=range(-.07,.07),angle=random()*Math.PI*2,oldHeight=range(.012,.038);
+  sheet.rotation.set(-Math.PI/2,0,angle);sheet.position.set(x,.005,z);sheet.material.side=THREE.DoubleSide;sheet.name='Paper resting on the floor';
+  const p=sheet.geometry.attributes.position;for(let j=0;j<p.count;j++)p.setZ(j,Math.abs(Math.sin(p.getX(j)*33+crease)*Math.sin(p.getY(j)*24+curl))*.0015+oldHeight*.008);
+  floorPapers.push(sheet);
  }
  for(let i=0;i<95;i++){let x=range(-3.65,3.65),z=range(-3.7,4);if(Math.abs(x)<.8&&z>-.8&&z<1.3)x-=1.7;const piece=box([range(.025,.17),range(.015,.065),range(.035,.20)],[x,range(.025,.055),z],debrisMats[i%4]);piece.rotation.set(range(-.13,.13),random()*Math.PI*2,range(-.13,.13));}
  for(let i=0;i<9;i++){const chip=new THREE.Group();chip.position.set(range(-3,3),.028,range(-2,3));chip.rotation.y=random()*6;office.add(chip);box([.18,.012,.24],[0,0,0],board,chip);for(let j=0;j<4;j++)box([.035,.017,.05],[-.055+(j%2)*.10,.013,-.07+Math.floor(j/2)*.12],black,chip);}
  for(let i=0;i<12;i++){const p=box([.09,.018,.09],[range(-3.5,3.5),.03,range(-3.4,3.7)],black);p.rotation.y=random()*6;box([.06,.003,.03],[p.position.x,.041,p.position.z],plastic).rotation.y=p.rotation.y;}
  // A few torn carpet squares and lifted corners break up the concrete floor.
- for(let i=0;i<14;i++){const p=box([range(.3,.7),.012,range(.3,.8)],[range(-3.4,3.4),.007,range(-3.5,3.7)],material(i%2?0xb9bcb0:0xc6c7b6,.98,fabricMap));p.rotation.y=range(-.15,.15);}
+ for(let i=0;i<14;i++){const p=box([range(.3,.7),.012,range(.3,.8)],[range(-3.4,3.4),.007,range(-3.5,3.7)],material(i%2?0x888c7c:0x9b9a85,.98,fabricMap));p.rotation.y=range(-.15,.15);carpetPatches.push(p);}
 
  // Product-design whiteboards: screen layouts, mobile flows, notes and erased marker smears.
  // Uneven eraser passes leave ghost lines; dirt and drips collect around the frames.
@@ -433,7 +440,7 @@ export function createOffice(renderer){
  }
  for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(missingNotes.has(row*9+col))continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.040,row*9+col);}
  for(let i=0;i<5;i++){if(i===1||i===4)continue;sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.040,28+i);}
- for(let i=0;i<4;i++){const fallenNote=sticky(office,-1.70-i*.30,.024,-.38+i*.26,33+i);fallenNote.rotation.set(-Math.PI/2,0,.6+i*.73);}
+ for(let i=0;i<4;i++){const fallenNote=sticky(office,-1.70-i*.30,.005,-.38+i*.26,33+i);fallenNote.rotation.set(-Math.PI/2,0,.6+i*.73);const p=fallenNote.geometry.attributes.position;for(let j=0;j<p.count;j++)p.setZ(j,p.getZ(j)*.10);floorPapers.push(fallenNote);}
 
  // One crooked overhead light and a small desk lamp provide practical light sources.
  const lamp=new THREE.Group();lamp.position.set(.22,2.98,-.55);lamp.rotation.set(.02,.12,-.075);office.add(lamp);box([1.50,.09,.28],[0,0,0],steel,lamp);
@@ -473,7 +480,7 @@ export function createOffice(renderer){
  }
  function bottleShell(profile,mat,parent,depth=1){const body=mesh(new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),48),mat,parent);body.scale.z=depth;return body;}
  function placeBottle(bottle,x,z,rotation,center,scale){
-  const pose=new THREE.Group();pose.name=bottle.name;pose.add(bottle);bottle.position.y=-center;office.add(pose);pose.position.set(x,0,z);pose.rotation.set(...rotation);pose.scale.setScalar(scale);pose.updateMatrixWorld(true);pose.position.y=.013-new THREE.Box3().setFromObject(pose).min.y;return pose;
+  const pose=new THREE.Group();pose.name=bottle.name;pose.add(bottle);bottle.position.y=-center;office.add(pose);pose.position.set(x,0,z);pose.rotation.set(...rotation);pose.scale.setScalar(scale);pose.updateMatrixWorld(true);pose.position.y=.006-new THREE.Box3().setFromObject(pose,true).min.y;return pose;
  }
  const glassKetchup=new THREE.Group();glassKetchup.name='Discarded glass ketchup bottle';
  const glassProfile=[[0,0],[.063,0],[.076,.014],[.080,.047],[.079,.19],[.069,.267],[.049,.342],[.030,.410],[.029,.447],[.033,.454],[.032,.471],[0,.471]];
@@ -491,7 +498,7 @@ export function createOffice(renderer){
  const lidSeam=cylinder(.0694,.003,[0,.014,0],capSeam,squeezeKetchup,40);lidSeam.scale.z=.73;
  rounded([.042,.012,.010],[0,.014,.051],bottleCap,squeezeKetchup);
  box([.031,.018,.008],[0,.040,-.050],capSeam,squeezeKetchup);
- placeBottle(squeezeKetchup,1.19,2.54,[-.12,-.95,-Math.PI/2],.225,.80);
+ placeBottle(squeezeKetchup,1.95,2.45,[-Math.PI/2,0,-.45],.225,.80);
  // A tipped blue animal mug with pointed ceramic ears and coffee running from its rim.
  const[cMug,mugPaint]=canvas(1024);cMug.height=512;
  mugPaint.fillStyle='#86b0b2';mugPaint.fillRect(0,0,1024,512);
@@ -516,7 +523,7 @@ export function createOffice(renderer){
  const mugRim=mesh(new THREE.TorusGeometry(.134,.008,10,64),blueGlaze,earMug);mugRim.rotation.x=Math.PI/2;mugRim.position.y=.254;
  const mugFoot=mesh(new THREE.TorusGeometry(.102,.004,8,48),innerGlaze,earMug);mugFoot.rotation.x=Math.PI/2;mugFoot.position.y=.012;
  for(const side of[-1,1]){
-  const ear=new THREE.Group();ear.position.set(side*.095,.228,.103);ear.rotation.z=-side*.13;earMug.add(ear);
+  const ear=new THREE.Group();ear.position.set(side*.095,.235,.103);ear.rotation.set(-.06,side*Math.atan2(.095,.103),-side*.10);earMug.add(ear);
   const shape=new THREE.Shape();shape.moveTo(-.047,0);shape.bezierCurveTo(-.044,.046,-.015,.112,0,.142);shape.bezierCurveTo(.018,.125,.046,.045,.047,0);shape.closePath();
   const geo=new THREE.ExtrudeGeometry(shape,{depth:.013,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.005,bevelThickness:.005,curveSegments:12});geo.translate(0,0,-.0065);mesh(geo,blueGlaze,ear);
   cable([[-.028,.018,.014],[-.025,.057,.014],[0,.113,.014],[.027,.036,.014]],.0019,material(0x4c615b,.62),ear);
@@ -546,5 +553,83 @@ export function createOffice(renderer){
  for(const[distance,side,radius]of[[.45,.10,.018],[.51,-.07,.012],[.37,-.18,.022],[.29,.21,.009]]){
   const drop=rimPoint.clone().addScaledVector(spillDirection,distance).add(new THREE.Vector3(-spillDirection.z*side,0,spillDirection.x*side));coffeePuddle(drop.x,drop.z,radius,radius*.65,distance*3);
  }
+
+ // Papers conform to the concrete and thin carpet remnants instead of hovering above them.
+ office.updateMatrixWorld(true);
+ for(const sheet of floorPapers){
+  const p=sheet.geometry.attributes.position;
+  for(let i=0;i<p.count;i++){
+   const point=sheet.localToWorld(new THREE.Vector3(p.getX(i),p.getY(i),0));let support=.003;
+   for(const patch of carpetPatches){const local=patch.worldToLocal(point.clone()),size=patch.geometry.parameters;if(Math.abs(local.x)<size.width/2&&Math.abs(local.z)<size.depth/2)support=Math.max(support,.013);}
+   p.setZ(i,p.getZ(i)+support+.002-sheet.position.y);
+  }
+  p.needsUpdate=true;sheet.geometry.computeVertexNormals();sheet.geometry.computeBoundingSphere();
+ }
+
+ // The left wall carries the remains of the design team's work and reference library.
+ for(const[z,y,w,h,mobile]of[[-2.53,2.13,1.52,1.08,true],[-.62,2.13,1.78,1.10,false]]){
+  const g=new THREE.Group();g.name='Left-wall design whiteboard';g.position.set(-3.86,y,z);g.rotation.y=Math.PI/2;office.add(g);
+  box([w,h,.045],[0,0,0],silver,g);const map=wireframeMap(mobile);
+  const face=mesh(new THREE.PlaneGeometry(w-.07,h-.07),new THREE.MeshStandardMaterial({map,roughness:.85,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.026;
+  box([w-.07,.025,.10],[0,-h/2,.035],silver,g);
+  rod([-.4,-h/2+.025,.06],[-.23,-h/2+.025,.06],.011,black,g);
+  box([.13,.035,.065],[w*.29,-h/2+.029,.045],fabric,g);
+  sticky(g,w*.35,h*.21,.034,mobile?6:9);
+ }
+ const library=new THREE.Group();library.name='Worn bookshelf of design books';library.position.set(-3.65,0,1.65);library.rotation.y=Math.PI/2;office.add(library);
+ const shelfWood=material(0xb1a893,.92,woodMap),bookPages=material(0xa6a28d,.98);
+ box([1.56,2.38,.035],[0,1.19,-.185],shelfWood,library);
+ for(const x of[-.765,.765])box([.045,2.42,.42],[x,1.21,.015],shelfWood,library);
+ for(const y of[.12,.66,1.20,1.74,2.28])box([1.50,.035,.42],[0,y,.015],shelfWood,library);
+ box([1.51,.10,.045],[0,.05,.19],shelfWood,library);
+ const titles=[['The Design of Everyday Things','#b5ad86'],["Don't Make Me Think",'#bd8b36'],['Thinking with Type','#9f392f'],['Grid Systems','#adaf9a'],['Designing Interfaces','#54796f'],['About Face','#393e3e'],['The Elements of User Experience','#758b9d'],['Sprint','#b3a847'],['Universal Principles of Design','#b8b5a4'],['Designing for Interaction','#80665b'],['Sketching User Experiences','#456976'],['The Shape of Design','#bcb296']];
+ const spines=titles.map(([title,color],i)=>{
+  const[c,ctx]=canvas(128);c.height=1024;ctx.fillStyle=color;ctx.fillRect(0,0,128,1024);
+  const shade=ctx.createLinearGradient(0,0,128,0);shade.addColorStop(0,'rgba(0,0,0,.35)');shade.addColorStop(.25,'rgba(0,0,0,0)');shade.addColorStop(.86,'rgba(230,219,175,.12)');shade.addColorStop(1,'rgba(0,0,0,.2)');ctx.fillStyle=shade;ctx.fillRect(0,0,128,1024);
+  ctx.save();ctx.translate(76,70);ctx.rotate(Math.PI/2);ctx.fillStyle=[2,4,5,6,9,10].includes(i)?'#ded9c5':'#262b26';ctx.font='600 47px Georgia,serif';ctx.fillText(title,0,0,820);ctx.restore();
+  ctx.fillStyle='rgba(217,210,181,.55)';ctx.fillRect(14,947,100,3);ctx.fillRect(14,963,100,3);speckle(ctx,128,400,'22,24,17',.22);
+  return new THREE.MeshStandardMaterial({map:texture(c),roughness:.96});
+ });
+ for(let row=0;row<4;row++){
+  let x=-.69;
+  for(let i=0;i<16;i++){
+   const index=(i+row*5)%titles.length,w=range(.045,.085),h=range(.30,.44),depth=range(.22,.30);
+   if(x+w>.68)break;if(i===7||row===2&&i===11){x+=.10;continue;}
+   const book=new THREE.Group();book.name=titles[index][0];library.add(book);const lean=(i%6===5?-.12:range(-.025,.025));book.rotation.z=lean;book.position.set(x+w/2,.12+row*.54+.018+Math.abs(Math.sin(lean))*w/2,.18-depth/2);
+   box([w-.008,h-.009,depth-.007],[0,h/2,0],bookPages,book);
+   const cover=material(titles[index][1],.93);for(const side of[-1,1])box([.004,h,depth],[side*(w/2-.002),h/2,0],cover,book);
+   box([w,h,.007],[0,h/2,depth/2],cover,book);
+   const spine=mesh(new THREE.PlaneGeometry(w-.002,h-.004),spines[index],book);spine.position.set(0,h/2,depth/2+.004);spine.castShadow=false;
+   x+=w+.008;
+  }
+ }
+ // Dust collects along shelf lips and in the empty upper section.
+ for(const y of[.14,.68,1.22,1.76,2.30])box([1.44,.002,.035],[0,y,.196],material(0x6d6e59,.99),library);
+ const looseBook=box([.32,.055,.24],[.41,2.327,.03],material(0x6a4538,.95),library);looseBook.rotation.y=.17;
+
+ // High-resolution concrete wear: old spills, ground-in dirt, caster marks and fine cracks.
+ const[cWear,wear]=canvas(2048);wear.fillStyle='#66695d';wear.fillRect(0,0,2048,2048);
+ for(let i=0;i<1250;i++)cloud(wear,random()*2048,random()*2048,range(4,125),i%4?'34,31,21':'135,131,110',range(.035,.22));
+ for(let i=0;i<160;i++){
+  const side=i%4,x=side<2?(side?2048:0)+range(-45,90):random()*2048,y=side<2?random()*2048:(side===2?0:2048)+range(-45,90);
+  cloud(wear,x,y,range(60,190),'20,26,19',range(.15,.4));
+ }
+ for(let i=0;i<75;i++){
+  const x=range(80,1968),y=range(80,1968),r=range(14,70);cloud(wear,x,y,r*1.7,'57,35,15',range(.13,.35));
+  wear.strokeStyle=`rgba(48,35,18,${range(.12,.36)})`;wear.lineWidth=range(1,4);wear.beginPath();wear.ellipse(x,y,r,r*range(.6,1.2),random()*Math.PI,0,Math.PI*range(1.1,2));wear.stroke();
+ }
+ wear.lineCap='round';
+ for(let i=0;i<340;i++){
+  const x=range(100,1950),y=range(100,1950);wear.save();wear.translate(x,y);wear.rotate(random()*Math.PI*2);
+  wear.strokeStyle=`rgba(16,23,19,${range(.10,.30)})`;wear.lineWidth=range(1,4);wear.beginPath();wear.moveTo(0,0);wear.quadraticCurveTo(range(15,50),range(-12,12),range(55,160),range(-20,20));wear.stroke();wear.restore();
+ }
+ // Narrow chipped cracks and lighter scratches break up the surface without raised geometry.
+ for(let i=0;i<17;i++){
+  let x=random()*2048,y=random()*2048;wear.beginPath();wear.moveTo(x,y);for(let j=0;j<9;j++){x+=range(-20,25);y+=range(6,27);wear.lineTo(x,y);}
+  wear.strokeStyle='rgba(18,23,18,.42)';wear.lineWidth=2.2;wear.stroke();
+ }
+ for(let i=0;i<1900;i++){const x=random()*2048,y=random()*2048;wear.strokeStyle=`rgba(167,163,137,${range(.03,.22)})`;wear.lineWidth=range(.4,1.3);wear.beginPath();wear.moveTo(x,y);wear.lineTo(x+range(3,28),y+range(-5,5));wear.stroke();}
+ speckle(wear,2048,90000,'16,22,15',.26);speckle(wear,2048,30000,'166,161,135',.20);
+ const wornFloorMap=texture(cWear);concrete.map=wornFloorMap;concrete.bumpMap=wornFloorMap;concrete.bumpScale=.006;concrete.needsUpdate=true;
  return {group:office,laptop:laptopControl};
 }
