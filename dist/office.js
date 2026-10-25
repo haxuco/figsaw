@@ -5,6 +5,7 @@ import { createFigpalVats } from './figpal-vats.js?v=skeletal-figpals';
 import { createFallenMobile } from './fallen-mobile.js?v=left-rear';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=hard-cutouts';
 import { createFloorTimer } from './floor-timer.js';
+import { drawFigmaMark } from './figma-mark.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -284,14 +285,16 @@ export function createOffice(renderer,viewerPosition){
  devicePanel(.88,.59,.018,[0,.295,0],aluminum,laptopLid);
  devicePanel(.856,.566,.005,[0,.295,.010],keyBlack,laptopLid);
  for(const x of[-.34,.34])for(const z of[-.21,.21])sphere([.025,.006,.025],[x,-.014,z],rubber,laptop);
- // The dark inset emblem faces outward on the closed aluminum lid.
- const emblem=new THREE.Shape();emblem.moveTo(0,.027);emblem.bezierCurveTo(-.019,.043,-.045,.022,-.042,-.004);emblem.bezierCurveTo(-.04,-.025,-.022,-.052,-.010,-.044);emblem.bezierCurveTo(0,-.037,.005,-.037,.018,-.044);emblem.bezierCurveTo(.030,-.049,.043,-.024,.046,-.016);emblem.bezierCurveTo(.023,-.009,.024,.015,.043,.021);emblem.bezierCurveTo(.029,.040,.014,.032,0,.027);
- const lidEmblem=mesh(new THREE.ShapeGeometry(emblem),keyBlack,laptopLid);lidEmblem.position.set(0,.30,-.010);lidEmblem.rotation.y=Math.PI;lidEmblem.castShadow=false;
- const emblemLeaf=sphere([.010,.022,.0015],[.008,.352,-.010],keyBlack,laptopLid);emblemLeaf.rotation.z=-.45;emblemLeaf.castShadow=false;
+ // A flat Figma decal replaces the emblem on the outside of the aluminum lid.
+ const logoCanvas=document.createElement('canvas');logoCanvas.width=256;logoCanvas.height=384;drawFigmaMark(logoCanvas.getContext('2d'),0,0,256);
+ const figmaMap=texture(logoCanvas),figmaMat=new THREE.MeshStandardMaterial({map:figmaMap,transparent:true,alphaTest:.1,roughness:.64,metalness:.03,emissiveMap:figmaMap,emissive:0xffffff,emissiveIntensity:.14});
+ const lidEmblem=mesh(new THREE.PlaneGeometry(.115,.1725),figmaMat,laptopLid);lidEmblem.name='Figma logo on the laptop lid';lidEmblem.position.set(0,.30,-.0105);lidEmblem.rotation.y=Math.PI;lidEmblem.castShadow=false;
+
  const[cDisplay,display]=canvas(1024);cDisplay.height=640;
  display.fillStyle='#111b22';display.fillRect(0,0,1024,640);
  display.fillStyle='#222e36';display.fillRect(0,0,1024,38);display.fillRect(0,38,140,602);display.fillRect(894,38,130,602);
- display.font='13px sans-serif';display.fillStyle='#7e969e';display.fillText('Wireframes / exploration',28,25);
+ drawFigmaMark(display,15,6,17);
+ display.font='13px sans-serif';display.fillStyle='#bac6ca';display.fillText('Figma / Wireframes',44,25);
  for(let i=0;i<7;i++){display.fillStyle=i===2?'#48616b':'#657a80';display.fillRect(18,85+i*34,85-i%3*18,3);}
  for(let i=0;i<3;i++){
   const x=181+i*231;display.fillStyle='#b2bfbb';display.fillRect(x,118,197,390);

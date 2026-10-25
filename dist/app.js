@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=skeletal-figpals';
+import { createOffice } from './office.js?v=auto-laptop';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -520,7 +520,9 @@ function render(){
  updateEntrance(clock.elapsedTime);
  if(countdownStartTime!==null&&t>=countdownStartTime){
   countdown.start();countdownStartTime=null;
-  countdownAnnouncement.textContent='The five-minute countdown has started.';
+  // Automatic opening must never trigger the click-only Figma navigation.
+  if(!laptop.isOpen)openLaptop();
+  countdownAnnouncement.textContent='The five-minute countdown has started. The laptop is open.';
  }
  const countdownSeconds=countdown.update();
  if(countdownSeconds!==lastCountdownSeconds){
