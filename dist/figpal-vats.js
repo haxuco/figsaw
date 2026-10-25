@@ -1,7 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 import { figpalSwayPose } from './character-motion.js';
-import { createFloatingBones } from './floating-bones.js';
+import { createFloatingBones } from './floating-bones.js?v=varied-remains';
+import { createFigpalTransformation } from './figpal-transformation.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // All shapes, markings, glass, liquid and wear are local procedural assets.
@@ -193,6 +194,7 @@ export function createFigpalVats(){
   ball([0,.17,.28],[.018,.011,.012],new THREE.MeshBasicMaterial({color:0x76866b}),winch);
   const hanger=new THREE.Group();hanger.name=`Suspended Figpal ${i+1}`;hanger.position.y=height;rig.add(hanger);
   const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
+  const transformation=createFigpalTransformation(captive.object,i);
   // A spreader and two linked chain slings support the body, leaving its face clear.
   rod([-.22,.45,0],[.22,.45,0],.019,steel,hanger);
   const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,hanger);hook.position.set(0,.49,0);hook.rotation.z=-.5;rod([-.028,.476,.008],[.016,.511,.008],.004,darkMetal,hanger);
@@ -204,10 +206,10 @@ export function createFigpalVats(){
   box([.12,.21,.07],[0,0,0],darkMetal,control);
   ball([0,.047,.047],[.024,.024,.015],material(0x7b2e23,.6,0),control);ball([0,-.047,.047],[.024,.024,.015],material(0x697c49,.6,0),control);
   line([[.39,.95,.40],[.44,1.02,.35],[.46,1.27,.12],[.44,winchY-.13,.06],[.24,winchY,.0]],.007,darkMetal,rig);
-  rigs.push({rig,hanger,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
+  rigs.push({rig,hanger,transformation,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
- function toggleHoist(index){const rig=rigs[index];if(!rig)return null;rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.80:rig.homeHeight;return `Figpal ${index+1} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;}
+ function toggleHoist(index){const rig=rigs[index];if(!rig)return null;rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.65:rig.homeHeight;return `Figpal ${index+1}${rig.transformation.transformed?"'s bones":''} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;}
  let lastTime=0;const swayPose={};
  function update(time,reducedMotion=false){
   const dt=Math.max(0,Math.min(.05,time-lastTime));lastTime=time;
@@ -218,6 +220,7 @@ export function createFigpalVats(){
    rig.hanger.position.set(swayPose.x,swayPose.y,0);rig.hanger.rotation.z=swayPose.angle;
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
    rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
+   rig.transformation.update(1.086);
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
   for(const vat of vats){
