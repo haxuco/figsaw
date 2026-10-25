@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=closed-laptop';
+import { createOffice } from './office.js?v=ketchup-bottles';
 
 const canvas=document.querySelector('#scene');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
