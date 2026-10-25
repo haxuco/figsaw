@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 import { figpalSwayPose } from './character-motion.js';
-import { createFloatingBones } from './floating-bones.js?v=tank-decal';
+import { createFloatingBones } from './floating-bones.js?v=no-skulls';
 import { createFigpalTransformation } from './figpal-transformation.js?v=figpal-identity';
 import { createTankDecalFactory } from './tank-decal.js';
 

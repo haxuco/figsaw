@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js?v=acid-valves';
+import { createFigpalVats } from './figpal-vats.js?v=no-skulls';
 
 import { createFallenMobile } from './fallen-mobile.js?v=plush-grounded';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
