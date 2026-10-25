@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import { createOffice } from './office.js?v=silent-skeletons';
 import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=camera-hand';
-import { createRestraintMenu } from './restraint-menu.js';
+import { createRestraintMenu } from './restraint-menu.js?v=detach-icon';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';

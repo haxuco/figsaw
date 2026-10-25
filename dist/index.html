@@ -8,14 +8,24 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch.ttf" as="font" type="font/ttf" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=silent-skeletons">
+  <link rel="stylesheet" href="./style.css?v=detach-icon">
 </head>
 <body>
   <canvas id="scene" tabindex="0" aria-label="An abandoned technology office with three worried Figpals hanging from chain winches above green vats on the left, a closed MacBook Pro and a red LED countdown timer on the floor and a smaller Figsaw riding out of a dark corner. Click a winch or its canister control, or press 1, 2, or 3, to lower and raise the matching Figpal. Click the laptop or press Enter to reach for it. Your wrist is chained to the rear pipes. Right-click the wrist chain and choose Detach instance to free your hand, then click the laptop to open it. Use WASD to move, E to rise, Q to lower, drag or arrow keys to look around, and scroll to zoom. Hold Space to open his mouth. Press R to reset the view and replay his entrance."></canvas>
   <div id="figsaw-dialogue" hidden aria-hidden="true">
     <div class="dialogue-bubble"><strong>Figsaw</strong> <span>I want to play a game...</span></div>
   </div>
-  <div id="chain-menu" role="menu" aria-label="Chain instance" hidden><button type="button" role="menuitem">Detach instance</button></div>
+  <div id="chain-menu" role="menu" aria-label="Chain instance" hidden>
+    <button type="button" role="menuitem" aria-keyshortcuts="Alt+Meta+B">
+      <svg class="detach-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+        <g stroke="currentColor" stroke-width="1.65" stroke-linecap="round" stroke-linejoin="round">
+          <path d="m14 9.5 3-3a3.18 3.18 0 0 0-4.5-4.5L10 4.5M10 14.5l-3 3a3.18 3.18 0 0 1-4.5-4.5L5 10.5" transform="translate(2 1)"/>
+          <path d="m10 10 4-4m-4 12 4-4M4 4h2M4 4V2m16 18h-2m2 0v2"/>
+        </g>
+      </svg>
+      <span>Detach instance</span><kbd aria-hidden="true">⌥⌘B</kbd>
+    </button>
+  </div>
   <p id="restraint-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <div id="figpal-dialogues" hidden aria-hidden="true"></div>
   <p id="dialogue-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
@@ -34,6 +44,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./app.js?v=camera-hand"></script>
+  <script type="module" src="./app.js?v=detach-icon"></script>
 </body>
 </html>

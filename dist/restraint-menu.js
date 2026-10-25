@@ -7,10 +7,15 @@ export function createRestraintMenu(onDetach){
   menu.style.top=`${Math.max(8,Math.min(y,innerHeight-menu.offsetHeight-8))}px`;
   button.focus({preventScroll:true});
  }
- button.addEventListener('click',()=>{hide(true);onDetach();});
+ function detach(){hide(true);onDetach();}
+ button.addEventListener('click',detach);
  menu.addEventListener('contextmenu',event=>event.preventDefault());
  document.addEventListener('pointerdown',event=>{if(!menu.hidden&&!menu.contains(event.target))hide();},true);
- document.addEventListener('keydown',event=>{if(menu.hidden)return;if(event.code==='Escape'){event.preventDefault();event.stopPropagation();hide(true);}},true);
+ document.addEventListener('keydown',event=>{
+  if(menu.hidden)return;
+  if(event.code==='Escape'){event.preventDefault();event.stopPropagation();hide(true);}
+  else if(event.code==='KeyB'&&event.altKey&&event.metaKey&&!event.ctrlKey&&!event.shiftKey){event.preventDefault();event.stopPropagation();if(!event.repeat)detach();}
+ },true);
  window.addEventListener('blur',()=>hide());
  return {show,hide,get active(){return !menu.hidden;}};
 }
