@@ -307,11 +307,16 @@ const modelScale=.26,groundOffset=-.53*modelScale+.012;
 model.scale.setScalar(modelScale);
 const entrancePath=new THREE.CatmullRomCurve3([
  [2.45,groundOffset,-2.40],[1.70,groundOffset,-2.20],[.90,groundOffset,-1.65],
- [-.05,groundOffset,-1.10],[-.92,groundOffset,-.05],[-.95,groundOffset,.65]
+ [-.05,groundOffset,-1.10],[-.88,groundOffset,.30],[-.60,groundOffset,1.22]
 ].map(point=>new THREE.Vector3(...point)),false,'centripetal');
 entrancePath.arcLengthDivisions=240;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
-let entranceStartedAt=0;
+const arrivalDialogue=document.querySelector('#figsaw-dialogue');
+const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
+const dialogueText='Figsaw: I want to play a game...';
+const dialogueAnchor=new THREE.Vector3(),dialogueProjection=new THREE.Vector3();
+const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
+let entranceStartedAt=0,entranceArrived=false,dialogueOccluded=false,nextDialogueVisibilityCheck=0;
 function updateEntrance(time){
  const elapsed=time-entranceStartedAt-1.0;
  const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,8.5);
@@ -322,6 +327,7 @@ function updateEntrance(time){
  const relativeYaw=THREE.MathUtils.euclideanModulo(viewerYaw-model.rotation.y+Math.PI,Math.PI*2)-Math.PI;
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70);
  setRollingDistance(progress*entranceLength/modelScale);
+ if(progress===1&&!entranceArrived){entranceArrived=true;dialogueAnnouncement.textContent=dialogueText;}
 }
 updateEntrance(0);
 const {group:office,laptop,setDisplayEnvironment}=createOffice(renderer,homePosition);scene.add(office);
@@ -333,6 +339,30 @@ reflectionCamera.update(renderer,scene);
 const reflectionFilter=new THREE.PMREMGenerator(renderer);
 const displayEnvironment=reflectionFilter.fromCubemap(reflectionTarget.texture);
 setDisplayEnvironment(displayEnvironment.texture);reflectionTarget.dispose();reflectionFilter.dispose();
+function updateArrivalDialogue(time){
+ if(!entranceArrived){arrivalDialogue.hidden=true;return;}
+ // Keep the bubble attached to the crown as the viewer walks or turns around.
+ puppet.localToWorld(dialogueAnchor.set(-.28,bodyHeight+.24,0));
+ dialogueProjection.copy(dialogueAnchor).project(camera);
+ // A portrait view can clip his crown while part of the rock is still visible.
+ const horizontalMargin=Math.min(.7,.40/(camera.position.distanceTo(dialogueAnchor)*Math.tan(THREE.MathUtils.degToRad(camera.fov/2))*camera.aspect));
+ if(dialogueProjection.z<-1||dialogueProjection.z>1||Math.abs(dialogueProjection.x)>1+horizontalMargin||Math.abs(dialogueProjection.y)>1){arrivalDialogue.hidden=true;return;}
+ if(time>=nextDialogueVisibilityCheck){
+  nextDialogueVisibilityCheck=time+.12;
+  dialogueDirection.copy(dialogueAnchor).sub(camera.position);const distance=dialogueDirection.length();
+  dialogueRay.set(camera.position,dialogueDirection.normalize());dialogueRay.near=.06;dialogueRay.far=Math.max(.06,distance-.035);
+  dialogueOccluded=dialogueRay.intersectObject(office,true).length>0;
+ }
+ if(dialogueOccluded){arrivalDialogue.hidden=true;return;}
+ arrivalDialogue.hidden=false;
+ const rect=canvas.getBoundingClientRect(),anchorX=rect.left+(dialogueProjection.x*.5+.5)*rect.width;
+ const anchorY=rect.top+(-dialogueProjection.y*.5+.5)*rect.height;
+ const halfWidth=arrivalDialogue.offsetWidth/2;
+ const x=THREE.MathUtils.clamp(anchorX,halfWidth+12,innerWidth-halfWidth-12);
+ const y=Math.max(arrivalDialogue.offsetHeight+14,anchorY-8);
+ arrivalDialogue.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-100%)`;
+ arrivalDialogue.style.setProperty('--tail-offset',`${THREE.MathUtils.clamp(anchorX-x,-halfWidth+24,halfWidth-24)}px`);
+}
 const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
 function interactionAt(event,laptopOnly=false){
  const rect=canvas.getBoundingClientRect();
@@ -352,7 +382,7 @@ function openLaptop(){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;}
+function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';nextDialogueVisibilityCheck=0;}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -470,7 +500,7 @@ function render(){
  laptop.update(dt,reducedMotion);
  model.updateMatrixWorld(true);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
- renderer.render(scene,camera);requestAnimationFrame(render);
+ renderer.render(scene,camera);updateArrivalDialogue(t);requestAnimationFrame(render);
 }
 render();
 canvas.addEventListener('webglcontextlost',event=>event.preventDefault());

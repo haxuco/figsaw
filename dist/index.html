@@ -7,10 +7,14 @@
   <title>Figsaw</title>
   <meta name="description" content="A view of Figsaw and a MacBook Pro in an abandoned technology office.">
   <link rel="icon" href="data:,">
-  <link rel="stylesheet" href="./style.css?v=saved-camera">
+  <link rel="stylesheet" href="./style.css?v=arrival-dialogue">
 </head>
 <body>
   <canvas id="scene" tabindex="0" aria-label="An abandoned technology office with a closed MacBook Pro on the floor and a smaller Figsaw riding out of a dark corner. Click the laptop or press Enter to open it. Use WASD to move, E to rise, Q to lower, drag or arrow keys to look around, and scroll to zoom. Hold Space to open his mouth. Press R to reset the view and replay his entrance."></canvas>
+  <div id="figsaw-dialogue" hidden aria-hidden="true">
+    <div class="dialogue-bubble"><strong>Figsaw:</strong> <span>I want to play a game...</span></div>
+  </div>
+  <p id="dialogue-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <div class="view-tools">
     <button id="copy-view" type="button" title="Copy the current camera view as a prompt">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor"/><path d="M10 3H4a1 1 0 0 0-1 1v6" stroke="currentColor" stroke-linecap="round"/></svg>
@@ -23,6 +27,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./app.js?v=monitor-glass-rear-wall"></script>
+  <script type="module" src="./app.js?v=arrival-dialogue"></script>
 </body>
 </html>
