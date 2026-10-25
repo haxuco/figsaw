@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=spilled-mug';
+import { createOffice } from './office.js?v=monitor-glass-rear-wall';
 
 const canvas=document.querySelector('#scene');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -324,7 +324,15 @@ function updateEntrance(time){
  setRollingDistance(progress*entranceLength/modelScale);
 }
 updateEntrance(0);
-const {group:office,laptop}=createOffice(renderer,homePosition);scene.add(office);
+const {group:office,laptop,setDisplayEnvironment}=createOffice(renderer,homePosition);scene.add(office);
+// Capture the actual furnished room once for subtle reflections in the display covers.
+// Static environment capture keeps the glass reflective without six extra renders per frame.
+const reflectionTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
+const reflectionCamera=new THREE.CubeCamera(.08,20,reflectionTarget);reflectionCamera.position.set(0,1.35,.25);
+reflectionCamera.update(renderer,scene);
+const reflectionFilter=new THREE.PMREMGenerator(renderer);
+const displayEnvironment=reflectionFilter.fromCubemap(reflectionTarget.texture);
+setDisplayEnvironment(displayEnvironment.texture);reflectionTarget.dispose();reflectionFilter.dispose();
 const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
 function interactionAt(event,laptopOnly=false){
  const rect=canvas.getBoundingClientRect();

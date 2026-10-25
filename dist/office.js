@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -67,21 +68,17 @@ export function createOffice(renderer,viewerPosition){
  for(const x of[-.86,.86])cable([[x,.80,.15],[x,.12,.16],[x,-.77,.15]],.005,black,windowGroup);
  cable([[1.35,.83,.12],[1.4,-.7,.14],[1.32,-1.10,.18]],.006,black,windowGroup);
 
- // Modern flat-panel displays with fractured LCDs and a few dying green traces.
- function screenMap(type){const[c,ctx]=canvas();ctx.fillStyle=type==='live'?'#10231b':'#101a16';ctx.fillRect(0,0,512,512);
-  const gradient=ctx.createLinearGradient(0,0,512,512);gradient.addColorStop(0,'rgba(101,125,107,.22)');gradient.addColorStop(1,'rgba(3,8,5,.7)');ctx.fillStyle=gradient;ctx.fillRect(0,0,512,512);
-  if(type==='live'){for(let row=0;row<24;row++){ctx.fillStyle=`rgba(102,150,91,${range(.2,.65)})`;let x=24;for(let j=0;j<range(5,14);j++){const w=range(5,45);ctx.fillRect(x,25+row*17,w,3);x+=w+7;}}for(let y=0;y<512;y+=4){ctx.fillStyle='rgba(0,0,0,.2)';ctx.fillRect(0,y,512,1);}}
-  if(type!=='live'){const hx=range(150,350),hy=range(100,330);for(let i=0;i<15;i++){const a=i/15*Math.PI*2;ctx.strokeStyle=i%2?'rgba(148,166,149,.65)':'rgba(0,0,0,.8)';ctx.lineWidth=range(1,3);ctx.beginPath();ctx.moveTo(hx,hy);for(let j=1;j<7;j++)ctx.lineTo(hx+Math.cos(a)*j*65+range(-20,20),hy+Math.sin(a)*j*65+range(-15,15));ctx.stroke();}if(type==='hole'){ctx.fillStyle='#030705';ctx.beginPath();for(let i=0;i<14;i++){const a=i/14*Math.PI*2,r=range(55,105),x=hx+Math.cos(a)*r,y=hy+Math.sin(a)*r;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();}}
-  speckle(ctx,512,5000,'168,173,142',.13);return texture(c);
- }
- const screens={};for(const type of['live','cracked','hole']){const map=screenMap(type);screens[type]=new THREE.MeshStandardMaterial({map,roughness:.28,metalness:.15,emissive:0xffffff,emissiveMap:map,emissiveIntensity:type==='live'?.7:.45});}
- const monitorCase=bevelBox(.77,.45,.035,.012),frontGlass=new THREE.PlaneGeometry(.735,.410);
+ // Separate LCD damage from the laminated glass and its room reflections.
+ const displays=createDisplayFactory(renderer);
+ // Keep the established furniture and clutter layout independent of display texture changes.
+ seed=577513849;
+ const monitorCase=bevelBox(.77,.45,.035,.012);
  const monitorMetal=material(0x6b7474,.38,null,.7);
  function monitor(parent,pos,rotation=0,type='cracked',size=1){const group=new THREE.Group();group.position.set(...pos);group.rotation.y=rotation;group.scale.setScalar(size);parent.add(group);
   group.name='Damaged widescreen monitor';
   const shell=mesh(monitorCase,black,group);shell.position.set(0,.375,0);
   rounded([.31,.018,.20],[0,.013,-.025],monitorMetal,group);box([.055,.24,.025],[0,.14,-.035],monitorMetal,group);
-  const face=mesh(frontGlass,screens[type],group);face.position.set(0,.381,.020);face.castShadow=false;
+  displays.add(group,type);
   box([.18,.16,.032],[0,.36,-.03],monitorMetal,group);
   sphere([.004,.004,.003],[.35,.163,.022],type==='live'?new THREE.MeshBasicMaterial({color:0x8cbb60}):black,group);
   for(let i=0;i<11;i++)box([.015,.002,.003],[-.25+i*.05,.585,-.020],steel,group);
@@ -631,5 +628,87 @@ export function createOffice(renderer,viewerPosition){
  for(let i=0;i<1900;i++){const x=random()*2048,y=random()*2048;wear.strokeStyle=`rgba(167,163,137,${range(.03,.22)})`;wear.lineWidth=range(.4,1.3);wear.beginPath();wear.moveTo(x,y);wear.lineTo(x+range(3,28),y+range(-5,5));wear.stroke();}
  speckle(wear,2048,90000,'16,22,15',.26);speckle(wear,2048,30000,'166,161,135',.20);
  const wornFloorMap=texture(cWear);concrete.map=wornFloorMap;concrete.bumpMap=wornFloorMap;concrete.bumpScale=.006;concrete.needsUpdate=true;
- return {group:office,laptop:laptopControl};
+ // Complete the room behind the prone viewer with an abandoned service entrance.
+ const rear=new THREE.Group();rear.name='Weathered entrance wall behind the viewer';rear.position.z=4.48;rear.rotation.y=Math.PI;office.add(rear);
+ box([7.8,3.35,.16],[0,1.675,-.08],material(0x99a18f,.99,plasterMap),rear);
+ const rearGrime=dirtOverlay(7.8,3.35,rear);rearGrime.position.set(0,1.675,.004);
+ box([7.8,.14,.045],[0,.07,.024],black,rear);
+ box([7.8,.026,.023],[0,2.87,.03],steel,rear);
+ // Water leaks, missing paint and narrow plaster cracks gather around the old door frame.
+ const[cRear,rearWear]=canvas(1024);
+ for(let i=0;i<62;i++){
+  const x=random()*1024,y=range(0,180);rearWear.strokeStyle=`rgba(43,36,22,${range(.10,.32)})`;rearWear.lineWidth=range(.5,5);rearWear.beginPath();rearWear.moveTo(x,y);rearWear.bezierCurveTo(x+6,y+80,x-4,y+170,x+range(-6,9),y+range(210,650));rearWear.stroke();
+ }
+ for(let i=0;i<21;i++){
+  const x=random()*1024,y=random()*1024;rearWear.beginPath();for(let j=0;j<12;j++){const a=j/12*Math.PI*2,r=range(9,27),xx=x+Math.cos(a)*r,yy=y+Math.sin(a)*r*1.7;j?rearWear.lineTo(xx,yy):rearWear.moveTo(xx,yy);}rearWear.closePath();rearWear.fillStyle=i%3?'rgba(61,65,52,.75)':'rgba(149,144,118,.6)';rearWear.fill();
+ }
+ for(let i=0;i<10;i++){
+  let x=random()*1024,y=range(60,850);rearWear.strokeStyle='rgba(28,34,26,.75)';rearWear.lineWidth=.8;rearWear.beginPath();rearWear.moveTo(x,y);for(let j=0;j<8;j++){x+=range(-9,12);y+=range(5,16);rearWear.lineTo(x,y);}rearWear.stroke();
+ }
+ const rearScars=mesh(new THREE.PlaneGeometry(7.8,3.35),new THREE.MeshStandardMaterial({map:texture(cRear),transparent:true,depthWrite:false,roughness:1}),rear);rearScars.position.set(0,1.675,.007);rearScars.castShadow=false;
+ const door=new THREE.Group();door.name='Scuffed service door and failing exit sign';door.position.set(1.20,0,.05);rear.add(door);
+ const doorPaint=material(0x697368,.88,metalMap,.22);
+ box([1.12,2.34,.042],[0,1.17,0],black,door);
+ box([1.035,2.27,.048],[0,1.153,.022],doorPaint,door);
+ for(const x of[-.565,.565])box([.065,2.40,.10],[x,1.20,.035],steel,door);
+ box([1.19,.065,.10],[0,2.40,.035],steel,door);
+ box([1.10,.025,.13],[0,.016,.045],silver,door);
+ box([.85,.28,.009],[0,.25,.052],material(0x6e766c,.7,metalMap,.55),door);
+ for(const side of[-1,1])for(const y of[.14,.35])sphere([.008,.008,.003],[side*.39,y,.059],silver,door);
+ box([.68,.73,.032],[0,1.69,.055],steel,door);
+ const[cDoor,doorGlass]=canvas(512);doorGlass.fillStyle='#293c39';doorGlass.fillRect(0,0,512,512);
+ for(let i=0;i<170;i++)cloud(doorGlass,random()*512,random()*512,range(4,45),'7,14,11',range(.08,.3));
+ doorGlass.strokeStyle='rgba(100,118,105,.32)';doorGlass.lineWidth=1.4;for(let i=-512;i<1024;i+=36){doorGlass.beginPath();doorGlass.moveTo(i,0);doorGlass.lineTo(i+512,512);doorGlass.moveTo(i,0);doorGlass.lineTo(i-512,512);doorGlass.stroke();}
+ const doorWindow=mesh(new THREE.PlaneGeometry(.60,.65),new THREE.MeshPhysicalMaterial({map:texture(cDoor),roughness:.32,clearcoat:.8,metalness:.12}),door);doorWindow.position.set(0,1.69,.074);
+ rod([.36,.90,.095],[.36,1.05,.095],.017,silver,door);rod([.36,1.03,.095],[.20,1.03,.12],.015,silver,door);
+ for(const y of[.35,1.20,2.07]){box([.07,.10,.034],[-.515,y,.064],steel,door);cylinder(.012,.12,[-.53,y,.08],silver,door);}
+ function wallLabel(text,w,h,parent,pos,background='#74796b',ink='#d0cdb8'){
+  const[c,ctx]=canvas(512);c.height=128;ctx.fillStyle=background;ctx.fillRect(0,0,512,128);ctx.fillStyle=ink;ctx.font='600 50px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(text,256,82,470);speckle(ctx,512,1500,'14,20,15',.2);
+  const label=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture(c),roughness:.9}),parent);label.position.set(...pos);label.castShadow=false;return label;
+ }
+ wallLabel('STAFF ONLY',.40,.10,door,[0,1.12,.055]);
+ box([.54,.21,.10],[0,2.66,.08],steel,door);
+ const exitLabel=wallLabel('EXIT  →',.48,.15,door,[0,2.66,.133],'#263b30','#a8b593');exitLabel.material.emissive.set(0x5b7657);exitLabel.material.emissiveMap=exitLabel.material.map;exitLabel.material.emissiveIntensity=.25;
+ // An old pinboard of discarded design critiques, curling printouts and tape ghosts.
+ const notices=new THREE.Group();notices.name='Abandoned critique pinboard';notices.position.set(-.95,1.94,.055);notices.rotation.z=-.018;rear.add(notices);
+ const cork=material(0x807052,.99,woodMap);box([1.86,1.25,.045],[0,0,0],cork,notices);
+ for(const x of[-.94,.94])box([.035,1.30,.055],[x,0,.01],steel,notices);
+ for(const y of[-.64,.64])box([1.91,.035,.055],[0,y,.01],steel,notices);
+ for(let i=0;i<7;i++){
+  const x=-.68+(i%4)*.44,y=i<4?.28:-.26,map=wireframeMap(i%2===0),print=mesh(new THREE.PlaneGeometry(.35,.43),new THREE.MeshStandardMaterial({map,color:i%2?0xb9b4a0:0xc6c6b4,roughness:1,side:THREE.DoubleSide}),notices);
+  print.position.set(x,y,.028+i%3*.001);print.rotation.z=range(-.10,.10);print.castShadow=false;
+  sphere([.008,.008,.005],[x,y+.195,.039],i%2?black:material(0x773f33,.8),notices);
+  const tape=box([.11,.033,.001],[x-.06,y+.20,.031],material(0x989a73,.98),notices);tape.rotation.z=range(-.2,.2);
+ }
+ wallLabel('DESIGN / CRITIQUE',1.1,.10,notices,[-.11,.56,.028],'#77765a','#252d27');
+ // A weak remaining task tube reveals the pinboard without lifting the room's darkness.
+ box([.94,.065,.13],[-.95,2.78,.11],steel,rear);
+ const rearTube=cylinder(.013,.82,[-.95,2.741,.14],new THREE.MeshBasicMaterial({color:0x738b85}),rear,12);rearTube.rotation.z=Math.PI/2;rearTube.castShadow=false;
+ const rearTask=new THREE.SpotLight(0x92aaa0,3.4,3.6,1.0,.85,2);rearTask.position.set(-.95,2.72,.36);rearTask.target.position.set(-1.12,1.35,.04);rear.add(rearTask,rearTask.target);
+ // Old drawers, a box of abandoned prototypes and dangling network leads below the board.
+ const filing=new THREE.Group();filing.name='Damaged filing cabinets';filing.position.set(-1.12,0,.26);rear.add(filing);
+ box([1.52,.77,.43],[0,.385,0],doorPaint,filing);box([1.56,.035,.46],[0,.795,0],steel,filing);
+ for(const x of[-.38,.38])for(const y of[.20,.56]){
+  const pulled=x<0&&y>.4?.12:0;box([.71,.32,.025],[x,y,.231+pulled],steel,filing);rod([x-.10,y+.04,.26+pulled],[x+.10,y+.04,.26+pulled],.011,silver,filing);
+  box([.16,.055,.004],[x,y-.06,.248+pulled],plastic,filing);
+  if(pulled){box([.68,.014,.35],[x,y-.16,.20],steel,filing);box([.012,.28,.34],[x-.34,y,.20],steel,filing);}
+ }
+ const archiveBox=box([.47,.29,.36],[-1.30,.96,.29],material(0xb09a6d,.99,woodMap),rear);archiveBox.rotation.y=.14;
+ wallLabel('ARCHIVE',.25,.075,rear,[-1.30,.97,.483],'#a49471','#3b3d30');
+ const folded=box([.50,.014,.19],[-1.30,1.116,.39],wood,rear);folded.rotation.x=.20;
+ // Open electrical cabinet, missing covers, cable conduit and a rusted extinguisher bracket.
+ const utilities=new THREE.Group();utilities.name='Neglected network and electrical cabinet';utilities.position.set(-2.96,1.60,.08);rear.add(utilities);
+ box([.64,.97,.12],[0,0,0],steel,utilities);box([.56,.88,.014],[0,0,.066],black,utilities);
+ for(let row=0;row<4;row++)for(let col=0;col<5;col++){box([.072,.09,.035],[-.20+col*.10,.28-row*.16,.09],doorPaint,utilities);box([.017,.035,.010],[-.20+col*.10,.28-row*.16,.113],row===1?plastic:black,utilities);}
+ const cabinetDoor=new THREE.Group();cabinetDoor.position.set(-.32,0,.06);cabinetDoor.rotation.y=-.65;utilities.add(cabinetDoor);box([.62,.96,.025],[.31,0,0],steel,cabinetDoor);
+ wallLabel('CAUTION',.30,.10,cabinetDoor,[.32,.26,.014],'#a08d52','#252b24');
+ for(let i=0;i<4;i++)cable([[-3.12+i*.08,2.10,.12],[-3.15+i*.08,2.50,.12],[-3.15+i*.08,2.88,.12],[-2.1+i*.08,2.88,.12]],.012,steel,rear);
+ for(let i=0;i<6;i++)cable([[-3.18+i*.08,1.15,.16],[-3.20+i*.06,.71,.21],[-3.13+i*.10,.32,.17],[-2.85+i*.06,.15,.30]],.005,i%2?black:material(0x59665b,.9),rear);
+ box([.20,.13,.022],[2.20,.35,.047],plastic,rear);box([.11,.085,.025],[2.20,.35,.065],black,rear);
+ cable([[2.20,.35,.09],[2.24,.12,.13],[2.47,.023,.28],[2.90,.023,.42],[3.10,.023,.30]],.007,black,rear);
+ const extinguisher=new THREE.Group();extinguisher.name='Dusty fire extinguisher';extinguisher.position.set(2.16,.25,.17);rear.add(extinguisher);
+ const fadedRed=material(0x7e3629,.78,metalMap,.23);cylinder(.095,.42,[0,.25,0],fadedRed,extinguisher,24);sphere([.095,.065,.095],[0,.47,0],fadedRed,extinguisher);sphere([.093,.045,.093],[0,.04,0],fadedRed,extinguisher);
+ box([.11,.025,.055],[.015,.56,0],black,extinguisher);rod([0,.51,0],[0,.57,0],.018,silver,extinguisher);cable([[.035,.52,0],[.12,.47,.02],[.13,.19,.06]],.012,black,extinguisher);
+ wallLabel('FIRE',.12,.14,extinguisher,[0,.27,.097],'#b4ac8c','#33382d');
+ return {group:office,laptop:laptopControl,setDisplayEnvironment:displays.setEnvironment};
 }
