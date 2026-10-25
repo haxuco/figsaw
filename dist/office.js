@@ -9,6 +9,7 @@ import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-cont
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
 import { createLightInsects } from './light-insects.js';
+import { createFloorRodents } from './floor-rodents.js';
 import { createTankLeaks } from './tank-leaks.js';
 
 export function createOffice(renderer,viewerPosition){
@@ -743,7 +744,8 @@ export function createOffice(renderer,viewerPosition){
  office.add(createFallenMobile(viewerPosition,floorSupport));
  const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
+ const rodents=createFloorRodents({room:office,floorSupport});office.add(rodents.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
- function update(time,reducedMotion){figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);return level;}
+ function update(time,reducedMotion){rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);return level;}
  return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

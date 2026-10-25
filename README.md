@@ -57,3 +57,5 @@ After detaching the shackle, click the blue cat mug (or press M with the scene f
 Small flies and patterned moths circle the crooked ceiling fluorescent and rear wall light. Flies dart near the tubes, while moths take wider loops with visible wingbeats. Shared instanced geometry keeps the swarms lightweight, and reduced-motion mode holds them still.
 
 The shackle also gates the three tank drain valves. Click a red handwheel (or press V for the nearest tank) to spin it open. Green bubbly acid pours from the drain and spreads toward the player, etching nearby floor surfaces and props while releasing smoke. Touching the actual wet trail triggers GAME OVER; walking away delays contact. Restart clears the spill, corrosion, valve rotation and loss state. Winch buttons remain separate.
+
+Three mice and three larger rats wander the office floor. Their routes are chosen randomly on a walkable grid derived from the furniture and tank footprints. They pause to sniff between quick runs, with running paws, whiskers and swishing tapered tails; reduced-motion mode holds them still. Shared instanced geometry uses four draw calls for the whole group.
