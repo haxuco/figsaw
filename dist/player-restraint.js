@@ -44,6 +44,7 @@ export function createPlayerRestraint(camera,options={}){
  const forearmShape=createReachingForearm(skin,ink);arm.add(forearmShape.mesh);
  const forearmRotation=new THREE.Quaternion();
  const hand=new THREE.Group();hand.name='Cartoon right hand';arm.add(hand);
+ const sawContact=new THREE.Object3D();sawContact.name='Saw contact above wrist';sawContact.position.set(0,.044,.095);hand.add(sawContact);
  const handleContact=new THREE.Object3D();handleContact.name='Mug handle contact';handleContact.position.set(0,-.036,-.145);hand.add(handleContact);
  // A narrow wrist joins the fuller palm; the cuff sits behind the palm flare.
  skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.030,-.005,0,.059,.036],[-.066,-.005,0,.071,.040],[-.108,-.002,-.002,.071,.037],[-.140,.002,-.003,.065,.031],[-.160,.004,-.004,.051,.022],[-.170,.004,-.004,.006,.004]],40);
@@ -123,7 +124,7 @@ export function createPlayerRestraint(camera,options={}){
   }
   links.instanceMatrix.needsUpdate=true;pickLinks.instanceMatrix.needsUpdate=true;
  }
- function update(time,reducedMotion=false,keepVisible=false,lidHand=null){
+ function update(time,reducedMotion=false,keepVisible=false,lidHand=null,sawLift=0){
   const pose=state.sample(time,keepVisible),reach=pose.reach;
   // The entire arm follows translation, yaw AND pitch; the far chain end remains
   // physically attached to the room's pipe. FOV changes preserve the framing.
@@ -136,6 +137,7 @@ export function createPlayerRestraint(camera,options={}){
   pipeHook.copy(pipeAnchor);space.worldToLocal(pipeHook);
   const reveal=lidHand?lidHand.reveal:reducedMotion?1:pose.reveal,withdraw=(1-reveal)*.55;
   wrist.copy(restWrist).lerp(pose.locked?chainedReach:freeReach,reach);
+  wrist.y+=sawLift*.18;wrist.x-=sawLift*.12;
   if(pose.locked)wrist.y+=reducedMotion?0:pose.strain;
   // Two fixed-length limb segments articulate at the elbow instead of stretching
   // one long cylinder from the bottom of the screen to the hand.
@@ -207,5 +209,5 @@ export function createPlayerRestraint(camera,options={}){
  }
  function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);
- return {group,target:restraint,state,update,reset,endReach:()=>state.endReach(),setEnvironment(map){for(const mat of[iron,edge,cuffSteel,polished]){mat.envMap=map;mat.envMapIntensity=mat===polished?1.65:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
+ return {group,target:restraint,state,update,reset,getSawContact:out=>sawContact.getWorldPosition(out),endReach:()=>state.endReach(),setEnvironment(map){for(const mat of[iron,edge,cuffSteel,polished]){mat.envMap=map;mat.envMapIntensity=mat===polished?1.65:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
 }

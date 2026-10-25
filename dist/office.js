@@ -764,5 +764,5 @@ export function createOffice(renderer,viewerPosition){
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,chargingKit,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,acidLeaks,chargingKit,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

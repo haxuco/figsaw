@@ -1,4 +1,4 @@
 // Give the loading message one paint before constructing the WebGL room.
-requestAnimationFrame(()=>setTimeout(()=>import('./game.bundle.js?v=f9a0570b7006').catch(error=>{
+requestAnimationFrame(()=>setTimeout(()=>import('./game.bundle.js?v=36bc1dd82a1f').catch(error=>{
  console.error(error);const status=document.querySelector('#loading-status');if(status)status.textContent='The room could not load. Please reload to try again.';
 }),0));
