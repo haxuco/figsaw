@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three.module.js';
 
 // Shared, instanced geometry keeps these small moving silhouettes inexpensive.
-export function createLightInsects({flies=10,moths=5,spread=[.82,.17,.47],seed=29}={}){
+export function createLightInsects({flies=10,moths=5,spread=[.82,.17,.47],seed=29,sizeScale=1,dive=0}={}){
  const group=new THREE.Group();group.name='Flies and moths circling the light';
  const bodyGeometry=new THREE.SphereGeometry(1,8,6);
  const flyBody=new THREE.MeshStandardMaterial({color:0x151916,roughness:.65});
  const mothBody=new THREE.MeshStandardMaterial({color:0x554b36,roughness:1});
- const flyWing=new THREE.MeshStandardMaterial({color:0xb7c9c4,roughness:.43,transparent:true,opacity:.46,depthWrite:false,side:THREE.DoubleSide});
+ const flyWing=new THREE.MeshStandardMaterial({color:0xc4d2c8,roughness:.35,transparent:true,opacity:.58,depthWrite:false,side:THREE.DoubleSide});
  const canvas=document.createElement('canvas');canvas.width=canvas.height=128;
  const paint=canvas.getContext('2d');paint.fillStyle='#b8aa83';paint.fillRect(0,0,128,128);
  for(let i=0;i<190;i++){paint.fillStyle=i%2?'#89795255':'#e2d3ab66';paint.fillRect((i*47)%128,(i*73)%128,2,1);}
@@ -16,7 +16,7 @@ export function createLightInsects({flies=10,moths=5,spread=[.82,.17,.47],seed=2
  paint.strokeStyle='#75684788';paint.lineWidth=1;
  for(let i=0;i<5;i++){paint.beginPath();paint.moveTo(0,64);paint.lineTo(128,12+i*26);paint.stroke();}
  const wingMap=new THREE.CanvasTexture(canvas);wingMap.colorSpace=THREE.SRGBColorSpace;
- const mothWing=new THREE.MeshStandardMaterial({map:wingMap,roughness:1,side:THREE.DoubleSide,emissive:0x7b6c43,emissiveIntensity:.09});
+ const mothWing=new THREE.MeshStandardMaterial({map:wingMap,roughness:.9,side:THREE.DoubleSide,emissive:0x9a8966,emissiveMap:wingMap,emissiveIntensity:.15});
  function wingGeometry(moth){
   const shape=new THREE.Shape();shape.moveTo(0,-.008);
   if(moth){shape.bezierCurveTo(.020,-.031,.052,-.036,.058,-.018);shape.bezierCurveTo(.060,-.007,.044,.004,.039,.009);shape.bezierCurveTo(.047,.026,.023,.034,.013,.019);}
@@ -34,7 +34,7 @@ export function createLightInsects({flies=10,moths=5,spread=[.82,.17,.47],seed=2
  const dummy=new THREE.Object3D(),position=new THREE.Vector3(),next=new THREE.Vector3(),direction=new THREE.Vector3();
  const forward=new THREE.Vector3(0,0,-1),axisZ=new THREE.Vector3(0,0,1),axisY=new THREE.Vector3(0,1,0),offset=new THREE.Vector3();
  const facing=new THREE.Quaternion(),flapRotation=new THREE.Quaternion(),mirror=new THREE.Quaternion().setFromAxisAngle(axisY,Math.PI);
- const insects=Array.from({length:flies+moths},(_,i)=>({moth:i>=flies,index:i>=flies?i-flies:i,phase:i*2.399+seed*.17,size:.72+((i*17+seed)%13)/28,speed:i>=flies?.95+(i%3)*.23:1.8+(i%4)*.46}));
+ const insects=Array.from({length:flies+moths},(_,i)=>({moth:i>=flies,index:i>=flies?i-flies:i,phase:i*2.399+seed*.17,size:sizeScale*(.72+((i*17+seed)%13)/28),speed:i>=flies?.95+(i%3)*.23:1.8+(i%4)*.46}));
  function path(time,insect,out){
   const t=time*insect.speed+insect.phase,p=insect.phase,r=insect.moth?.72:.46;
   out.set(
@@ -42,6 +42,8 @@ export function createLightInsects({flies=10,moths=5,spread=[.82,.17,.47],seed=2
    spread[1]*(.70*Math.sin(t*1.73+p)+.23*Math.cos(t*4.13)),
    spread[2]*(r*Math.sin(t*.91)+.18*Math.cos(t*2.71-p))
   );
+  // Occasional downward swoops make the swarm visible in the light beam from floor level.
+  out.y-=dive*(insect.moth?1:.38)*Math.pow(.5+.5*Math.sin(t*.43+p),6);
   if(!insect.moth){out.x+=.035*Math.sin(t*7.3);out.y+=.014*Math.cos(t*9.7);}
   return out;
  }
@@ -61,7 +63,7 @@ export function createLightInsects({flies=10,moths=5,spread=[.82,.17,.47],seed=2
     dummy.scale.setScalar(size);dummy.updateMatrix();wings.setMatrixAt(index*2+j,dummy.matrix);
    }
   }
-  mothWing.emissiveIntensity=.035+.055*Math.max(0,lightLevel);
+  mothWing.emissiveIntensity=.055+.14*Math.max(0,lightLevel);
   for(const mesh of[flyBodies,mothBodies,flyWings,mothWings])mesh.instanceMatrix.needsUpdate=true;
  }
  update(0);return {group,update};
