@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=brighter-liquid';
 
+import { createFallenMobile } from './fallen-mobile.js';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=brighter-liquid';
 
 export function createOffice(renderer,viewerPosition){
@@ -712,6 +713,7 @@ export function createOffice(renderer,viewerPosition){
  const fadedRed=material(0x7e3629,.78,metalMap,.23);cylinder(.095,.42,[0,.25,0],fadedRed,extinguisher,24);sphere([.095,.065,.095],[0,.47,0],fadedRed,extinguisher);sphere([.093,.045,.093],[0,.04,0],fadedRed,extinguisher);
  box([.11,.025,.055],[.015,.56,0],black,extinguisher);rod([0,.51,0],[0,.57,0],.018,silver,extinguisher);cable([[.035,.52,0],[.12,.47,.02],[.13,.19,.06]],.012,black,extinguisher);
  wallLabel('FIRE',.12,.14,extinguisher,[0,.27,.097],'#b4ac8c','#33382d');
+ office.add(createFallenMobile(viewerPosition));
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
  function setEnvironment(map){displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
