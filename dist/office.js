@@ -492,5 +492,59 @@ export function createOffice(renderer){
  rounded([.042,.012,.010],[0,.014,.051],bottleCap,squeezeKetchup);
  box([.031,.018,.008],[0,.040,-.050],capSeam,squeezeKetchup);
  placeBottle(squeezeKetchup,1.19,2.54,[-.12,-.95,-Math.PI/2],.225,.80);
+ // A tipped blue animal mug with pointed ceramic ears and coffee running from its rim.
+ const[cMug,mugPaint]=canvas(1024);cMug.height=512;
+ mugPaint.fillStyle='#86b0b2';mugPaint.fillRect(0,0,1024,512);
+ for(let i=0;i<180;i++)cloud(mugPaint,random()*1024,random()*512,range(5,55),i%2?'225,229,207':'83,125,129',range(.035,.14));
+ mugPaint.lineCap='round';
+ for(let i=0;i<260;i++){const x=random()*1024,y=random()*512;mugPaint.strokeStyle=`rgba(44,57,53,${range(.3,.65)})`;mugPaint.lineWidth=range(2,4);mugPaint.beginPath();mugPaint.moveTo(x,y);mugPaint.quadraticCurveTo(x-3,y+7,x+range(-2,3),y+range(7,15));mugPaint.stroke();}
+ mugPaint.fillStyle='#eee2c3';mugPaint.beginPath();mugPaint.moveTo(512,176);mugPaint.bezierCurveTo(459,117,386,112,350,169);mugPaint.bezierCurveTo(313,243,337,421,410,466);mugPaint.bezierCurveTo(460,493,565,493,615,466);mugPaint.bezierCurveTo(687,421,711,243,675,169);mugPaint.bezierCurveTo(639,112,565,117,512,176);mugPaint.fill();
+ for(const x of[433,591]){cloud(mugPaint,x,271,29,'197,123,110',.20);mugPaint.fillStyle='#3d3630';mugPaint.beginPath();mugPaint.ellipse(x,215,7,4,-.20,0,Math.PI*2);mugPaint.fill();}
+ mugPaint.strokeStyle='#52443a';mugPaint.lineWidth=3;mugPaint.beginPath();mugPaint.moveTo(512,274);mugPaint.lineTo(512,316);mugPaint.bezierCurveTo(501,335,482,337,472,326);mugPaint.moveTo(512,316);mugPaint.bezierCurveTo(523,335,542,337,552,326);mugPaint.stroke();
+ for(const side of[-1,1])for(let i=0;i<3;i++){mugPaint.fillStyle='#6e5b46';mugPaint.beginPath();mugPaint.arc(512+side*(25+i*9),300+(i%2)*12,1.8,0,Math.PI*2);mugPaint.fill();}
+ speckle(mugPaint,512,2300,'112,124,109',.07);
+ const mugGlaze=new THREE.MeshPhysicalMaterial({map:texture(cMug),roughness:.29,clearcoat:1,clearcoatRoughness:.16});
+ const blueGlaze=new THREE.MeshPhysicalMaterial({color:0x8ab7b9,roughness:.25,clearcoat:1,clearcoatRoughness:.14});
+ const[cInside,insidePaint]=canvas(1024);cInside.height=512;insidePaint.fillStyle='#e8dcba';insidePaint.fillRect(0,0,1024,512);
+ for(let i=0;i<18;i++){const x=i*1024/18;insidePaint.fillStyle=i%2?'#93b8ae':'#7ca6a5';insidePaint.beginPath();insidePaint.moveTo(x-12,0);insidePaint.bezierCurveTo(x-20,170,x+4,310,x-12,512);insidePaint.lineTo(x+12,512);insidePaint.bezierCurveTo(x+26,310,x+8,170,x+17,0);insidePaint.closePath();insidePaint.fill();}
+ const coffeeRing=insidePaint.createLinearGradient(0,220,0,512);coffeeRing.addColorStop(0,'rgba(103,62,27,0)');coffeeRing.addColorStop(.7,'rgba(103,62,27,.09)');coffeeRing.addColorStop(1,'rgba(74,39,14,.48)');insidePaint.fillStyle=coffeeRing;insidePaint.fillRect(0,0,1024,512);
+ const innerGlaze=new THREE.MeshPhysicalMaterial({map:texture(cInside),roughness:.34,clearcoat:.8,side:THREE.DoubleSide});
+ const earMug=new THREE.Group();earMug.name='Blue pointy-eared mug tipped on its side';
+ function mugSurface(profile,mat){const geo=new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),64),uv=geo.attributes.uv,p=geo.attributes.position;for(let i=0;i<p.count;i++)uv.setY(i,p.getY(i)/.258);geo.rotateY(Math.PI);return mesh(geo,mat,earMug);}
+ mugSurface([[0,.008],[.085,.008],[.113,.018],[.126,.043],[.139,.138],[.144,.236],[.140,.257]],mugGlaze);
+ mugSurface([[.127,.257],[.128,.237],[.121,.090],[.106,.034],[0,.034]],innerGlaze);
+ const mugRim=mesh(new THREE.TorusGeometry(.134,.008,10,64),blueGlaze,earMug);mugRim.rotation.x=Math.PI/2;mugRim.position.y=.254;
+ const mugFoot=mesh(new THREE.TorusGeometry(.102,.004,8,48),innerGlaze,earMug);mugFoot.rotation.x=Math.PI/2;mugFoot.position.y=.012;
+ for(const side of[-1,1]){
+  const ear=new THREE.Group();ear.position.set(side*.095,.228,.103);ear.rotation.z=-side*.13;earMug.add(ear);
+  const shape=new THREE.Shape();shape.moveTo(-.047,0);shape.bezierCurveTo(-.044,.046,-.015,.112,0,.142);shape.bezierCurveTo(.018,.125,.046,.045,.047,0);shape.closePath();
+  const geo=new THREE.ExtrudeGeometry(shape,{depth:.013,bevelEnabled:true,bevelSegments:3,steps:1,bevelSize:.005,bevelThickness:.005,curveSegments:12});geo.translate(0,0,-.0065);mesh(geo,blueGlaze,ear);
+  cable([[-.028,.018,.014],[-.025,.057,.014],[0,.113,.014],[.027,.036,.014]],.0019,material(0x4c615b,.62),ear);
+ }
+ const[cHandle,handlePaint]=canvas(256);handlePaint.fillStyle='#e8dfc6';handlePaint.fillRect(0,0,256,256);handlePaint.fillStyle='#84adb0';for(const x of[0,95,200])handlePaint.fillRect(x,0,47,256);
+ const handleGlaze=new THREE.MeshPhysicalMaterial({map:texture(cHandle),roughness:.28,clearcoat:1});
+ cable([[.129,.211,0],[.195,.222,0],[.249,.188,0],[.257,.130,0],[.229,.075,0],[.178,.057,0],[.125,.076,0]],.014,handleGlaze,earMug);
+ const noseShape=new THREE.Shape();noseShape.moveTo(-.021,.010);noseShape.quadraticCurveTo(0,.021,.021,.010);noseShape.quadraticCurveTo(.021,-.003,0,-.019);noseShape.quadraticCurveTo(-.022,-.004,-.021,.010);
+ const nose=mesh(new THREE.ExtrudeGeometry(noseShape,{depth:.012,bevelEnabled:true,bevelSize:.003,bevelThickness:.003,bevelSegments:2,curveSegments:8}),new THREE.MeshPhysicalMaterial({color:0x292823,roughness:.30,clearcoat:1}),earMug);nose.position.set(0,.129,.142);
+ const mugPose=new THREE.Group();mugPose.name='Spilled animal mug in the left foreground';mugPose.add(earMug);earMug.position.y=-.135;office.add(mugPose);
+ const mouthAxis=new THREE.Vector3(-.55,-.05,.83).normalize(),faceAxis=new THREE.Vector3(.54,.66,.39);faceAxis.addScaledVector(mouthAxis,-faceAxis.dot(mouthAxis)).normalize();
+ const sideAxis=new THREE.Vector3().crossVectors(mouthAxis,faceAxis).normalize();mugPose.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(sideAxis,mouthAxis,faceAxis));
+ mugPose.scale.setScalar(.72);mugPose.position.set(.24,0,3.02);mugPose.updateMatrixWorld(true);mugPose.position.y=.012-new THREE.Box3().setFromObject(mugPose,true).min.y;mugPose.updateMatrixWorld(true);
+ // Find the lowest point of the open rim so the spill visibly meets the cup.
+ const rimSlope=Math.hypot(sideAxis.y,faceAxis.y),rimPoint=earMug.localToWorld(new THREE.Vector3(-.134*sideAxis.y/rimSlope,.254,-.134*faceAxis.y/rimSlope));
+ const spillDirection=new THREE.Vector3(mouthAxis.x,0,mouthAxis.z).normalize(),poolCenter=rimPoint.clone().addScaledVector(spillDirection,.23);poolCenter.y=.018;
+ const wetCoffee=new THREE.MeshPhysicalMaterial({color:0x51402b,roughness:.13,metalness:.04,clearcoat:1,clearcoatRoughness:.08,transparent:true,opacity:.94,side:THREE.DoubleSide});
+ const coffeeEdge=new THREE.MeshStandardMaterial({color:0x8a7049,roughness:.40,transparent:true,opacity:.68,depthWrite:false,side:THREE.DoubleSide});
+ function coffeePuddle(x,z,rx,rz,phase=0){
+  const outline=new THREE.Shape();for(let i=0;i<=80;i++){const a=i/80*Math.PI*2,r=1+.11*Math.sin(a*3+phase)+.065*Math.sin(a*7-.3)+.025*Math.cos(a*13),xx=Math.cos(a)*rx*r,zz=Math.sin(a)*rz*r;i?outline.lineTo(xx,zz):outline.moveTo(xx,zz);}outline.closePath();
+  const geometry=new THREE.ShapeGeometry(outline,32),edge=mesh(geometry,coffeeEdge);edge.rotation.x=-Math.PI/2;edge.scale.setScalar(1.045);edge.position.set(x,.015,z);edge.castShadow=false;
+  const puddle=mesh(geometry,wetCoffee);puddle.rotation.x=-Math.PI/2;puddle.position.set(x,.019,z);puddle.castShadow=false;return puddle;
+ }
+ coffeePuddle(poolCenter.x,poolCenter.z,.23,.145,.4);
+ const lipFloor=rimPoint.clone();lipFloor.y=.021;
+ cable([rimPoint.toArray(),lipFloor.toArray(),lipFloor.clone().addScaledVector(spillDirection,.09).toArray(),poolCenter.toArray()],.008,wetCoffee);
+ for(const[distance,side,radius]of[[.45,.10,.018],[.51,-.07,.012],[.37,-.18,.022],[.29,.21,.009]]){
+  const drop=rimPoint.clone().addScaledVector(spillDirection,distance).add(new THREE.Vector3(-spillDirection.z*side,0,spillDirection.x*side));coffeePuddle(drop.x,drop.z,radius,radius*.65,distance*3);
+ }
  return {group:office,laptop:laptopControl};
 }
