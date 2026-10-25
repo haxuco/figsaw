@@ -30,12 +30,18 @@ test('the saw is fatal until the key is collected, including while the key lies 
  }
 });
 
-test('the actual saw lifts, strokes beside the cuff, then ends once on a full blackout',()=>{
+test('the actual saw lifts with its handle on the left, strokes beside the cuff, then blacks out',()=>{
  for(const fov of[62,48.36])for(const aspect of[16/9,390/844]){
   const {saw,camera,restraint,trap,tick}=fixture(fov,aspect),home=saw.position.clone();
   assert.equal(trap.start(0),true);
   tick(1.8);const a=saw.position.clone();tick(1.95);const b=saw.position.clone();
   assert.ok(a.distanceTo(home)>.3,'lift the floor prop');assert.ok(a.distanceTo(b)>.08,'visible back-and-forth strokes');
+  const handle=new THREE.Box3().setFromObject(saw.getObjectByName('Worn wooden open grip')).getCenter(new THREE.Vector3()).project(camera);
+  const bladeTip=saw.children[0].localToWorld(new THREE.Vector3(-.35,0,0)).project(camera);
+  const edgeTop=saw.children[0].localToWorld(new THREE.Vector3(-.06,.05,0)).project(camera);
+  const edgeBottom=saw.children[0].localToWorld(new THREE.Vector3(-.06,-.07,0)).project(camera);
+  assert.ok(handle.x<bladeTip.x,'the wooden grip stays on the left of the blade');
+  assert.ok(edgeBottom.y<edgeTop.y,'turning the saw must keep its teeth pointing down');
   assert.equal(restraint.locked,true,'the saw must not unlock the shackle');
   assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,true);
   const contact=restraint.getSawContact(new THREE.Vector3()).project(camera);

@@ -7,7 +7,7 @@ export function createSawTrap({saw,camera,restraint,hasKey}){
  const floorPosition=new THREE.Vector3(),floorRotation=new THREE.Quaternion();
  const contact=new THREE.Vector3(),target=new THREE.Vector3(),offset=new THREE.Vector3();
  const worldRotation=new THREE.Quaternion(),targetRotation=new THREE.Quaternion(),parentRotation=new THREE.Quaternion();
- const upright=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,0,-.16,'ZYX'));
+ const upright=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,Math.PI,.16,'ZYX'));
  const cameraRight=new THREE.Vector3();
  let startedAt=null,finished=false,blackout=0;
  function start(time){
@@ -24,7 +24,7 @@ export function createSawTrap({saw,camera,restraint,hasKey}){
    restraint.getSawContact(contact);
    targetRotation.copy(camera.quaternion).multiply(upright);
    // The saw's child lies flat on the floor. Rotate it upright, then place a
-   // point on the toothed edge at the wrist, with the grip on the right.
+   // point on the toothed edge at the wrist, with the grip on the left.
    offset.set(-.06,0,.070).applyQuaternion(targetRotation);
    target.copy(contact).sub(offset);
    cameraRight.set(1,0,0).applyQuaternion(camera.quaternion);
