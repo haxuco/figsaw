@@ -344,6 +344,7 @@ let countdownStartTime=null,lastCountdownSeconds=300;
 const dialogueLines=[
  'I want to play a game...',
  "Those who don't appreciate design do not deserve it.",
+ 'Complete the design challenges to escape... but every 5 minutes one of your Figpals will be dropped into the tank of acid.',
  'Let the games begin...'
 ];
 let dialogueLineIndex=-1,nextDialogueAt=Infinity;
@@ -352,6 +353,7 @@ const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
 let entranceStartedAt=0,entranceArrived=false,entranceArrivedAt=0,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
 function showFigsawDialogue(index){
  const text=dialogueLines[index];dialogueLineIndex=index;
+ arrivalDialogue.classList.toggle('long-dialogue',text.length>80);
  arrivalDialogue.querySelector('.dialogue-bubble span').textContent=text;
  dialogueAnnouncement.textContent=`Figsaw. ${text}`;
  const speech=createDialogueSpeech(text,state.time);
@@ -524,7 +526,7 @@ function resetView({skipIntro=false}={}){
  resetting=!skipIntro;
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
- arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;
+ arrivalDialogue.hidden=true;arrivalDialogue.classList.remove('long-dialogue');dialogueAnnouncement.textContent='';dialogueSpeech=null;
  dialogueLineIndex=skipIntro?dialogueLines.length-1:-1;nextDialogueAt=Infinity;
  state.jaw=0;state.talkUntil=0;nextDialogueVisibilityCheck=0;
  countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;
