@@ -6,7 +6,7 @@ export function createFigpalVats(){
  const group=new THREE.Group();group.name='Three suspended Figpals over bubbling green canisters';
  const TAU=Math.PI*2;
  let seed=193108;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
- const material=(color,roughness=.72,emission=.07)=>new THREE.MeshStandardMaterial({color,roughness,emissive:color,emissiveIntensity:emission});
+ const material=(color,roughness=.78,emission=.005)=>new THREE.MeshStandardMaterial({color,roughness,emissive:color,emissiveIntensity:emission});
  const ink=material(0x121415,.85,0),cream=material(0xffedb6),rice=material(0xf6f4e7),blue=material(0x008ce8),orange=material(0xe8570c),ribOrange=material(0xa83109),gold=material(0xffac22),pink=material(0xffa8a7),fishBlue=material(0x9bdcf4),finBlue=material(0x047cdc),yellow=material(0xffd428);
  const outlineMaterial=new THREE.MeshBasicMaterial({color:0x101313,side:THREE.BackSide});
  outlineMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normal * 0.009;');};
@@ -26,10 +26,15 @@ export function createFigpalVats(){
   const geometry=new THREE.ExtrudeGeometry(shape,{depth:depth-bevel*2,bevelEnabled:true,bevelSize:bevel,bevelThickness:bevel,bevelSegments:3,steps:1,curveSegments:16});
   geometry.translate(0,0,-depth/2+bevel);return mesh(geometry,mat,parent,true);
  }
- function face(parent,y,z,spacing=.105,smile=true){
-  for(const side of[-1,1])ball([side*spacing,y,z],[.022,.025,.012],ink,parent);
-  const mouth=smile?[[-.052,y-.054,z],[0,y-.079,z+.004],[.052,y-.052,z]]:[[-.052,y-.067,z],[.052,y-.067,z]];
-  line(mouth,.012,ink,parent);
+ function face(parent,y,z,spacing=.105,expression='worried'){
+  const expressionGroup=new THREE.Group();expressionGroup.name=`${expression} expression`;parent.add(expressionGroup);
+  for(const side of[-1,1]){
+   ball([side*spacing,y,z],[.022,.031,.013],ink,expressionGroup);
+   // Inner ends lift toward the forehead: anxious brows, not an angry scowl.
+   line([[side*(spacing+.035),y+.041,z+.004],[side*spacing,y+.055,z+.007],[side*(spacing-.035),y+.074,z+.007]],.010,ink,expressionGroup);
+  }
+  if(expression==='afraid')ball([0,y-.075,z+.003],[.026,.038,.012],ink,expressionGroup);
+  else line([[-.052,y-.091,z],[0,y-.060,z+.005],[.052,y-.091,z]],.012,ink,expressionGroup);
  }
  function pudding(){
   const g=new THREE.Group();g.name='Party-hat pudding Figpal';
@@ -43,7 +48,7 @@ export function createFigpalVats(){
   const c=document.createElement('canvas');c.width=512;c.height=256;const ctx=c.getContext('2d');ctx.fillStyle='#ffd62d';ctx.fillRect(0,0,512,256);ctx.fillStyle='#0088ea';
   for(let row=0;row<4;row++)for(let col=0;col<7;col++){ctx.beginPath();ctx.ellipse(col*85+(row%2)*42,30+row*67,18,14,0,0,TAU);ctx.fill();}
   const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
-  const hatMat=new THREE.MeshStandardMaterial({map,roughness:.73,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.08});
+  const hatMat=new THREE.MeshStandardMaterial({map,roughness:.82});
   const cone=mesh(new THREE.ConeGeometry(.205,.50,48),hatMat,hat,true);cone.position.y=.25;
   ring(.205,.009,0,ink,hat);
   ball([0,.515,0],[.042,.045,.041],blue,hat);
@@ -58,7 +63,7 @@ export function createFigpalVats(){
   const topping=new THREE.Shape();topping.moveTo(-.37,-.015);topping.lineTo(-.41,.17);topping.quadraticCurveTo(-.40,.22,-.21,.29);topping.quadraticCurveTo(0,.33,.21,.29);topping.quadraticCurveTo(.40,.22,.41,.17);topping.lineTo(.37,-.015);topping.quadraticCurveTo(0,.055,-.37,-.015);
   extrude(topping,.43,yellow,g,.022);
   const nori=new THREE.Shape();nori.moveTo(-.12,.022);nori.lineTo(-.13,.31);nori.quadraticCurveTo(0,.33,.13,.31);nori.lineTo(.12,.022);nori.closePath();const seaweed=extrude(nori,.44,ink,g,.006);seaweed.position.z=.008;
-  face(g,-.10,.253,.10);
+  face(g,-.10,.253,.10,'afraid');
   for(let i=0;i<16;i++){const a=i/16*TAU;ball([Math.cos(a)*.29,-.18+Math.sin(a)*.025,Math.sin(a)*.17],[.031,.022,.015],rice,g);}
   const hat=new THREE.Group();hat.position.y=.30;g.add(hat);
   const dome=mesh(new THREE.SphereGeometry(1,32,16,0,TAU,0,Math.PI/2),orange,hat,true);dome.scale.set(.235,.235,.20);
@@ -73,7 +78,7 @@ export function createFigpalVats(){
   const tail=new THREE.Shape();tail.moveTo(.26,.03);tail.quadraticCurveTo(.34,.06,.40,.16);tail.quadraticCurveTo(.49,.23,.50,.06);tail.quadraticCurveTo(.51,-.11,.43,-.13);tail.lineTo(.33,-.05);tail.closePath();extrude(tail,.11,fishBlue,g,.02);
   for(let i=0;i<3;i++)line([[.38,-.025+i*.04,.078],[.465,-.075+i*.085,.078]],.012,finBlue,g);
   for(const side of[-1,1]){const fin=ball([side*.303,-.02,.13],[.065,.10,.035],fishBlue,g,true);fin.rotation.z=side*.25;for(let i=0;i<3;i++)line([[side*.30,-.06+i*.04,.168],[side*.338,-.075+i*.05,.160]],.01,finBlue,g);}
-  face(g,.015,.252,.09,false);
+  face(g,.015,.252,.09,'worried');
   for(let i=0;i<11;i++){const a=Math.PI*1.03+i/10*Math.PI*.90,x=Math.cos(a)*.26,y=Math.sin(a)*.25;const z=.25*Math.sqrt(Math.max(.04,1-(x/.335)**2-(y/.33)**2))+.008;line([[x,y,z],[x+.008,y-.027,z]],.011,finBlue,g);}
   for(let i=0;i<7;i++){const a=.15+i/6*Math.PI*.88;rod([Math.cos(a)*.31,Math.sin(a)*.31,0],[Math.cos(a)*.37,Math.sin(a)*.37,0],.012,finBlue,g);}
   const hat=new THREE.Group();hat.position.set(0,.275,0);g.add(hat);
@@ -90,7 +95,24 @@ export function createFigpalVats(){
  for(let i=0;i<55;i++){ctx.strokeStyle='rgba(190,190,159,.18)';ctx.lineWidth=random()+.4;const x=random()*512,y=random()*512;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+random()*75,y+random()*8);ctx.stroke();}
  const metalMap=new THREE.CanvasTexture(c);metalMap.colorSpace=THREE.SRGBColorSpace;
  const steel=new THREE.MeshStandardMaterial({map:metalMap,roughness:.67,metalness:.48,bumpMap:metalMap,bumpScale:.004});
- const darkMetal=material(0x202b27,.56,0),rope=material(0x978c6b,.92,0),fastener=new THREE.MeshStandardMaterial({color:0x869486,metalness:.7,roughness:.4});
+ const darkMetal=material(0x202b27,.56,0),fastener=new THREE.MeshStandardMaterial({color:0x869486,metalness:.7,roughness:.4});
+ const chainMetal=new THREE.MeshStandardMaterial({color:0x747972,metalness:.72,roughness:.47});
+ const chainGeometry=new THREE.TorusGeometry(.021,.0055,6,12);
+ const chainDummy=new THREE.Object3D(),chainUp=new THREE.Vector3(0,1,0),chainTwist=new THREE.Quaternion();
+ function chainRun(points,parent,maxLinks=null){
+  const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),length=curve.getLength();
+  const count=maxLinks??Math.max(2,Math.ceil(length/.033));
+  const links=new THREE.InstancedMesh(chainGeometry,chainMetal,count);links.name='Interlocking steel chain links';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;parent.add(links);
+  function setPoints(a,b){
+   const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start),distance=direction.length();
+   const n=Math.min(count,Math.max(2,Math.ceil(distance/.033)));links.count=n;direction.normalize();
+   for(let j=0;j<n;j++){chainDummy.position.copy(start).lerp(end,j/(n-1));chainDummy.quaternion.setFromUnitVectors(chainUp,direction);chainTwist.setFromAxisAngle(chainUp,j%2?Math.PI/2:0);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.set(.78,1.16,1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
+   links.instanceMatrix.needsUpdate=true;
+  }
+  if(maxLinks){links.instanceMatrix.setUsage(THREE.DynamicDrawUsage);setPoints(points[0],points.at(-1));}
+  else for(let j=0;j<count;j++){const t=j/(count-1);chainDummy.position.copy(curve.getPointAt(t));chainDummy.quaternion.setFromUnitVectors(chainUp,curve.getTangentAt(t));chainTwist.setFromAxisAngle(chainUp,j%2?Math.PI/2:0);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.set(.78,1.16,1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
+  return {object:links,setPoints};
+ }
  const glass=new THREE.MeshPhysicalMaterial({color:0xc4ebbc,roughness:.16,metalness:.05,transparent:true,opacity:.12,depthWrite:false,clearcoat:1,clearcoatRoughness:.12,side:THREE.DoubleSide});
  const fluid=new THREE.MeshStandardMaterial({color:0x55ad13,emissive:0x367d08,emissiveIntensity:.8,roughness:.21,transparent:true,opacity:.60,depthWrite:false,side:THREE.DoubleSide});
  const liquidTop=new THREE.MeshStandardMaterial({color:0x83d629,emissive:0x4c8d0d,emissiveIntensity:.75,roughness:.19,metalness:.12,side:THREE.DoubleSide});
@@ -98,12 +120,12 @@ export function createFigpalVats(){
  const bubbleMat=new THREE.MeshPhysicalMaterial({color:0xc3f87b,emissive:0x66aa1c,emissiveIntensity:.42,roughness:.08,transparent:true,opacity:.5,depthWrite:false,clearcoat:1});
  const rippleMat=new THREE.MeshBasicMaterial({color:0xb9ea55,transparent:true,opacity:.38,depthWrite:false,side:THREE.DoubleSide});
  const rigs=[],vats=[],dummy=new THREE.Object3D();
- const tankZ=-2.39;
- box([4.32,.11,.15],[-.30,3.065,tankZ],steel);
- for(const x of[-2.25,1.65]){box([.18,.055,.31],[x,3.145,tankZ],steel);for(const z of[-.09,.09])cylinder(.025,.035,[x,3.185,tankZ+z],fastener);}
+ // A staggered left-hand bay leaves Figsaw and his dialogue clear in the saved view.
+ const stations=[{x:-3.05,z:-1.05,height:2.02,winchY:2.80},{x:-2.85,z:.30,height:1.84,winchY:2.65},{x:-2.15,z:1.45,height:1.60,winchY:2.38}];
+ for(let i=0;i<stations.length-1;i++){const a=stations[i],b=stations[i+1];rod([a.x,3.065,a.z],[b.x,3.065,b.z],.052,steel);}
  const makers=[pudding,sushi,pufferfish];
  for(let i=0;i<3;i++){
-  const x=-1.70+i*1.40;
+  const {x,z:tankZ,height,winchY}=stations[i];
   const vat=new THREE.Group();vat.position.set(x,.012,tankZ);vat.name=`Green bubbling canister ${i+1}`;group.add(vat);
   cylinder(.515,.16,[0,.10,0],steel,vat);cylinder(.46,.035,[0,.025,0],darkMetal,vat);
   for(let j=0;j<8;j++){const a=j/8*TAU;ball([Math.cos(a)*.49,.15,Math.sin(a)*.49],[.022,.022,.022],fastener,vat);}
@@ -131,20 +153,54 @@ export function createFigpalVats(){
   const dial=mesh(new THREE.CircleGeometry(.052,24),cream,vat);dial.position.set(.32,1.19,.391);line([[.32,1.19,.395],[.30,1.219,.395]],.003,ink,vat);
   const drain=cylinder(.038,.17,[.37,.25,.37],steel,vat);drain.rotation.x=Math.PI/2;
   const valve=mesh(new THREE.TorusGeometry(.068,.008,6,24),ribOrange,vat);valve.position.set(.37,.25,.47);rod([.31,.25,.47],[.43,.25,.47],.006,ribOrange,vat);
-  const glow=new THREE.PointLight(0x86d82c,1.65,2.25,2);glow.position.set(0,1.12,0);vat.add(glow);
+  const glow=new THREE.PointLight(0x86d82c,.55,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
   vats.push({surface,bubbles,bubbleData,foam,ripples,phase:i*1.7});
 
-  const pivot=new THREE.Group();pivot.name=`Suspension rig ${i+1}`;pivot.position.set(x,3.00,tankZ);group.add(pivot);
-  const captive=makers[i]();captive.object.position.y=-.64;captive.object.rotation.y=.28;captive.object.rotation.z=(i-1)*.035;pivot.add(captive.object);
-  // Two cords and an under-body sling make the suspension visibly supported.
-  for(const side of[-1,1]){line([[side*.24,0,0],[side*.26,-.30,0],[side*.36,-.67,.012],[side*.29,-.89,.055],[side*.16,-.965,.07],[0,-.975,.07]],.011,rope,pivot);ball([side*.24,0,0],[.026,.027,.026],fastener,pivot);}
-  rigs.push({pivot,propeller:captive.propeller,phase:i*2.1});
+  const facing=Math.atan2(1.85221-x,3.1149-tankZ);
+  vat.rotation.y=facing;
+  const rig=new THREE.Group();rig.name=`Chain hoist ${i+1}`;rig.position.set(x,0,tankZ);rig.rotation.y=facing;group.add(rig);
+  box([.40,.05,.34],[0,3.13,0],steel,rig);
+  for(const side of[-1,1]){rod([side*.16,3.12,0],[side*.16,winchY+.10,0],.023,steel,rig);ball([side*.16,3.12,.08],[.026,.026,.026],fastener,rig);}
+  const winch=new THREE.Group();winch.name=`Winch ${i+1}: lower or raise Figpal`;winch.position.y=winchY;winch.userData.hoistIndex=i;rig.add(winch);
+  box([.46,.12,.30],[0,.10,-.03],steel,winch);
+  const drumMount=new THREE.Group();drumMount.rotation.z=Math.PI/2;winch.add(drumMount);
+  const drum=new THREE.Group();drum.name='Rotating chain sprocket';drumMount.add(drum);
+  cylinder(.10,.28,[0,0,0],darkMetal,drum);
+  for(const side of[-1,1]){cylinder(.136,.026,[0,side*.16,0],steel,drum);for(let j=0;j<12;j++){const a=j/12*TAU;box([.026,.03,.032],[Math.cos(a)*.13,side*.16,Math.sin(a)*.13],fastener,drum);}}
+  for(let j=0;j<9;j++){const wrap=ring(.106,.007,0,chainMetal,drum);wrap.position.y=-.11+j*.027;}
+  const motor=cylinder(.105,.24,[.30,.015,-.04],darkMetal,winch);motor.rotation.z=Math.PI/2;
+  for(let j=0;j<6;j++){const fin=cylinder(.115,.009,[.215+j*.033,.015,-.04],steel,winch);fin.rotation.z=Math.PI/2;}
+  const crank=new THREE.Group();crank.position.set(-.22,0,0);winch.add(crank);rod([0,0,0],[0,-.13,0],.014,steel,crank);rod([0,-.13,0],[-.09,-.13,0],.021,darkMetal,crank);
+  const inspectionLight=new THREE.PointLight(0xbcc7ad,.40,.85,2);inspectionLight.position.set(0,.17,.28);winch.add(inspectionLight);
+  ball([0,.17,.28],[.018,.011,.012],new THREE.MeshBasicMaterial({color:0x76866b}),winch);
+  const hanger=new THREE.Group();hanger.name=`Suspended Figpal ${i+1}`;hanger.position.y=height;rig.add(hanger);
+  const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
+  // A spreader and two linked chain slings support the body, leaving its face clear.
+  rod([-.22,.45,0],[.22,.45,0],.019,steel,hanger);
+  const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,hanger);hook.position.set(0,.49,0);hook.rotation.z=-.5;
+  for(const side of[-1,1])chainRun([[side*.21,.45,0],[side*.245,.11,0],[side*.23,-.12,.015],[side*.16,-.205,.04],[0,-.222,.045]],hanger);
+  const loadChain=chainRun([[0,winchY-.10,.025],[0,height+.52,0]],rig,72);
+  const returnChain=chainRun([[-.10,winchY-.01,-.11],[-.11,winchY-.36,-.12],[-.16,winchY-.40,-.10],[-.20,winchY-.05,-.08]],rig);
+  returnChain.object.name='Winch return chain loop';
+  const control=new THREE.Group();control.name=`Canister ${i+1} winch control`;control.position.set(.39,.85,.40);control.rotation.y=.35;control.userData.hoistIndex=i;vat.add(control);
+  box([.12,.21,.07],[0,0,0],darkMetal,control);
+  ball([0,.047,.047],[.024,.024,.015],material(0x7b2e23,.6,0),control);ball([0,-.047,.047],[.024,.024,.015],material(0x697c49,.6,0),control);
+  line([[.39,.95,.40],[.44,1.02,.35],[.46,1.27,.12],[.44,winchY-.13,.06],[.24,winchY,.0]],.007,darkMetal,rig);
+  rigs.push({rig,hanger,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
  }
- // Localized light reveals the colored toys without brightening the rest of the office.
- const faceLight=new THREE.PointLight(0xe8dfc5,4.2,4.0,2);faceLight.position.set(-.15,2.70,-1.35);group.add(faceLight);
+ const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
+ function toggleHoist(index){const rig=rigs[index];if(!rig)return null;rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.80:rig.homeHeight;return `Figpal ${index+1} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;}
+ let lastTime=0;
  function update(time,reducedMotion=false){
+  const dt=Math.max(0,Math.min(.05,time-lastTime));lastTime=time;
   const t=reducedMotion?0:time;
-  for(const rig of rigs){rig.pivot.rotation.z=Math.sin(t*.65+rig.phase)*.014;rig.pivot.rotation.x=Math.sin(t*.48+rig.phase)*.008;if(rig.propeller)rig.propeller.rotation.y=t*.7;}
+  for(const rig of rigs){
+   const delta=rig.targetHeight-rig.height;rig.height=reducedMotion?rig.targetHeight:rig.height+Math.sign(delta)*Math.min(Math.abs(delta),dt*.15);
+   rig.hanger.position.y=rig.height;rig.hanger.rotation.z=Math.sin(t*.65+rig.phase)*.006;
+   rig.loadChain.setPoints([0,rig.winchY-.10,.025],[0,rig.height+.52,0]);
+   rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
+   if(rig.propeller)rig.propeller.rotation.y=t*.18;
+  }
   for(const vat of vats){
    const positions=vat.surface.geometry.attributes.position;
    for(let j=0;j<positions.count;j++){const x=positions.getX(j),z=positions.getZ(j);positions.setY(j,Math.sin(x*17+t*2+vat.phase)*Math.cos(z*14-t*1.5)*.004);}
@@ -155,5 +211,5 @@ export function createFigpalVats(){
   }
  }
  update(0);
- return {group,update};
+ return {group,update,toggleHoist};
 }

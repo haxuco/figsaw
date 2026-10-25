@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=suspended-figpals';
+import { createOffice } from './office.js?v=left-chain-hoists';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 
 const canvas=document.querySelector('#scene');
@@ -336,7 +336,7 @@ function updateEntrance(time){
  if(progress===1&&!entranceArrived){entranceArrived=true;showFigsawDialogue(dialogueText);}
 }
 updateEntrance(0);
-const {group:office,laptop,setDisplayEnvironment,update:updateOffice}=createOffice(renderer,homePosition);scene.add(office);
+const {group:office,laptop,setDisplayEnvironment,update:updateOffice,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
 // Capture the actual furnished room once for subtle reflections in the display covers.
 // Static environment capture keeps the glass reflective without six extra renders per frame.
 const reflectionTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
@@ -370,14 +370,13 @@ function updateArrivalDialogue(time){
  arrivalDialogue.style.setProperty('--tail-offset',`${THREE.MathUtils.clamp(anchorX-x,-halfWidth+24,halfWidth-24)}px`);
 }
 const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
-function interactionAt(event,laptopOnly=false){
+function interactionAt(event){
  const rect=canvas.getBoundingClientRect();
  interactionPointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
  interactionRay.setFromCamera(interactionPointer,camera);
- if(laptopOnly&&!interactionRay.intersectObject(laptop.object,true).length)return null;
  // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
  const hit=interactionRay.intersectObjects([office,model],true)[0];
- for(let object=hit?.object;object;object=object.parent){if(object===laptop.object||object===puppet)return object;}
+ for(let object=hit?.object;object;object=object.parent){if(object===laptop.object||object===puppet||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 function openLaptop(){
@@ -385,6 +384,7 @@ function openLaptop(){
  canvas.classList.remove('over-laptop');
  canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro').replace(' Click the laptop or press Enter to open it.',''));
 }
+function operateHoist(index){const message=toggleHoist(index);if(message)document.querySelector('#hoist-status').textContent=message;}
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
@@ -396,6 +396,7 @@ document.addEventListener('keydown',event=>{
  if(movementKeys.has(event.code)){event.preventDefault();pressedKeys.add(event.code);resetting=false;return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
+ if(/^Digit[1-3]$/.test(event.code)&&event.target===canvas&&!event.repeat){event.preventDefault();operateHoist(Number(event.code.slice(-1))-1);}
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
  if(event.code.startsWith('Arrow')){
@@ -415,7 +416,7 @@ canvas.addEventListener('pointerdown',event=>{
  lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
 });
 canvas.addEventListener('pointermove',event=>{
- if(dragPointer===null){canvas.classList.toggle('over-laptop',!laptop.isOpen&&interactionAt(event,true)===laptop.object);return;}
+ if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
  state.yaw=wrapAngle(state.yaw-dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
@@ -427,9 +428,10 @@ canvas.addEventListener('pointerup',event=>{
   const hit=interactionAt(event);
   if(hit===laptop.object)openLaptop();
   else if(hit===puppet)state.talkUntil=state.time+1.8;
+  else if(Number.isInteger(hit?.userData.hoistIndex))operateHoist(hit.userData.hoistIndex);
  }
 });
-canvas.addEventListener('pointerleave',()=>canvas.classList.remove('over-laptop'));
+canvas.addEventListener('pointerleave',()=>canvas.classList.remove('over-laptop','over-hoist'));
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});

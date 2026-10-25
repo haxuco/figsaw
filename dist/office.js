@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js';
+import { createFigpalVats } from './figpal-vats.js?v=left-chain-hoists';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -102,10 +102,10 @@ export function createOffice(renderer,viewerPosition){
  }
  const backDesk=desk(-1.0,-3.37,5.4);
  for(let i=0;i<6;i++){const x=-2.24+i*.84;monitor(backDesk,[x,.86,-.05],range(-.13,.13),i===3?'live':i%2?'hole':'cracked',range(.88,1.04));keyboard(backDesk,[x+.03,.87,.30],range(-.16,.16));if(i%2===0)tower(backDesk,[x+.18,0,-.10],range(-.1,.1),true);}
- const sideDesk=desk(-3.37,-.69,2.6,Math.PI/2);
+ const sideDesk=desk(-1.10,-2.25,2.6,0);
  for(let i=0;i<3;i++){monitor(sideDesk,[-.84+i*.83,.86,-.10],range(-.2,.2),i===0?'live':'hole',.9);keyboard(sideDesk,[-.84+i*.83,.87,.30],range(-.2,.2));}
  // Fallen hardware and open cases are actual objects, not floor decals.
- const fallen=monitor(office,[-2.20,.31,1.24],.42,'hole',.95);fallen.rotation.z=.21;
+ const fallen=monitor(office,[-.80,.31,-1.45],.42,'hole',.95);fallen.rotation.z=.21;
  const tipped=monitor(office,[-2.72,.24,2.58],-.45,'cracked',.73);tipped.rotation.x=-.56;tipped.rotation.z=.24;
  const looseTower=tower(office,[-2.22,.13,-.72],.35,true);looseTower.rotation.z=Math.PI/2;
  for(let i=0;i<3;i++)tower(office,[-3.32,0,-2.45+i*.31],-.18,true).scale.setScalar(.90);
@@ -202,12 +202,12 @@ export function createOffice(renderer,viewerPosition){
  }
  aeronChair(-2.85,-2.48,[0,.35,-.035],{brokenArm:1,backTear:2});
  aeronChair(-.30,3.35,[-.08,-.28,.08],{brokenArm:-1,missingSpoke:3,backLean:-.16});
- aeronChair(-2.63,.32,[-.55,-.80,1.39],{brokenArm:-1,missingSpoke:2,backTwist:.20});
+ aeronChair(2.75,3.30,[-.55,-.80,1.39],{brokenArm:-1,missingSpoke:2,backTwist:.20});
  aeronChair(-.55,-3.42,[1.65,.65,.32],{brokenArm:1,noBack:true});
  // A tipped chair and its detached base frame the right-hand aisle without covering the laptop.
  aeronChair(1.35,1.42,[-.30,-.50,-1.28],{noBase:true,brokenArm:-1,backTwist:-.14,backTear:2});
  const looseBase=chairBase(office,1);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
- const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-1.85,2.12,[-1.60,.22,-.40]);
+ const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-.75,2.30,[-1.60,.22,-.40]);
  const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
  chairCaster(office,2.37,.045,2.84,.7);chairCaster(office,-2.15,.045,.95,-.4);
  seed=roomSeed;
@@ -398,7 +398,7 @@ export function createOffice(renderer,viewerPosition){
  }
 
  // Freestanding planning whiteboard with curled sticky notes and old interface sketches.
- const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(-2.82,0,-.70);partition.rotation.y=Math.PI/2;office.add(partition);
+ const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(1.90,0,-3.0);partition.rotation.y=0;office.add(partition);
  for(const x of[-1.12,1.12]){
   box([.045,.98,.055],[x,.49,0],steel,partition);box([.11,.06,.65],[x,.06,0],steel,partition);
   for(const z of[-.25,.25])sphere([.047,.045,.032],[x,.035,z],black,partition);
@@ -712,5 +712,5 @@ export function createOffice(renderer,viewerPosition){
  box([.11,.025,.055],[.015,.56,0],black,extinguisher);rod([0,.51,0],[0,.57,0],.018,silver,extinguisher);cable([[.035,.52,0],[.12,.47,.02],[.13,.19,.06]],.012,black,extinguisher);
  wallLabel('FIRE',.12,.14,extinguisher,[0,.27,.097],'#b4ac8c','#33382d');
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
- return {group:office,laptop:laptopControl,setDisplayEnvironment:displays.setEnvironment,update:figpalVats.update};
+ return {group:office,laptop:laptopControl,setDisplayEnvironment:displays.setEnvironment,update:figpalVats.update,toggleHoist:figpalVats.toggleHoist};
 }
