@@ -1,13 +1,14 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=hand-opens-laptop';
+import { createOffice } from './office.js?v=mug-trap';
 import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
-import { createPlayerRestraint } from './player-restraint.js?v=hand-opens-laptop';
+import { createPlayerRestraint } from './player-restraint.js?v=mug-trap';
 import { createRestraintMenu } from './restraint-menu.js?v=detach-icon';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
 import { createLaptopOpening } from './laptop-opening.js';
+import { createMugTrap } from './mug-trap.js';
 
 const canvas=document.querySelector('#scene');
 const initialCanvasDescription=canvas.getAttribute('aria-label');
@@ -367,9 +368,13 @@ function updateEntrance(time){
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
 updateEntrance(0);
-const {group:office,laptop,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
+const {group:office,laptop,catMug,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
 const restraint=createPlayerRestraint(camera);scene.add(restraint.group);
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
+const mugTrap=createMugTrap({mug:catMug,camera,restraint});
+const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
+const restartGame=document.querySelector('#restart-game');
+restartGame.addEventListener('click',()=>{resetView();canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
 const chainMenu=createRestraintMenu(()=>{
  if(restraint.detach(state.time)){restraintStatus.textContent='Instance detached. Your wrist is free. You can reach the laptop now.';canvas.classList.remove('over-chain');canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('Your wrist is chained to the rear pipes. Right-click the wrist chain and choose Detach instance to free your hand, then click the laptop to open it.','Your wrist is free. Click the laptop to open it.'));}
@@ -415,11 +420,11 @@ function interactionAt(event){
   for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
   return true;
  });
- for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===puppet||Number.isInteger(object.userData.hoistIndex))return object;}
+ for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===catMug||object===puppet||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 function openLaptop(){
- if(laptopOpening.active)return;
+ if(laptopOpening.active||mugTrap.active||mugTrap.finished)return;
  if(restraint.locked){
   restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. You can't reach the laptop.";return;
  }
@@ -435,7 +440,21 @@ function finishOpeningLaptop(fromHand=false){
  canvas.classList.remove('over-laptop');
  canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro').replace(' Click the laptop or press Enter to open it.',''));
 }
+function grabMug(){
+ if(laptopOpening.active||mugTrap.active||mugTrap.finished)return;
+ if(!mugTrap.start(state.time))return;
+ releaseControls();arrivalCameraMove.cancel();resetting=false;chainMenu.hide();
+ canvas.classList.remove('over-mug');
+ restraintStatus.textContent='You pick up the cat mug by its handle and raise it for a drink.';
+}
+function endMugGame(){
+ releaseControls();chainMenu.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
+ document.body.classList.add('game-over');canvas.inert=true;
+ gameOverContent.hidden=false;restartGame.focus({preventScroll:true});
+ restraintStatus.textContent="The mug's pointed ears hit your eyes. Everything goes dark. Game over.";
+}
 function operateHoist(index){
+ if(mugTrap.active||mugTrap.finished)return;
  const message=toggleHoist(index);if(!message)return;
  const lowering=figpalHoists.isLowered(index);
  if(lowering)figpalBubbles.show(index,state.time);else figpalBubbles.hide(index);
@@ -444,16 +463,21 @@ function operateHoist(index){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView(){mugTrap.reset();gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;document.body.classList.remove('game-over','mug-impact');canvas.inert=false;laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
- if(laptopOpening.active&&event.code!=='KeyR'){event.preventDefault();return;}
+ if(mugTrap.finished){
+  if(event.code==='KeyR'&&!event.repeat){event.preventDefault();resetView();canvas.focus({preventScroll:true});}
+  return;
+ }
+ if((laptopOpening.active||mugTrap.active)&&event.code!=='KeyR'){event.preventDefault();return;}
  if(chainMenu.active)return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
  if(movementKeys.has(event.code)){event.preventDefault();arrivalCameraMove.cancel();pressedKeys.add(event.code);resetting=false;return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
+ if(event.code==='KeyM'&&event.target===canvas&&!event.repeat){event.preventDefault();grabMug();}
  if(/^Digit[1-3]$/.test(event.code)&&event.target===canvas&&!event.repeat){event.preventDefault();operateHoist(Number(event.code.slice(-1))-1);}
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
@@ -470,18 +494,19 @@ window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
+ if(mugTrap.active||mugTrap.finished)return;
  if(restraint.locked&&interactionAt(event)===restraint.target)chainMenu.show(event.clientX,event.clientY);else chainMenu.hide();
 });
 canvas.addEventListener('pointerdown',event=>{
- if(laptopOpening.active)return;
+ if(laptopOpening.active||mugTrap.active||mugTrap.finished)return;
  if(event.button!==0)return;
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
  lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
 });
 canvas.addEventListener('pointermove',event=>{
- if(laptopOpening.active)return;
- if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
+ if(laptopOpening.active||mugTrap.active||mugTrap.finished)return;
+ if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
  if(pointerDistance>=6)arrivalCameraMove.cancel();
@@ -493,14 +518,15 @@ canvas.addEventListener('pointerup',event=>{
  if(pointerDistance<6){
   const hit=interactionAt(event);
   if(hit===laptop.object)openLaptop();
+  else if(hit===catMug)grabMug();
   else if(hit===puppet)state.talkUntil=state.time+1.8;
   else if(Number.isInteger(hit?.userData.hoistIndex))operateHoist(hit.userData.hoistIndex);
  }
 });
-canvas.addEventListener('pointerleave',()=>canvas.classList.remove('over-laptop','over-hoist','over-chain'));
+canvas.addEventListener('pointerleave',()=>canvas.classList.remove('over-laptop','over-hoist','over-chain','over-mug'));
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopOpening.active)return;arrivalCameraMove.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopOpening.active||mugTrap.active||mugTrap.finished)return;arrivalCameraMove.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -542,6 +568,7 @@ function resize(){
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
 function render(){
+ if(mugTrap.finished){clock.getDelta();requestAnimationFrame(render);return;}
  const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(resetting){
   state.yaw=wrapAngle(state.yaw+wrapAngle(homeView.yaw-state.yaw)*eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
@@ -554,8 +581,8 @@ function render(){
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
+ if(laptopOpening.active||mugTrap.active)arrivalCameraMove.cancel();
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
- if(laptopOpening.active)arrivalCameraMove.cancel();
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
  const viewYaw=state.yaw;
  // Walk along the floor plane relative to the view; E/Q independently change eye height.
@@ -592,7 +619,10 @@ function render(){
  const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
- restraint.update(t,reducedMotion,chainMenu.active,laptopOpening.handPose);
+ const mugFinished=mugTrap.update(t,reducedMotion);
+ if(mugTrap.blackout>0){gameOver.hidden=false;gameOver.style.opacity=String(mugTrap.blackout);document.body.classList.add('mug-impact');}
+ if(mugFinished)endMugGame();
+ restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active,mugTrap.handPose||laptopOpening.handPose);
  laptop.update(dt,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion);
  model.updateMatrixWorld(true);

@@ -121,7 +121,7 @@ export function createPlayerRestraint(camera){
   space.visible=pose.visible;
   if(!pose.visible)return pose.openLaptop;
   pipeHook.copy(pipeAnchor);space.worldToLocal(pipeHook);
-  const reveal=reducedMotion?1:lidHand?lidHand.reveal:pose.reveal,withdraw=(1-reveal)*.55;
+  const reveal=lidHand?lidHand.reveal:reducedMotion?1:pose.reveal,withdraw=(1-reveal)*.55;
   wrist.copy(restWrist).lerp(pose.locked?chainedReach:freeReach,reach);
   if(pose.locked)wrist.y+=reducedMotion?0:pose.strain;
   // Two fixed-length limb segments articulate at the elbow instead of stretching
@@ -146,15 +146,17 @@ export function createPlayerRestraint(camera){
   fingers.forEach((f,i)=>{f.rotation.x=-.06+(1-reach)*(.11+i*.015);});
   thumb.rotation.x=0;thumb.rotation.y=.88;
   if(lidHand){
-   const blend=lidHand.blend,grip=lidHand.grip;
+   const blend=lidHand.blend,grip=lidHand.grip,holdingMug=lidHand.gripKind==='handle';
    fingers.forEach((finger,i)=>{
-    finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,-.46+(i===0?.08:0),grip);
+    finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,(holdingMug?-.96:-.46)+(i===0?.08:0),grip);
     finger.rotation.y=THREE.MathUtils.lerp(finger.userData.spread,finger.userData.spread*.30,grip);
    });
    thumb.rotation.x=.28*grip;thumb.rotation.y=.88-.28*grip;
-   // Solve wrist position from the actual fingertip, so the hand cannot slide
-   // through the lid or trail behind its independently animated hinge.
-   fingers[1].updateMatrix();gripOffset.copy(fingertip.position).applyMatrix4(fingers[1].matrix);
+   // Solve the wrist from the grip point: fingertips for the lid, palm for
+   // the mug handle. The hand stays attached as either prop moves.
+   fingers[1].updateMatrix();
+   if(holdingMug)gripOffset.set(0,-.008,-.18);
+   else gripOffset.copy(fingertip.position).applyMatrix4(fingers[1].matrix);
    cameraInverse.copy(camera.quaternion).invert();gripRotation.copy(cameraInverse).multiply(lidHand.quaternion);
    gripPosition.copy(lidHand.position);space.worldToLocal(gripPosition);
    gripWrist.copy(gripPosition).sub(gripOffset.applyQuaternion(gripRotation));

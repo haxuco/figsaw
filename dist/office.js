@@ -740,5 +740,5 @@ export function createOffice(renderer,viewerPosition){
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
- return {group:office,laptop:laptopControl,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
