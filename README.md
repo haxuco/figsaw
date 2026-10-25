@@ -8,9 +8,9 @@ Figsaw retains his thick black outline, shallow marionette jaw, narrow rough lip
 
 Figsaw and his tricycle are half their previous size. After a short pause, he rides from the shadowed coffee corner along a curved path to the aisle beside the laptop, then stops. Wheel and pedal rotation follow the distance traveled; pedal platforms remain level. Reduced-motion preferences show the final resting position immediately.
 
-Use WASD to move relative to the viewing direction, E to raise the camera, and Q to lower it. Drag or use arrow keys to look around freely; scroll to zoom. The default eye position is 0.26 units above the floor, behind the MacBook. Movement stays inside the room and clears on focus loss. Press R to restore the default position, direction and zoom, and replay the entrance. Hold Space to open the mouth or tap Figsaw for a short mouth animation.
+Use WASD to move relative to the viewing direction, E to raise the camera, and Q to lower it. Drag or use arrow keys to look around freely; scroll to zoom. The default camera position is `[1.85221, 0.821615, 3.1149]`, looking at `[1.293346, 0.717709, 2.292176]` with a 62-degree vertical field of view. Movement stays inside the room and clears on focus loss. Press R to restore the default position, direction and zoom, and replay the entrance. Hold Space to open the mouth or tap Figsaw for a short mouth animation.
 
-Copy view exports the rendered camera position, look-at point, and vertical field of view as JSON prefaced with a request to set that view as the default. The copied values include zoom and portrait framing. Paste the text into the chat to request a new default. If clipboard access is unavailable, a small selectable text panel provides the same prompt. Portrait framing keeps both the MacBook and Figsaw visible.
+Copy view exports the rendered camera position, look-at point, and vertical field of view as JSON prefaced with a request to set that view as the default. The copied values include the current zoom. Paste the text into the chat to request a new default. If clipboard access is unavailable, a small selectable text panel provides the same prompt. The saved position, direction, and vertical field of view apply at every viewport size.
 
 Serve `dist` with any static HTTP server:
 

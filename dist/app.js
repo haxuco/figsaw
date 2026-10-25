@@ -3,7 +3,10 @@ import { createOffice } from './office.js?v=spilled-mug';
 
 const canvas=document.querySelector('#scene');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
-const homeView={yaw:.12,pitch:.10};
+const homeCamera={position:[1.85221,.821615,3.1149],lookAt:[1.293346,.717709,2.292176],fov:62};
+const homePosition=new THREE.Vector3(...homeCamera.position);
+const homeDirection=new THREE.Vector3(...homeCamera.lookAt).sub(homePosition).normalize();
+const homeView={yaw:Math.atan2(-homeDirection.x,-homeDirection.z),pitch:Math.asin(homeDirection.y)};
 const state={yaw:homeView.yaw,pitch:homeView.pitch,zoom:1,jaw:0,space:false,time:0,talkUntil:0};
 const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
 renderer.setPixelRatio(Math.min(devicePixelRatio,2));
@@ -13,8 +16,8 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
-const camera=new THREE.PerspectiveCamera(58,1,.06,35);
-const homePosition=new THREE.Vector3(.72,.26,4.15),cameraPosition=homePosition.clone();
+const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
+const cameraPosition=homePosition.clone();
 const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDirection=new THREE.Vector3();
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
 const fluorescent=new THREE.SpotLight(0xc4d2b0,14,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
@@ -418,7 +421,7 @@ document.querySelector('#close-copy').addEventListener('click',()=>{copyFallback
 
 function resize(){
  const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
- renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=(camera.aspect<.85?82:62)*state.zoom;camera.updateProjectionMatrix();
+ renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=homeCamera.fov*state.zoom;camera.updateProjectionMatrix();
 }
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
@@ -431,7 +434,7 @@ function render(){
    state.yaw=homeView.yaw;state.pitch=homeView.pitch;state.zoom=1;cameraPosition.copy(homePosition);resetting=false;
   }
  }
- const viewYaw=state.yaw+(camera.aspect<.85?.13:0);
+ const viewYaw=state.yaw;
  // Walk along the floor plane relative to the view; E/Q independently change eye height.
  const forward=Number(pressedKeys.has('KeyW'))-Number(pressedKeys.has('KeyS'));
  const strafe=Number(pressedKeys.has('KeyD'))-Number(pressedKeys.has('KeyA'));
@@ -446,7 +449,7 @@ function render(){
  camera.position.copy(cameraPosition);
  viewDirection.set(-Math.sin(viewYaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(viewYaw)*Math.cos(state.pitch));
  cameraTarget.copy(cameraPosition).add(viewDirection);camera.lookAt(cameraTarget);
- const fov=(camera.aspect<.85?82:62)*state.zoom;
+ const fov=homeCamera.fov*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
  const mouthTarget=state.space?1:t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
