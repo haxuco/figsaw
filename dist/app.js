@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=fallen-mobile';
+import { createOffice } from './office.js?v=character-motion';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
+import { figsawIdlePose } from './character-motion.js';
 
 const canvas=document.querySelector('#scene');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -275,13 +276,18 @@ const mouthLine=[];for(let i=0;i<=30;i++){const p=slotSurface(cutRow/rows,mix(-h
 for(const side of[-1,1]){
  const seam=[];for(let i=4;i<=cutRow;i++){const p=slotSurface(i/rows,side*halfMouth);p.z+=.009;seam.push(p);}tube(seam,.033,new THREE.MeshBasicMaterial({color:0x171918}),puppet);
 }
-// The open eyes sit close to the mouth and face the viewer as the camera orbits.
+// Open, unblinking eyes track the viewer between smooth glances around the room.
 const trackingEyes=[];
+// A trace of red remains legible during the fluorescent's dim phases.
+const irisMaterial=mat(0xf51528,.36);irisMaterial.emissive.set(0xb90d1a);irisMaterial.emissiveIntensity=.12;
+const idlePose={headYaw:0,gazeYaw:0,gazePitch:0};
+const gazeOrigin=new THREE.Vector3(),gazeDirection=new THREE.Vector3(),gazeTarget=new THREE.Vector3();
+const gazeUp=new THREE.Vector3(0,1,0),previousEyeRotation=new THREE.Quaternion();
 for(const side of[-1,1]){
  const x=side*.42-.09,y=1.84+(side===-1?.045:0),z=faceZ(x,y)+.044;
  const eye=new THREE.Group();eye.position.set(x,y,z);puppet.add(eye);trackingEyes.push(eye);
  ball(eye,mat(0x101015,.25),[0,0,0],[.156,.156,.075]);
- ball(eye,mat(0xf51528,.36),[0,0,.055],[.084,.084,.029]);
+ ball(eye,irisMaterial,[0,0,.055],[.084,.084,.029]);
  ball(eye,mat(0x0a090c,.32),[0,0,.074],[.039,.039,.016]);
 }
 // A small red fabric bow tie sits below the jaw's full travel, attached to the stone.
@@ -317,7 +323,7 @@ const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
 const dialogueText='I want to play a game...';
 const dialogueAnchor=new THREE.Vector3(),dialogueProjection=new THREE.Vector3();
 const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
-let entranceStartedAt=0,entranceArrived=false,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
+let entranceStartedAt=0,entranceArrived=false,entranceArrivedAt=0,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
 function showFigsawDialogue(text){
  arrivalDialogue.querySelector('.dialogue-bubble span').textContent=text;
  dialogueAnnouncement.textContent=`Figsaw: ${text}`;
@@ -331,9 +337,10 @@ function updateEntrance(time){
  // Turn the stone partly toward the saved viewpoint while the wheels follow the route.
  const viewerYaw=Math.atan2(homePosition.x-ridePoint.x,homePosition.z-ridePoint.z);
  const relativeYaw=THREE.MathUtils.euclideanModulo(viewerYaw-model.rotation.y+Math.PI,Math.PI*2)-Math.PI;
- puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70);
  setRollingDistance(progress*entranceLength/modelScale);
- if(progress===1&&!entranceArrived){entranceArrived=true;showFigsawDialogue(dialogueText);}
+ if(progress===1&&!entranceArrived){entranceArrived=true;entranceArrivedAt=time;showFigsawDialogue(dialogueText);}
+ figsawIdlePose(entranceArrived?time-entranceArrivedAt:-1,reducedMotion,idlePose);
+ puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
 updateEntrance(0);
 const {group:office,laptop,setDisplayEnvironment,update:updateOffice,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
@@ -510,7 +517,18 @@ function render(){
  laptop.update(dt,reducedMotion);
  fluorescent.intensity=14*updateOffice(t,reducedMotion);
  model.updateMatrixWorld(true);
- for(const eye of trackingEyes)eye.lookAt(camera.position);
+ // One shared distant target keeps both eyes coordinated. Their faster motion
+ // leads the head, then settles back toward the viewer between glances.
+ puppet.localToWorld(gazeOrigin.set(-.09,1.86,1.0));
+ gazeDirection.copy(camera.position).sub(gazeOrigin);
+ const gazeDistance=Math.max(1,gazeDirection.length());
+ gazeDirection.normalize().applyAxisAngle(gazeUp,idlePose.gazeYaw);
+ gazeDirection.y+=idlePose.gazePitch;gazeDirection.normalize();
+ gazeTarget.copy(gazeOrigin).addScaledVector(gazeDirection,gazeDistance);
+ for(const eye of trackingEyes){
+  previousEyeRotation.copy(eye.quaternion);eye.lookAt(gazeTarget);
+  if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
+ }
  renderer.render(scene,camera);updateArrivalDialogue(t);requestAnimationFrame(render);
 }
 render();

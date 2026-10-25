@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
+import { figpalSwayPose } from './character-motion.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // All shapes, markings, glass, liquid and wear are local procedural assets.
@@ -205,14 +206,15 @@ export function createFigpalVats(){
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
  function toggleHoist(index){const rig=rigs[index];if(!rig)return null;rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.80:rig.homeHeight;return `Figpal ${index+1} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;}
- let lastTime=0;
+ let lastTime=0;const swayPose={};
  function update(time,reducedMotion=false){
   const dt=Math.max(0,Math.min(.05,time-lastTime));lastTime=time;
   const t=reducedMotion?0:time;waterTime.value=t;
   for(const rig of rigs){
    const delta=rig.targetHeight-rig.height;rig.height=reducedMotion?rig.targetHeight:rig.height+Math.sign(delta)*Math.min(Math.abs(delta),dt*.15);
-   rig.hanger.position.y=rig.height;rig.hanger.rotation.z=Math.sin(t*.65+rig.phase)*.006;
-   rig.loadChain.setPoints([0,rig.winchY-.10,.025],[0,rig.height+.52,0]);
+   figpalSwayPose(time,rig.height,rig.winchY,rig.phase,reducedMotion,swayPose);
+   rig.hanger.position.set(swayPose.x,swayPose.y,0);rig.hanger.rotation.z=swayPose.angle;
+   rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
    rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
