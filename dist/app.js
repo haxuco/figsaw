@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=light-name';
+import { createOffice } from './office.js?v=countdown';
+import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 
@@ -321,6 +322,9 @@ entrancePath.arcLengthDivisions=240;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
 const arrivalDialogue=document.querySelector('#figsaw-dialogue');
 const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
+const countdownReadout=document.querySelector('#game-countdown');
+const countdownAnnouncement=document.querySelector('#countdown-announcement');
+let countdownStartTime=null,lastCountdownSeconds=300;
 const dialogueText='I want to play a game...';
 const dialogueAnchor=new THREE.Vector3(),dialogueProjection=new THREE.Vector3();
 const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
@@ -328,7 +332,10 @@ let entranceStartedAt=0,entranceArrived=false,entranceArrivedAt=0,dialogueOcclud
 function showFigsawDialogue(text){
  arrivalDialogue.querySelector('.dialogue-bubble span').textContent=text;
  dialogueAnnouncement.textContent=`Figsaw. ${text}`;
- dialogueSpeech=reducedMotion?null:createDialogueSpeech(text,state.time);
+ const speech=createDialogueSpeech(text,state.time);
+ dialogueSpeech=reducedMotion?null:speech;
+ // The persistent bubble stays visible; the timer starts after the spoken line ends.
+ countdownStartTime=speech.startTime+speech.duration;
 }
 function updateEntrance(time){
  const elapsed=time-entranceStartedAt-1.0;
@@ -344,7 +351,7 @@ function updateEntrance(time){
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
 updateEntrance(0);
-const {group:office,laptop,setDisplayEnvironment,update:updateOffice,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
+const {group:office,laptop,countdown,setDisplayEnvironment,update:updateOffice,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
 // Capture the actual furnished room once for subtle reflections in the display covers.
 // Static environment capture keeps the glass reflective without six extra renders per frame.
 const reflectionTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
@@ -396,7 +403,7 @@ function operateHoist(index){const message=toggleHoist(index);if(message)documen
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;}
+function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -510,6 +517,15 @@ function render(){
  const fov=homeCamera.fov*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
  updateEntrance(clock.elapsedTime);
+ if(countdownStartTime!==null&&t>=countdownStartTime){
+  countdown.start();countdownStartTime=null;
+  countdownAnnouncement.textContent='The five-minute countdown has started.';
+ }
+ const countdownSeconds=countdown.update();
+ if(countdownSeconds!==lastCountdownSeconds){
+  countdownReadout.textContent=formatCountdown(countdownSeconds);lastCountdownSeconds=countdownSeconds;
+  if(countdownSeconds===0)countdownAnnouncement.textContent='The countdown has reached zero.';
+ }
  const dialogueMouth=dialogueMouthAmount(dialogueSpeech,t);
  const tapMouth=t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
  const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);

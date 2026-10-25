@@ -4,6 +4,7 @@ import { createFigpalVats } from './figpal-vats.js?v=floating-bones';
 
 import { createFallenMobile } from './fallen-mobile.js?v=left-rear';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=hard-cutouts';
+import { createFloorTimer } from './floor-timer.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -270,6 +271,9 @@ export function createOffice(renderer,viewerPosition){
 
  // The MacBook rests directly on the floor in front of the viewer's prone eye position.
  const laptop=new THREE.Group();laptop.name='MacBook Pro on the floor';laptop.position.set(.45,.027,2.18);laptop.rotation.y=Math.atan2(viewerPosition.x-laptop.position.x,viewerPosition.z-laptop.position.z);office.add(laptop);
+ // A separate floor prop beside the laptop, with its LED face aimed at the viewer.
+ const timerPosition=laptop.position.clone().add(new THREE.Vector3(.88,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),laptop.rotation.y));
+ const countdown=createFloorTimer(viewerPosition,timerPosition);office.add(countdown.group);
  const aluminum=material(0x879194,.35,null,.72),keyBlack=material(0x101517,.70);
  // Both halves share the same rounded footprint, including the bevel's outer extent.
  function devicePanel(w,h,t,pos,mat,parent,flat=false){const b=Math.min(.012,w/6,h/6,t/6),part=mesh(bevelBox(w-2*b,h-2*b,t,.026-b),mat,parent);part.position.set(...pos);if(flat)part.rotation.x=-Math.PI/2;return part;}
@@ -708,5 +712,5 @@ export function createOffice(renderer,viewerPosition){
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
  function setEnvironment(map){displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
- return {group:office,laptop:laptopControl,setDisplayEnvironment:setEnvironment,update,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,countdown,setDisplayEnvironment:setEnvironment,update,toggleHoist:figpalVats.toggleHoist};
 }
