@@ -6,7 +6,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #figsaw-dialogue{position:fixed;top:0;left:0;z-index:3;width:max-content;max-width:calc(100vw - 28px);pointer-events:none;will-change:transform}
 #figsaw-dialogue[hidden]{display:none}
 .dialogue-bubble{position:relative;box-sizing:border-box;max-width:430px;padding:13px 18px;border:1px solid #ffffff29;border-radius:7px;background:#000;color:#fff;box-shadow:0 7px 24px #000b;font:500 28px/1.18 "Grenze Gotisch",Georgia,serif;letter-spacing:.012em;overflow-wrap:break-word;animation:dialogue-arrive .28s ease-out both}
-.dialogue-bubble strong{display:block;margin-bottom:3px;color:inherit;font-size:30px;font-weight:600;letter-spacing:.025em}
+.dialogue-bubble strong{display:block;margin-bottom:6px;color:inherit;font:700 25px/1.15 Georgia,"Times New Roman",serif;letter-spacing:.035em}
 .dialogue-bubble::after{content:"";position:absolute;bottom:-6px;left:calc(50% + var(--tail-offset,0px));width:10px;height:10px;background:#000;border-right:1px solid #ffffff29;border-bottom:1px solid #ffffff29;transform:translateX(-50%) rotate(45deg)}
 @keyframes dialogue-arrive{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.dialogue-bubble{animation:none}}

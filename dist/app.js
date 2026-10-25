@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=reference-labels';
+import { createOffice } from './office.js?v=light-name';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 
@@ -22,7 +22,8 @@ const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
 const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDirection=new THREE.Vector3();
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
-const fluorescent=new THREE.SpotLight(0xc4d2b0,14,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
+const fluorescentPower=17.5;
+const fluorescent=new THREE.SpotLight(0xc4d2b0,fluorescentPower,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
 fluorescent.shadow.mapSize.set(2048,2048);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.015;fluorescent.shadow.bias=-.00015;scene.add(fluorescent,fluorescent.target);
 const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=true;windowLight.shadow.mapSize.set(2048,2048);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.012;windowLight.shadow.bias=-.0002;scene.add(windowLight,windowLight.target);
 const doorwayLight=new THREE.PointLight(0x8ea6a4,2.2,10,2);doorwayLight.position.set(-1,2.6,4.0);scene.add(doorwayLight);
@@ -326,7 +327,7 @@ const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
 let entranceStartedAt=0,entranceArrived=false,entranceArrivedAt=0,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
 function showFigsawDialogue(text){
  arrivalDialogue.querySelector('.dialogue-bubble span').textContent=text;
- dialogueAnnouncement.textContent=`Figsaw: ${text}`;
+ dialogueAnnouncement.textContent=`Figsaw. ${text}`;
  dialogueSpeech=reducedMotion?null:createDialogueSpeech(text,state.time);
 }
 function updateEntrance(time){
@@ -515,7 +516,7 @@ function render(){
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
  laptop.update(dt,reducedMotion);
- fluorescent.intensity=14*updateOffice(t,reducedMotion);
+ fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion);
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.

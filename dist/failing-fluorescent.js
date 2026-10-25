@@ -1,17 +1,27 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal } from './industrial-materials.js?v=brighter-liquid';
 
-// Discrete ballast failures, not a rapid repeating strobe. Each tube fails separately.
+// Hard ballast cutouts and abrupt restarts, in short irregular clusters.
+// Each tube has a small independent delay, with long steady stretches between failures.
+const failureEvents=[
+ [3.70,.15,.015],[4.22,.22,0],[4.96,.34,.025],
+ [10.20,.94,0],[11.62,.16,.02],[12.25,.28,.04],
+ [19.40,.18,0],[20.03,.25,.025],[21.05,.68,0],[25.10,.24,.06]
+];
 export function fluorescentLevels(time,reducedMotion=false){
  if(reducedMotion)return [.88,.79];
- const events=[[3.7,.32,.08],[4.42,.62,.18],[10.2,1.2,0],[12.1,.42,.16],[19.4,.76,.02],[21.5,.28,.12]];
  return [0,1].map(index=>{
-  const t=((time+index*.19)%27.8+27.8)%27.8;
+  const t=((time+index*.055)%27.8+27.8)%27.8;
   let level=index?.79:.88;
-  for(let i=0;i<events.length;i++){
-   const [start,duration,low]=events[i];if(index===1&&i===3)continue;
-   if(t>=start&&t<start+duration){const edge=Math.min((t-start)/.045,(start+duration-t)/.07,1);level=THREE.MathUtils.lerp(level,low,Math.max(0,edge));}
-   else if(t>=start+duration&&t<start+duration+.62){const warm=(t-start-duration)/.62;level*=.45+.55*warm;}
+  for(let i=0;i<failureEvents.length;i++){
+   const [start,duration,low]=failureEvents[i];if(index===1&&i===4)continue;
+   if(t>=start&&t<start+duration){
+    const edge=Math.min((t-start)/.008,(start+duration-t)/.014,1);
+    level=THREE.MathUtils.lerp(level,low,Math.max(0,edge));
+   }else if(t>=start+duration&&t<start+duration+.075){
+    // A brief striking surge, then an immediate return to the normal output.
+    level*=1+.12*(1-(t-start-duration)/.075);
+   }
   }
   return level*(.98+.02*Math.sin(time*1.7+index));
  });
@@ -49,7 +59,7 @@ export function createFailingFluorescent(){
  wire([[.57,-.02,.15],[.59,-.15,.17],[.68,-.13,.18],[.68,-.035,.15]],metal,.004);
  wire([[.72,.04,0],[.82,.09,.03],[.89,.19,.04],[1.02,.31,.03]],soot,.006);
  const bounce=new THREE.PointLight(0xb1bb97,.25,1.2,2);bounce.position.set(0,.1,0);group.add(bounce);
- function update(time,reducedMotion){const levels=fluorescentLevels(time,reducedMotion);tubeMaterials.forEach((m,i)=>m.emissiveIntensity=levels[i]*2.3);bounce.intensity=(levels[0]+levels[1])*.16;return (levels[0]+levels[1])/1.67;}
+ function update(time,reducedMotion){const levels=fluorescentLevels(time,reducedMotion);tubeMaterials.forEach((m,i)=>m.emissiveIntensity=levels[i]*2.9);bounce.intensity=(levels[0]+levels[1])*.20;return (levels[0]+levels[1])/1.67;}
  function setEnvironment(map){for(const mat of[metal,enamel]){mat.envMap=map;mat.needsUpdate=true;}}
  update(0,false);return {group,update,setEnvironment};
 }

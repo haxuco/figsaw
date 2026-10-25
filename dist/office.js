@@ -3,7 +3,7 @@ import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=floating-bones';
 
 import { createFallenMobile } from './fallen-mobile.js?v=left-rear';
-import { createFailingFluorescent } from './failing-fluorescent.js?v=brighter-liquid';
+import { createFailingFluorescent } from './failing-fluorescent.js?v=hard-cutouts';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
