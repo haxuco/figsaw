@@ -13,7 +13,7 @@ export function createMugTrap({mug,camera,restraint}){
  const hand={position:new THREE.Vector3(),quaternion:new THREE.Quaternion(),blend:0,grip:0,reveal:0,gripKind:'handle'};
  let startedAt=null,finished=false,blackout=0;
  function start(time){
-  if(startedAt!==null||finished||!restraint.requestReach(time))return false;
+  if(restraint.locked||startedAt!==null||finished||!restraint.requestReach(time))return false;
   mug.updateWorldMatrix(true,false);mug.getWorldPosition(floorPosition);mug.getWorldQuaternion(floorRotation);
   camera.updateWorldMatrix(true,false);camera.getWorldPosition(eyePosition);camera.getWorldQuaternion(eyeRotation);
   heldPosition.set(.03,-.25,-.52).applyQuaternion(eyeRotation).add(eyePosition);

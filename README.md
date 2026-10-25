@@ -52,6 +52,8 @@ The reaching hand has a slightly larger palm and fingers with a relaxed spread. 
 
 Once freed, the hand opens the laptop with a single coordinated gesture: the view leans toward it, the fingers catch the actual front lip, and the hand follows the lid as it lifts before releasing and withdrawing. The screen wakes as the lid opens. The view then returns, repeated clicks cannot interrupt the gesture, and R resets it; reduced-motion mode opens immediately.
 
-Click the blue cat mug (or press M with the scene focused) to pick it up by the handle and try to drink. Its pointed ears approach eye level, the view blacks out, and GAME OVER uses the same gothic font as Figsaw’s dialogue. The scene stops until Try again or R restores the mug and restarts the game. Reduced-motion mode skips the moving close-up.
+After detaching the shackle, click the blue cat mug (or press M with the scene focused) to pick it up by the handle and try to drink. Its pointed ears approach eye level, the view blacks out, and GAME OVER uses the same gothic font as Figsaw’s dialogue. The scene stops until Try again or R restores the mug and restarts the game. Reduced-motion mode skips the moving close-up.
 
 Small flies and patterned moths circle the crooked ceiling fluorescent and rear wall light. Flies dart near the tubes, while moths take wider loops with visible wingbeats. Shared instanced geometry keeps the swarms lightweight, and reduced-motion mode holds them still.
+
+The shackle also gates the three tank drain valves. Click a red handwheel (or press V for the nearest tank) to spin it open. Green bubbly acid pours from the drain and spreads toward the player, etching nearby floor surfaces and props while releasing smoke. Touching the actual wet trail triggers GAME OVER; walking away delays contact. Restart clears the spill, corrosion, valve rotation and loss state. Winch buttons remain separate.

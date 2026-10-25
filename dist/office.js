@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js?v=tank-decal';
+import { createFigpalVats } from './figpal-vats.js?v=acid-valves';
 
 import { createFallenMobile } from './fallen-mobile.js?v=plush-grounded';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
@@ -9,6 +9,7 @@ import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-cont
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
 import { createLightInsects } from './light-insects.js';
+import { createTankLeaks } from './tank-leaks.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -740,8 +741,9 @@ export function createOffice(renderer,viewerPosition){
  }
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
  office.add(createFallenMobile(viewerPosition,floorSupport));
- const figpalVats=createFigpalVats();office.add(figpalVats.group);
+ const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
+ const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);return level;}
- return {group:office,laptop:laptopControl,catMug:mugPose,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

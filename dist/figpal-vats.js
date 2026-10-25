@@ -122,7 +122,7 @@ export function createFigpalVats(){
  const tankMaterials=createTankMaterials();
  const createTankDecal=createTankDecalFactory();
  const {glass,haze,fluid,liquidTop,foam:foamMat,bubble:bubbleMat,ripple:rippleMat,waterTime}=tankMaterials;
- const rigs=[],vats=[],speechAnchors=[],dummy=new THREE.Object3D();
+ const rigs=[],vats=[],valves=[],speechAnchors=[],dummy=new THREE.Object3D();
  // A staggered left-hand bay leaves Figsaw and his dialogue clear in the saved view.
  const stations=[{x:-3.05,z:-1.05,height:2.02,winchY:2.80},{x:-2.85,z:.30,height:1.84,winchY:2.65},{x:-2.15,z:1.45,height:1.60,winchY:2.38}];
  for(let i=0;i<stations.length-1;i++){const a=stations[i],b=stations[i+1];rod([a.x,3.065,a.z],[b.x,3.065,b.z],.052,steel);}
@@ -157,8 +157,19 @@ export function createFigpalVats(){
   plate.position.z=.520;
   const gauge=cylinder(.064,.03,[.32,1.19,.37],steel,vat);gauge.rotation.x=Math.PI/2;
   const dial=mesh(new THREE.CircleGeometry(.052,24),cream,vat);dial.position.set(.32,1.19,.391);line([[.32,1.19,.395],[.30,1.219,.395]],.003,ink,vat);
-  const drain=cylinder(.038,.17,[.37,.25,.37],steel,vat);drain.rotation.x=Math.PI/2;
-  const valve=mesh(new THREE.TorusGeometry(.068,.008,6,24),ribOrange,vat);valve.position.set(.37,.25,.47);rod([.31,.25,.47],[.43,.25,.47],.006,ribOrange,vat);
+  const drain=new THREE.Group();drain.name=`Tank ${i+1} drain valve`;drain.position.set(.30,.29,.43);drain.userData.valveIndex=i;vat.add(drain);
+  const fitting=cylinder(.042,.19,[0,0,0],steel,drain);fitting.rotation.x=Math.PI/2;
+  line([[0,0,.045],[0,-.035,.16],[0,-.10,.23]],.033,steel,drain);
+  const outlet=new THREE.Object3D();outlet.position.set(0,-.10,.23);drain.add(outlet);
+  const mouth=mesh(new THREE.RingGeometry(.024,.034,20),steel,drain);mouth.position.copy(outlet.position);mouth.rotation.x=.60;
+  const interior=mesh(new THREE.CircleGeometry(.024,20),darkMetal,drain);interior.position.copy(outlet.position);interior.position.z-=.001;interior.rotation.x=.60;
+  rod([0,0,.01],[0,.075,.11],.012,steel,drain);
+  const wheel=new THREE.Group();wheel.name='Spinning red drain handwheel';wheel.position.set(0,.075,.12);drain.add(wheel);
+  mesh(new THREE.TorusGeometry(.088,.010,8,32),ribOrange,wheel);
+  for(let j=0;j<3;j++){const a=j/3*TAU;rod([0,0,0],[Math.cos(a)*.084,Math.sin(a)*.084,0],.007,ribOrange,wheel);}
+  const hub=cylinder(.018,.028,[0,0,0],fastener,wheel);hub.rotation.x=Math.PI/2;
+  const pick=mesh(new THREE.SphereGeometry(.102,12,8),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false}),wheel);pick.castShadow=false;
+  valves.push({object:drain,outlet,setOpen(progress){wheel.rotation.z=-progress*Math.PI*4;wheel.position.z=.12+progress*.018;}});
   const glow=new THREE.PointLight(0x6b9c25,.58,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
   vats.push({surface,bubbles,bubbleData,foam,ripples,floatingBones,phase:i*1.7});
 
@@ -256,5 +267,5 @@ export function createFigpalVats(){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,toggleHoist,isLowered:index=>rigs[index]?.lowered??false,canSpeak,isHanging,lowerAll,reset,speechAnchors,setEnvironment};
+ return {group,update,valves,toggleHoist,isLowered:index=>rigs[index]?.lowered??false,canSpeak,isHanging,lowerAll,reset,speechAnchors,setEnvironment};
 }
