@@ -1,13 +1,14 @@
-export function createRestraintMenu(onDetach){
+export function createRestraintMenu(onDetach,{canDetach=()=>true,onBlocked=()=>{}}={}){
  const menu=document.querySelector('#chain-menu'),button=menu.querySelector('button'),canvas=document.querySelector('#scene');
  function hide(returnFocus=false){menu.hidden=true;if(returnFocus)canvas.focus({preventScroll:true});}
  function show(x,y){
+  button.setAttribute('aria-disabled',String(!canDetach()));button.title=canDetach()?'Unlock the shackle with the key':'Find the shackle key first';
   menu.hidden=false;
   menu.style.left=`${Math.max(8,Math.min(x,innerWidth-menu.offsetWidth-8))}px`;
   menu.style.top=`${Math.max(8,Math.min(y,innerHeight-menu.offsetHeight-8))}px`;
   button.focus({preventScroll:true});
  }
- function detach(){hide(true);onDetach();}
+ function detach(){if(!canDetach()){onBlocked();return;}hide(true);onDetach();}
  button.addEventListener('click',detach);
  menu.addEventListener('contextmenu',event=>event.preventDefault());
  document.addEventListener('pointerdown',event=>{if(!menu.hidden&&!menu.contains(event.target))hide();},true);

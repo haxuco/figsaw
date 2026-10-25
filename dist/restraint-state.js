@@ -1,7 +1,7 @@
 const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 
 // Reaching and releasing are separate transitions: a click can never unlock the cuff.
-export function createRestraintState(){
+export function createRestraintState({canDetach=()=>true}={}){
  let locked=true,reachStart=-Infinity,releasedAt=-Infinity,openPending=false,visibleUntil=-Infinity;
  return {
   get locked(){return locked;},
@@ -9,7 +9,7 @@ export function createRestraintState(){
    if(time-reachStart<1.65||(!locked&&time-releasedAt<.85))return false;
    reachStart=time;visibleUntil=time+5.2;openPending=!locked;return true;
   },
-  detach(time){if(!locked)return false;locked=false;releasedAt=time;visibleUntil=time+2.4;openPending=false;return true;},
+  detach(time){if(!locked||!canDetach())return false;locked=false;releasedAt=time;visibleUntil=time+2.4;openPending=false;return true;},
   endReach(){visibleUntil=-Infinity;openPending=false;},
   sample(time,keepVisible=false){
    if(keepVisible&&Number.isFinite(reachStart))visibleUntil=Math.max(visibleUntil,time+.8);

@@ -1,12 +1,12 @@
 import * as THREE from './vendor/three.module.js';
 import {weatheredMetal} from './industrial-materials.js?v=brighter-liquid';
-import {createRestraintState} from './restraint-state.js?v=hand-opens-laptop';
+import {createRestraintState} from './restraint-state.js?v=key-lock';
 
 const UP=new THREE.Vector3(0,1,0);
-export function createPlayerRestraint(camera){
+export function createPlayerRestraint(camera,options={}){
  const group=new THREE.Group();group.name='Player forearm chained to the rear pipes';
  const space=new THREE.Group();space.name='Camera-relative reaching hand';group.add(space);
- const state=createRestraintState(),sphere=new THREE.SphereGeometry(1,24,16);
+ const state=createRestraintState(options),sphere=new THREE.SphereGeometry(1,24,16);
  // Broad cel-shaded forms and an ink silhouette match Figsaw's drawn features.
  const bands=new THREE.DataTexture(new Uint8Array([75,145,205,255]),4,1,THREE.RedFormat);
  bands.minFilter=bands.magFilter=THREE.NearestFilter;bands.generateMipmaps=false;bands.needsUpdate=true;

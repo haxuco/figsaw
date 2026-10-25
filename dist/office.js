@@ -11,6 +11,7 @@ import { createFloorHandsaw } from './floor-handsaw.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
 import { createFloorRodents } from './floor-rodents.js?v=smaller-critters';
 import { createChargingKit } from './charging-kit.js';
+import { createKetchupKey } from './ketchup-key.js';
 import { createTankLeaks } from './tank-leaks.js';
 
 export function createOffice(renderer,viewerPosition){
@@ -503,12 +504,13 @@ export function createOffice(renderer,viewerPosition){
  const glassKetchup=new THREE.Group();glassKetchup.name='Discarded glass ketchup bottle';
  const glassProfile=[[0,0],[.063,0],[.076,.014],[.080,.047],[.079,.19],[.069,.267],[.049,.342],[.030,.410],[.029,.447],[.033,.454],[.032,.471],[0,.471]];
  const filling=glassProfile.filter(p=>p[1]<.44).map(([r,y])=>[Math.max(0,r-.0035),y+.004]);filling.push([.026,.443],[0,.443]);
- bottleShell(filling,ketchup,glassKetchup);const glassBody=bottleShell(glassProfile,bottleGlass,glassKetchup);glassBody.castShadow=false;
+ const glassFilling=bottleShell(filling,ketchup,glassKetchup);const glassBody=bottleShell(glassProfile,bottleGlass,glassKetchup);glassBody.castShadow=false;
  bottleLabel(glassKetchup,glassProfile,.047,.240,glassLabel);bottleLabel(glassKetchup,glassProfile,.365,.432,neckLabel,1,.95);
- cylinder(.037,.036,[0,.480,0],bottleCap,glassKetchup,32);cylinder(.0365,.006,[0,.461,0],capSeam,glassKetchup,32);
- for(let i=0;i<30;i++){const a=i/30*Math.PI*2;rod([Math.cos(a)*.037,.467,Math.sin(a)*.037],[Math.cos(a)*.037,.494,Math.sin(a)*.037],.0011,capSeam,glassKetchup);}
+ const glassCap=new THREE.Group();glassCap.position.y=.480;glassKetchup.add(glassCap);
+ cylinder(.037,.036,[0,0,0],bottleCap,glassCap,32);cylinder(.0365,.006,[0,.461,0],capSeam,glassKetchup,32);
+ for(let i=0;i<30;i++){const a=i/30*Math.PI*2;rod([Math.cos(a)*.037,-.013,Math.sin(a)*.037],[Math.cos(a)*.037,.014,Math.sin(a)*.037],.0011,capSeam,glassCap);}
  const glassBottom=mesh(new THREE.TorusGeometry(.070,.003,6,32),bottleGlass,glassKetchup);glassBottom.rotation.x=Math.PI/2;glassBottom.position.y=.016;
- placeBottle(glassKetchup,-.28,2.92,[-.25,.45,Math.PI/2],.25,.82);
+ const glassBottlePose=placeBottle(glassKetchup,-.28,2.92,[-.25,.45,Math.PI/2],.25,.82);
  const squeezeKetchup=new THREE.Group();squeezeKetchup.name='Discarded squeeze ketchup bottle';
  const squeezeProfile=[[0,.058],[.055,.058],[.065,.075],[.098,.105],[.115,.15],[.109,.25],[.118,.36],[.112,.415],[.092,.438],[0,.438]];
  bottleShell(squeezeProfile,ketchup,squeezeKetchup,.62);bottleLabel(squeezeKetchup,squeezeProfile,.122,.403,squeezeLabel,.62,1.04);
@@ -749,8 +751,9 @@ export function createOffice(renderer,viewerPosition){
  const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
+ const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
  const rodents=createFloorRodents({room:office,floorSupport});office.add(rodents.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
- function update(time,reducedMotion){rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);return level;}
- return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,chargingKit,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ function update(time,reducedMotion){ketchupKey.update(time,reducedMotion);rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);return level;}
+ return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,chargingKit,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
