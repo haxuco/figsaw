@@ -228,10 +228,8 @@ export function createOffice(renderer,viewerPosition){
  const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
  onFloor(chairCaster(office,2.37,.045,2.84,.7));onFloor(chairCaster(office,-2.15,.045,.95,-.4));
  seed=roomSeed;
- for(let i=0;i<11;i++){const x=range(-3.3,.9),z=range(-3,-1);cable([[x,.83,z],[x+.15,.52,z+.2],[x-.12,.04,z+.45],[x+.31,.022,z+.83],[x+.62,.02,z+.47]],.009,black);}
- // Loose network cables snake across the clear central aisle.
- cable([[-3.25,.026,.8],[-2,.023,1.45],[-1.25,.022,1.78],[-.85,.022,1.47],[-.67,.022,2.5],[.45,.022,2.83],[1.25,.022,2.44]],.012,black);
- cable([[2.8,.027,-2.9],[2.05,.025,-1.5],[1.64,.024,-.4],[1.8,.022,.1],[.98,.022,.6]],.008,material(0x625c3b,.9));
+ // Skip the former cable placements so the remaining seeded room clutter stays fixed.
+ for(let i=0;i<22;i++)random();
 
  // Neglected coffee station: espresso machine, broken carafe, cups, spills and a drawer hanging open.
  const coffee=desk(2.55,-3.38,1.92);box([1.70,.72,.72],[0,.40,-.025],material(0x667268,.94,woodMap),coffee);
