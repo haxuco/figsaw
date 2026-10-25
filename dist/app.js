@@ -12,6 +12,7 @@ import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js'
 import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
 import { createLaptopOpening } from './laptop-opening.js';
+import { createDrawerCamera } from './drawer-camera.js';
 import { createMugTrap } from './mug-trap.js?v=locked-mug';
 
 const canvas=document.querySelector('#scene');
@@ -382,6 +383,7 @@ const {group:office,laptop,catMug,acidLeaks,chargingKit,ketchupKey,countdown,set
 profiler.mark('officeBuilt');
 const restraint=createPlayerRestraint(camera,{canDetach:()=>ketchupKey.hasKey});scene.add(restraint.group);
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
+const drawerCamera=createDrawerCamera({position:cameraPosition,state,getView:chargingKit.getDrawerView});
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
@@ -448,10 +450,16 @@ function useKeyObject(action){
 }
 function useCharging(action){
  if(!action||laptopOpening.active||mugTrap.active||gameEnded||acidLeaks.dying)return;
+ const wasOpen=chargingKit.drawerOpen,previousPhase=chargingKit.phase;
+ hoveredChargingAction=null;canvas.classList.remove('over-charging');
  if(restraint.locked)restraint.requestReach(state.time);
  if(action==='charger'&&chargingKit.phase==='drawer'&&!chargingKit.drawerReady&&!restraint.locked){chargingToast='Let the drawer finish opening.';}
  else chargingToast=chargingKit.use(action,state.time,restraint.locked);
  chargingToastUntil=state.time+3.8;restraintStatus.textContent=chargingToast;arrivalCameraMove.cancel();resetting=false;
+ if(!restraint.locked){
+  if(action==='drawer'&&!wasOpen&&chargingKit.drawerOpen){releaseControls();drawerCamera.start(state.time);}
+  else if((action==='drawer'&&wasOpen&&!chargingKit.drawerOpen)||(previousPhase==='drawer'&&chargingKit.phase==='carrying')){releaseControls();drawerCamera.restore(state.time);}
+ }
 }
 function updateChargingHint(){
  const label=state.time<chargingToastUntil?chargingToast:hoveredKeyAction?ketchupKey.hint(hoveredKeyAction):hoveredChargingAction?chargingKit.hint(hoveredChargingAction):ketchupKey.hasKey&&restraint.locked?'Shackle key collected · Click the shackle to unlock':chargingKit.hint(null);
@@ -464,6 +472,7 @@ function openLaptop(){
  }
  if(chargingKit.phase==='powered'){useCharging('laptop');return;}
  if(laptop.isOpen){finishOpeningLaptop();return;}
+ drawerCamera.cancel();
  if(laptopOpening.start(state.time)){
   releaseControls();arrivalCameraMove.cancel();resetting=false;
   restraintStatus.textContent='You reach for the front edge of the laptop.';
@@ -479,6 +488,7 @@ function grabMug(){
  if(laptopOpening.active||mugTrap.active||gameEnded||acidLeaks.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. Detach the shackle before picking up the mug.";return;}
  if(!mugTrap.start(state.time))return;
+ drawerCamera.cancel();
  releaseControls();arrivalCameraMove.cancel();resetting=false;chainMenu.hide();
  canvas.classList.remove('over-mug');
  restraintStatus.textContent='You pick up the cat mug by its handle and raise it for a drink.';
@@ -487,6 +497,7 @@ function openTankValve(index){
  if(laptopOpening.active||mugTrap.active||gameEnded||acidLeaks.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. Detach the shackle before turning a tank valve.";return;}
  if(acidLeaks.open(index,state.time,restraint.locked)){
+  drawerCamera.cancel();
   arrivalCameraMove.cancel();resetting=false;chainMenu.hide();
   restraintStatus.textContent=`Tank ${index+1}'s valve spins open. Bubbling acid spills onto the floor and starts eating through everything it touches.`;
  }
@@ -498,6 +509,7 @@ function nearestTankValve(){
 }
 function endGame(message){
  if(gameEnded)return;gameEnded=true;
+ drawerCamera.cancel();
  releaseControls();chainMenu.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
  document.body.classList.add('game-over');canvas.inert=true;
  gameOverContent.hidden=false;restartGame.focus({preventScroll:true});
@@ -520,7 +532,7 @@ function resetView({skipIntro=false}={}){
  gameEnded=false;acidLeaks.reset();mugTrap.reset();mugEyeImpact.hidden=true;mugEyeImpact.style.opacity='0';
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
- laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();
+ laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
  finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
  resetting=!skipIntro;
@@ -552,7 +564,8 @@ document.addEventListener('keydown',event=>{
  if((laptopOpening.active||mugTrap.active||acidLeaks.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
  if(chainMenu.active)return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
- if(movementKeys.has(event.code)){event.preventDefault();arrivalCameraMove.cancel();pressedKeys.add(event.code);resetting=false;return;}
+ if(movementKeys.has(event.code)){event.preventDefault();arrivalCameraMove.cancel();drawerCamera.cancel();pressedKeys.add(event.code);resetting=false;return;}
+ if(event.code==='Escape'&&drawerCamera.active){event.preventDefault();drawerCamera.restore(state.time);return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
  if(event.code==='KeyF'&&event.target===canvas&&!event.repeat){event.preventDefault();useCharging(chargingKit.nextAction);}
@@ -562,7 +575,7 @@ document.addEventListener('keydown',event=>{
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
  if(event.code.startsWith('Arrow')){
-  event.preventDefault();arrivalCameraMove.cancel();resetting=false;
+  event.preventDefault();arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;
   if(event.code==='ArrowLeft')state.yaw=wrapAngle(state.yaw+.08);
   if(event.code==='ArrowRight')state.yaw=wrapAngle(state.yaw-.08);
   if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-1.40,1.40);
@@ -589,7 +602,7 @@ canvas.addEventListener('pointermove',event=>{
  if(dragPointer===null){const hit=interactionAt(event);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
- if(pointerDistance>=6)arrivalCameraMove.cancel();
+ if(pointerDistance>=6){arrivalCameraMove.cancel();drawerCamera.cancel();}
  state.yaw=wrapAngle(state.yaw-dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
 });
 canvas.addEventListener('pointerup',event=>{
@@ -610,7 +623,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>{hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-key','over-laptop','over-hoist','over-chain','over-mug','over-valve','over-charging');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopOpening.active||mugTrap.active||gameEnded||acidLeaks.dying)return;arrivalCameraMove.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopOpening.active||mugTrap.active||gameEnded||acidLeaks.dying)return;arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -673,8 +686,9 @@ function render(){
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
- if(laptopOpening.active||mugTrap.active)arrivalCameraMove.cancel();
+ if(laptopOpening.active||mugTrap.active||drawerCamera.active)arrivalCameraMove.cancel();
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
+ drawerCamera.update(t,reducedMotion);
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
  const viewYaw=state.yaw;
  // Walk along the floor plane relative to the view; E/Q independently change eye height.
