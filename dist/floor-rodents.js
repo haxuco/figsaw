@@ -56,17 +56,17 @@ export function createFloorRodents({room,floorSupport,seed=Math.floor(Math.rando
  const features=new THREE.MeshStandardMaterial({roughness:.72});
  const tailMaterial=new THREE.MeshStandardMaterial({roughness:.88});
  function instances(geometry,material,count,name){const mesh=new THREE.InstancedMesh(geometry,material,count);mesh.name=name;mesh.instanceMatrix.setUsage(THREE.DynamicDrawUsage);mesh.frustumCulled=false;mesh.castShadow=true;mesh.receiveShadow=true;mesh.raycast=()=>{};group.add(mesh);return mesh;}
+ const starts=[[-.20,.65],[-1.15,1.60],[2.60,-1.65]],count=starts.length;
  const sphere=new THREE.SphereGeometry(1,14,9);
- const bodies=instances(sphere,fur,6*6,'Furry rat and mouse bodies');
- const details=instances(sphere,features,6*9,'Ears, eyes, noses and running paws');
- const tails=instances(new THREE.CylinderGeometry(1,1,1,7),tailMaterial,6*9,'Long tapered swishing tails');
- const whiskerPositions=new Float32Array(6*4*2*3),whiskerGeometry=new THREE.BufferGeometry();whiskerGeometry.setAttribute('position',new THREE.BufferAttribute(whiskerPositions,3).setUsage(THREE.DynamicDrawUsage));
+ const bodies=instances(sphere,fur,count*6,'Furry rat and mouse bodies');
+ const details=instances(sphere,features,count*9,'Ears, eyes, noses and running paws');
+ const tails=instances(new THREE.CylinderGeometry(1,1,1,7),tailMaterial,count*9,'Long tapered swishing tails');
+ const whiskerPositions=new Float32Array(count*4*2*3),whiskerGeometry=new THREE.BufferGeometry();whiskerGeometry.setAttribute('position',new THREE.BufferAttribute(whiskerPositions,3).setUsage(THREE.DynamicDrawUsage));
  const whiskers=new THREE.LineSegments(whiskerGeometry,new THREE.LineBasicMaterial({color:0xbbb1a0,transparent:true,opacity:.45}));whiskers.frustumCulled=false;whiskers.raycast=()=>{};group.add(whiskers);
- const starts=[[-.20,.65],[-1.15,1.60],[.80,-.65],[2.60,-1.65],[-1.55,-1.30],[.95,1.95]];
  const colors=[0x857766,0xb2a491,0x5c5952,0x8f806c,0xaaa9a0,0x6c6256];
  const animals=starts.map(([x,z],i)=>{
-  const cell=routes.closest(x,z),mouse=i%2===1;
-  return {mouse,cell:cell.id,x:cell.x,z:cell.z,territory:i<2?{x:cell.x,z:cell.z,radius:1.5}:null,yaw:random()*Math.PI*2,size:.5*(mouse?.58+random()*.08:.92+random()*.12),color:new THREE.Color(colors[i]),phase:random()*6.28,speed:mouse?.95+random()*.35:.66+random()*.28,route:[],pause:i===0?.1:.4+random()*2.3,gait:0,moving:false};
+  const cell=routes.closest(x,z),mouse=i!==0;
+  return {mouse,cell:cell.id,x:cell.x,z:cell.z,territory:i<2?{x:cell.x,z:cell.z,radius:1.5}:null,yaw:random()*Math.PI*2,size:.5*(mouse?.58+random()*.08:.92+random()*.12),color:new THREE.Color(colors[i]),phase:random()*6.28,speed:1.7*(mouse?.95+random()*.35:.66+random()*.28),route:[],pause:i===0?.1:.4+random()*2.3,gait:0,moving:false};
  });
  const pink=new THREE.Color(0xa47770),noseColor=new THREE.Color(0x765552),eyeColor=new THREE.Color(0x11110e);
  let lastTime=null;
@@ -87,7 +87,7 @@ export function createFloorRodents({room,floorSupport,seed=Math.floor(Math.rando
       const dx=target.x-animal.x,dz=target.z-animal.z,distance=Math.hypot(dx,dz),travel=Math.min(distance,animal.speed*dt);
       animal.moving=true;animal.gait+=travel*60;
       if(distance>.0001){animal.x+=dx/distance*travel;animal.z+=dz/distance*travel;const yaw=Math.atan2(-dx,-dz),delta=THREE.MathUtils.euclideanModulo(yaw-animal.yaw+Math.PI,Math.PI*2)-Math.PI;animal.yaw+=delta*(1-Math.exp(-dt*20));}
-      if(distance<.025){animal.x=target.x;animal.z=target.z;animal.cell=target.id;animal.route.shift();if(!animal.route.length)animal.pause=.45+random()*2.8;}
+      if(travel>=distance-.0001){animal.x=target.x;animal.z=target.z;animal.cell=target.id;animal.route.shift();if(!animal.route.length)animal.pause=.45+random()*2.8;}
      }else animal.pause=1;
     }
    }

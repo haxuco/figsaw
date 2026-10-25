@@ -9,7 +9,7 @@ import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-cont
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
-import { createFloorRodents } from './floor-rodents.js?v=smaller-critters';
+import { createFloorRodents } from './floor-rodents.js?v=fewer-faster';
 import { createChargingKit } from './charging-kit.js';
 import { createKetchupKey } from './ketchup-key.js';
 import { createTankLeaks } from './tank-leaks.js';
