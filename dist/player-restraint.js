@@ -1,16 +1,16 @@
 import * as THREE from './vendor/three.module.js';
 import {weatheredMetal} from './industrial-materials.js?v=brighter-liquid';
 import {createRestraintState} from './restraint-state.js?v=key-lock';
+import {createReachingForearm,solveReachElbow} from './reaching-arm.js';
 
 const UP=new THREE.Vector3(0,1,0);
 export function createPlayerRestraint(camera,options={}){
  const group=new THREE.Group();group.name='Player forearm chained to the rear pipes';
  const space=new THREE.Group();space.name='Camera-relative reaching hand';group.add(space);
  const state=createRestraintState(options),sphere=new THREE.SphereGeometry(1,24,16);
- // Broad cel-shaded forms and an ink silhouette match Figsaw's drawn features.
- const bands=new THREE.DataTexture(new Uint8Array([75,145,205,255]),4,1,THREE.RedFormat);
- bands.minFilter=bands.magFilter=THREE.NearestFilter;bands.generateMipmaps=false;bands.needsUpdate=true;
- const skin=new THREE.MeshToonMaterial({color:0xd3aa87,gradientMap:bands,emissive:0x684333,emissiveIntensity:.025});
+ // Rounded proportions and a fine ink edge match the character, with smooth
+ // matte shading so the arm reads as a volume rather than a faceted stick.
+ const skin=new THREE.MeshStandardMaterial({color:0xd3aa87,roughness:.86,metalness:0,emissive:0x684333,emissiveIntensity:.025});
  const ink=new THREE.MeshBasicMaterial({color:0x201c19,side:THREE.BackSide});
  const iron=weatheredMetal(0xa5aaa2),edge=weatheredMetal(0xbfc5c0),black=new THREE.MeshStandardMaterial({color:0x151716,roughness:.9});
  const invisible=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false});
@@ -36,9 +36,10 @@ export function createPlayerRestraint(camera,options={}){
   }
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();const m=mesh(geo,skin,parent);outline(m);return m;
  }
- const upperarm=skinForm(arm,[[0,0,0,.074,.058],[-.18,.004,0,.073,.056],[-.42,.008,.003,.069,.052],[-.70,.006,.002,.061,.047],[-1,0,0,.054,.042]],40);upperarm.name='Upper arm';
- const elbowJoint=ball(arm,[0,0,0],[.056,.046,.052]);elbowJoint.name='Bent elbow';
- const forearm=skinForm(arm,[[0,0,0,.054,.042],[-.12,.004,.002,.058,.043],[-.30,.010,.004,.057,.041],[-.52,.012,.004,.051,.036],[-.73,.008,.002,.044,.030],[-.90,.003,0,.039,.027],[-1,0,0,.038,.026]],40);forearm.name='Tapered forearm';
+ const upperarm=skinForm(arm,[[0,0,0,.097,.078],[-.18,.004,0,.099,.077],[-.42,.008,.003,.092,.073],[-.70,.006,.002,.084,.066],[-1,0,0,.076,.061]],40);upperarm.name='Upper arm';
+ const elbowJoint=ball(arm,[0,0,0],[.076,.061,.068]);elbowJoint.name='Bent elbow';
+ const forearmShape=createReachingForearm(skin,ink);arm.add(forearmShape.mesh);
+ const forearmRotation=new THREE.Quaternion();
  const hand=new THREE.Group();hand.name='Cartoon right hand';arm.add(hand);
  // Keep the wrist narrow enough for the existing fitted cuff; exaggerate only
  // the palm and fingers so the same hinged release still clears the hand.
@@ -139,9 +140,9 @@ export function createPlayerRestraint(camera,options={}){
   delta.copy(elbow).sub(wrist).setLength(.35);elbow.copy(wrist).add(delta);
   shoulder.copy(elbow).add(shoulderOffset);
   upperarm.position.copy(shoulder);delta.copy(elbow).sub(shoulder);upperarm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());upperarm.scale.z=delta.length();
-  forearm.position.copy(elbow);delta.copy(wrist).sub(elbow);forearm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());forearm.scale.z=.35;
-  elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearm.quaternion);
-  hand.position.copy(wrist);hand.quaternion.copy(forearm.quaternion);hand.rotateX(-.12+reach*.08);hand.rotateY(.13-reach*.06);hand.rotateZ(-.04);
+  delta.copy(wrist).sub(elbow);forearmRotation.setFromUnitVectors(boneAxis,delta.clone().normalize());
+  elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearmRotation);
+  hand.position.copy(wrist);hand.quaternion.copy(forearmRotation);hand.rotateX(-.12+reach*.08);hand.rotateY(.13-reach*.06);hand.rotateZ(-.04);
   if(releaseActive)hand.quaternion.slerp(releasedRotation,1-pose.handFree);
   fingers.forEach((f,i)=>{f.rotation.x=-.06+(1-reach)*(.11+i*.015);});
   thumb.rotation.x=0;thumb.rotation.y=.88;
@@ -163,13 +164,13 @@ export function createPlayerRestraint(camera,options={}){
    hand.position.lerp(gripWrist,blend);hand.quaternion.slerp(gripRotation,blend);
    // The arm enters from below the frame during the lift, keeping the elbow out
    // of sight as the wrist rises with the laptop edge.
-   const depth=Math.min(.62,Math.max(.38,-hand.position.z*.72));
-   gripElbow.set(hand.position.x+.18,-depth*Math.tan(THREE.MathUtils.degToRad(31))-.15,-depth);
-   elbow.lerp(gripElbow,blend);wrist.copy(hand.position);shoulder.copy(elbow).add(shoulderOffset);
+   wrist.copy(hand.position);shoulder.set(.34,-.66-withdraw,-.09);
+   solveReachElbow(shoulder,wrist,gripElbow);elbow.lerp(gripElbow,blend);
    upperarm.position.copy(shoulder);delta.copy(elbow).sub(shoulder);upperarm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());upperarm.scale.z=delta.length();
-   forearm.position.copy(elbow);delta.copy(wrist).sub(elbow);forearm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());forearm.scale.z=delta.length();
-   elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearm.quaternion);
+   delta.copy(wrist).sub(elbow);forearmRotation.setFromUnitVectors(boneAxis,delta.clone().normalize());
+   elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearmRotation);
   }else fingers.forEach(finger=>{finger.rotation.y=finger.userData.spread;});
+  forearmShape.update(elbow,hand.position,hand.quaternion);
   if(pose.locked){
    cuff.position.copy(wrist);cuff.quaternion.copy(hand.quaternion);gate.rotation.z=0;latch.rotation.z=0;
   }else{

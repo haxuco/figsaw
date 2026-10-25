@@ -42,7 +42,7 @@ When Figsaw stops cycling and begins his opening line, the camera eases over 1.4
 
 A worn handsaw lies on the floor beside the countdown timer, with a tapered, rust-pitted steel blade, individually modeled teeth, and a scratched wooden handle with an open grip and slotted brass fasteners. It uses the same floor-contact placement and room reflections as the surrounding props.
 
-The reaching hand uses rounded cartoon proportions, cel shading, and dark silhouette outlines to match Figsaw. Its camera-relative bent-arm reach, fitted wrist cuff, and hinged release remain unchanged.
+The reaching hand uses rounded cartoon proportions, smooth matte shading, and fine dark silhouette outlines to match Figsaw. Its camera-relative bent-arm reach, fitted wrist cuff, and hinged release remain unchanged.
 
 Each glass canister carries the supplied #OPENTOWORK decal, wrapped to the curved front with a transparent center. A gently bobbing Figpal-shaped skull sits inside each opening; limited drift keeps the skulls framed, while the tanks retain their different sets of loose bones.
 
@@ -74,3 +74,8 @@ Coarse-pointer, narrow-screen and low-resource devices use a 30 fps ceiling, 1.2
 Opaque static furniture is merged by material and spatial cell. Interactive/animated objects, transparent surfaces, and instanced creatures remain separate. Shared sphere geometry and packed bump/roughness/metalness maps avoid duplicate allocations. A small environment map replaces rendering the entire furnished room six times at startup. Shaders compile asynchronously while a loading message is visible, and the gothic font uses compressed WOFF.
 
 Append `?profile=1` to a local preview to expose a hidden `#performance-report` output with startup stages, recent frame timing, draw calls and GPU resource counts. Profiling is off by default. In the desktop QA scene geometry allocations fell from 2,777 to 1,462 (47%); draw calls vary with camera position and animation. Mobile viewport checks exercise the reduced budget but do not substitute for testing physical phones on slow networks.
+
+
+The laptop reach uses a rounded, curved forearm with a fuller elbow-to-wrist taper and smooth matte shading. A two-segment arm solve bends the elbow below the frame, and the opening camera eases to a wider view so the hooked fingers remain visible on the lid. Fingertips track the actual moving lip, and the original camera framing returns after the lift. The fitted wrist cuff and hinged unlock remain intact.
+
+Tank spills use a continuous floor-following wetness surface instead of overlapping flat puddle meshes. A gravity-fed, narrowing jet wavers from the drain into a growing impact pool, with small droplets, expanding rings, fine bubbles, reflective moving surface normals, thin translucent edges and wisps of corrosion smoke. The front meanders gently toward the player and leaves dark damp etching; contact still ends the game and reset clears the complete spill. The floor mask updates at 10 Hz and keeps the reduced mobile texture/mesh budgets.

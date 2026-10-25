@@ -755,7 +755,7 @@ export function createOffice(renderer,viewerPosition){
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
  const rodents=createFloorRodents({room:office,floorSupport,viewerPosition});office.add(rodents.group);
- function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
+ function setEnvironment(map){acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
   ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
