@@ -332,17 +332,25 @@ const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
 const countdownReadout=document.querySelector('#game-countdown');
 const countdownAnnouncement=document.querySelector('#countdown-announcement');
 let countdownStartTime=null,lastCountdownSeconds=300;
-const dialogueText='I want to play a game...';
+const dialogueLines=[
+ 'I want to play a game...',
+ "Those who don't appreciate design do not deserve it.",
+ 'Let the games begin...'
+];
+let dialogueLineIndex=-1,nextDialogueAt=Infinity;
 const dialogueAnchor=new THREE.Vector3(),dialogueProjection=new THREE.Vector3();
 const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
 let entranceStartedAt=0,entranceArrived=false,entranceArrivedAt=0,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
-function showFigsawDialogue(text){
+function showFigsawDialogue(index){
+ const text=dialogueLines[index];dialogueLineIndex=index;
  arrivalDialogue.querySelector('.dialogue-bubble span').textContent=text;
  dialogueAnnouncement.textContent=`Figsaw. ${text}`;
  const speech=createDialogueSpeech(text,state.time);
  dialogueSpeech=reducedMotion?null:speech;
- // The persistent bubble stays visible; the timer starts after the spoken line ends.
- countdownStartTime=speech.startTime+speech.duration;
+ // Leave a beat between lines, then keep the final line visible.
+ nextDialogueAt=index<dialogueLines.length-1?speech.startTime+speech.duration+1:Infinity;
+ // Preserve the original countdown cue without restarting it for later lines.
+ if(index===0)countdownStartTime=speech.startTime+speech.duration;
 }
 function updateEntrance(time){
  const elapsed=time-entranceStartedAt-1.0;
@@ -353,7 +361,7 @@ function updateEntrance(time){
  const viewerYaw=Math.atan2(homePosition.x-ridePoint.x,homePosition.z-ridePoint.z);
  const relativeYaw=THREE.MathUtils.euclideanModulo(viewerYaw-model.rotation.y+Math.PI,Math.PI*2)-Math.PI;
  setRollingDistance(progress*entranceLength/modelScale);
- if(progress===1&&!entranceArrived){entranceArrived=true;entranceArrivedAt=time;arrivalCameraMove.start(state.time,cameraPosition,state);showFigsawDialogue(dialogueText);}
+ if(progress===1&&!entranceArrived){entranceArrived=true;entranceArrivedAt=time;arrivalCameraMove.start(state.time,cameraPosition,state);showFigsawDialogue(0);}
  figsawIdlePose(entranceArrived?time-entranceArrivedAt:-1,reducedMotion,idlePose);
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
@@ -429,7 +437,7 @@ function operateHoist(index){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView(){arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -533,6 +541,7 @@ function render(){
   }
  }
  updateEntrance(clock.elapsedTime);
+ if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
