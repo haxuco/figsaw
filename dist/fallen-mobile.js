@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
 export function createFallenMobile(viewerPosition){
- const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.position.set(-.02,0,1.15);
+ const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
  for(let i=0;i<7000;i++){const x=random()*512,y=random()*512;ctx.strokeStyle=i%2?'rgba(58,52,36,.12)':'rgba(246,236,212,.28)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2,y+3);ctx.stroke();}
