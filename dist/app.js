@@ -1,4 +1,8 @@
 import * as THREE from './vendor/three.module.js';
+import {renderQuality as quality} from './render-quality.js';
+import {batchStaticScenery} from './static-batching.js';
+import {createRoomReflections} from './room-reflections.js';
+import {createPerformanceReport} from './performance-report.js';
 import { createOffice } from './office.js?v=fewer-faster';
 import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
@@ -18,15 +22,17 @@ const homePosition=new THREE.Vector3(...homeCamera.position);
 const homeDirection=new THREE.Vector3(...homeCamera.lookAt).sub(homePosition).normalize();
 const homeView={yaw:Math.atan2(-homeDirection.x,-homeDirection.z),pitch:Math.asin(homeDirection.y)};
 const state={yaw:homeView.yaw,pitch:homeView.pitch,zoom:1,jaw:0,space:false,time:0,talkUntil:0};
-const renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true});
-renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+const renderer=new THREE.WebGLRenderer({canvas,antialias:!quality.mobile,alpha:false,powerPreference:'high-performance'});
+renderer.setPixelRatio(quality.pixelRatio);
 renderer.localClippingEnabled=true;
 renderer.shadowMap.enabled=true;
+renderer.shadowMap.autoUpdate=false;
 renderer.shadowMap.type=THREE.PCFSoftShadowMap;
 renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
+const profiler=createPerformanceReport(renderer,scene);
 const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
 const arrivalCameraMove=createArrivalCameraMove(homeCamera.fov);
@@ -34,8 +40,8 @@ const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDir
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
 const fluorescentPower=17.5;
 const fluorescent=new THREE.SpotLight(0xc4d2b0,fluorescentPower,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
-fluorescent.shadow.mapSize.set(2048,2048);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.0025;fluorescent.shadow.bias=-.00005;scene.add(fluorescent,fluorescent.target);
-const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=true;windowLight.shadow.mapSize.set(2048,2048);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.003;windowLight.shadow.bias=-.00006;scene.add(windowLight,windowLight.target);
+fluorescent.shadow.mapSize.set(quality.shadowSize,quality.shadowSize);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.0025;fluorescent.shadow.bias=-.00005;scene.add(fluorescent,fluorescent.target);
+const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=!quality.mobile;windowLight.shadow.mapSize.set(1024,1024);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.003;windowLight.shadow.bias=-.00006;scene.add(windowLight,windowLight.target);
 const doorwayLight=new THREE.PointLight(0x8ea6a4,2.2,10,2);doorwayLight.position.set(-1,2.6,4.0);scene.add(doorwayLight);
 
 const mix=THREE.MathUtils.lerp;
@@ -368,7 +374,9 @@ function updateEntrance(time){
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
 updateEntrance(0);
+profiler.mark('characterBuilt');
 const {group:office,laptop,catMug,acidLeaks,chargingKit,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
+profiler.mark('officeBuilt');
 const restraint=createPlayerRestraint(camera,{canDetach:()=>ketchupKey.hasKey});scene.add(restraint.group);
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
@@ -385,15 +393,11 @@ const chainMenu=createRestraintMenu(()=>{
 const finale=createFinaleCue(figpalHoists);
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
-// Capture the actual furnished room once for subtle reflections in the display covers.
-// Static environment capture keeps the glass reflective without six extra renders per frame.
-const reflectionTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
-const reflectionCamera=new THREE.CubeCamera(.08,20,reflectionTarget);reflectionCamera.position.set(0,1.35,.25);
-reflectionCamera.update(renderer,scene);
-const reflectionFilter=new THREE.PMREMGenerator(renderer);
-const displayEnvironment=reflectionFilter.fromCubemap(reflectionTarget.texture);
-setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);reflectionTarget.dispose();reflectionFilter.dispose();
+const displayEnvironment=createRoomReflections(renderer);
+setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);
 acidLeaks.bindTargets([office,model]);
+batchStaticScenery(office,{exclude:[laptop.object,catMug,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group]});
+profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
  if(!entranceArrived||finale.active){arrivalDialogue.hidden=true;return;}
  // Keep the bubble attached to the crown as the viewer walks or turns around.
@@ -448,7 +452,7 @@ function useCharging(action){
 }
 function updateChargingHint(){
  const label=state.time<chargingToastUntil?chargingToast:hoveredKeyAction?ketchupKey.hint(hoveredKeyAction):hoveredChargingAction?chargingKit.hint(hoveredChargingAction):ketchupKey.hasKey&&restraint.locked?'Shackle key collected · Click the shackle to unlock':chargingKit.hint(null);
- chargingHint.textContent=label;chargingHint.hidden=!label||gameEnded||mugTrap.active||laptopOpening.active;
+ if(chargingHint.textContent!==label)chargingHint.textContent=label;chargingHint.hidden=!label||gameEnded||mugTrap.active||laptopOpening.active;
 }
 function openLaptop(){
  if(laptopOpening.active||mugTrap.active||gameEnded||acidLeaks.dying)return;
@@ -506,7 +510,7 @@ function operateHoist(index){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;gameEnded=false;acidLeaks.reset();mugTrap.reset();gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;document.body.classList.remove('game-over','mug-impact');canvas.inert=false;laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView(){scheduleFrame();ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;gameEnded=false;acidLeaks.reset();mugTrap.reset();gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;document.body.classList.remove('game-over','mug-impact');canvas.inert=false;laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=state.time;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -616,8 +620,16 @@ function resize(){
 }
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
+let sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
+function scheduleFrame(){if(sceneReady&&!frameRequest&&!document.hidden)frameRequest=requestAnimationFrame(render);}
+document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
- if(gameEnded){clock.getDelta();requestAnimationFrame(render);return;}
+ frameRequest=0;if(document.hidden)return;
+ if(gameEnded){clock.getDelta();return;}
+ const cpuStart=performance.now();
+ const frameInterval=lastRenderAt?cpuStart-lastRenderAt:0;
+ if(lastRenderAt&&frameInterval<1000/quality.maxFps-1){scheduleFrame();return;}
+ lastRenderAt=cpuStart;
  const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(resetting){
   state.yaw=wrapAngle(state.yaw+wrapAngle(homeView.yaw-state.yaw)*eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
@@ -626,7 +638,7 @@ function render(){
    state.yaw=homeView.yaw;state.pitch=homeView.pitch;state.zoom=1;cameraPosition.copy(homePosition);resetting=false;
   }
  }
- updateEntrance(clock.elapsedTime);
+ updateEntrance(t);
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
@@ -690,8 +702,15 @@ function render(){
   previousEyeRotation.copy(eye.quaternion);eye.lookAt(gazeTarget);
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
- renderer.render(scene,camera);updateArrivalDialogue(t);hangingPleas.update(t,finale.active);figpalBubbles.update(camera,t);requestAnimationFrame(render);
+ if(t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
+ renderer.render(scene,camera);updateArrivalDialogue(t);hangingPleas.update(t,finale.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
+ const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
+ if(t-lastQualityCheck>4){
+  if(frameSamples>30&&slowFrames/frameSamples>.65&&renderer.getPixelRatio()>quality.minPixelRatio){renderer.setPixelRatio(Math.max(quality.minPixelRatio,renderer.getPixelRatio()-.25));resize();}
+  lastQualityCheck=t;slowFrames=0;frameSamples=0;
+ }
+ scheduleFrame();
 }
-render();
+renderer.compileAsync(scene,camera).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();document.querySelector('#loading-status')?.remove();}).catch(error=>{console.error(error);const status=document.querySelector('#loading-status');if(status)status.textContent='The room could not load. Please reload to try again.';});
 canvas.addEventListener('webglcontextlost',event=>event.preventDefault());
 canvas.addEventListener('webglcontextrestored',()=>location.reload());

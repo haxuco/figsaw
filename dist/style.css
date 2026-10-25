@@ -1,4 +1,4 @@
-@font-face{font-family:"Grenze Gotisch";src:url("./fonts/grenze-gotisch.ttf") format("truetype");font-style:normal;font-weight:100 900;font-display:swap}
+@font-face{font-family:"Grenze Gotisch";src:url("./fonts/grenze-gotisch.woff") format("woff");font-style:normal;font-weight:100 900;font-display:swap}
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene{display:block;width:100%;height:100%;outline:none;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent}
 #scene:active{cursor:grabbing}
@@ -55,3 +55,5 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene.over-key:not(:active){cursor:pointer}
 #chain-menu button[aria-disabled="true"]{color:#888;cursor:not-allowed}
 #chain-menu button[aria-disabled="true"]:hover,#chain-menu button[aria-disabled="true"]:focus{background:#303030;color:#aaa}
+
+#loading-status{position:fixed;inset:0;z-index:30;display:grid;place-items:center;margin:0;background:#161d18;color:#bec8b9;font:14px Georgia,serif;pointer-events:none}

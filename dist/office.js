@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {renderQuality as quality} from './render-quality.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=no-skulls';
 
@@ -38,7 +39,8 @@ export function createOffice(renderer,viewerPosition){
  const plaster=material(0xffffff,.98,plasterMap),wood=material(0xffffff,.86,woodMap),plastic=material(0xffffff,.80,plasticMap),steel=material(0xffffff,.73,metalMap,.42),fabric=material(0xffffff,.95,fabricMap),black=material(0x171c19,.86),rubber=material(0x101512,.95),concrete=material(0xffffff,.98,floorMap),silver=material(0x828c86,.4,null,.8);
  function mesh(geometry,mat,parent=office){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  function box(size,pos,mat=steel,parent=office){const m=mesh(new THREE.BoxGeometry(...size),mat,parent);m.position.set(...pos);return m;}
- function sphere(size,pos,mat,parent=office){const m=mesh(new THREE.SphereGeometry(1,20,12),mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
+ const sphereGeometry=new THREE.SphereGeometry(1,20,12);
+ function sphere(size,pos,mat,parent=office){const m=mesh(sphereGeometry,mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
  function cylinder(radius,height,pos,mat=steel,parent=office,segments=12){const m=mesh(new THREE.CylinderGeometry(radius,radius,height,segments),mat,parent);m.position.set(...pos);return m;}
  function rod(a,b,r=.015,mat=steel,parent=office){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start);const m=cylinder(r,direction.length(),start.clone().add(end).multiplyScalar(.5).toArray(),mat,parent);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());return m;}
  function cable(points,r=.008,mat=black,parent=office){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const wire=mesh(new THREE.TubeGeometry(curve,Math.max(20,points.length*8),r,6,false),mat,parent);if(parent===office&&points.some(p=>p[1]<.06))floorCables.push(wire);return wire;}
@@ -754,6 +756,11 @@ export function createOffice(renderer,viewerPosition){
  const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
  const rodents=createFloorRodents({room:office,floorSupport});office.add(rodents.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
- function update(time,reducedMotion){ketchupKey.update(time,reducedMotion);rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);return level;}
+ let lastEffectsTime=-Infinity;
+ function update(time,reducedMotion){
+  ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
+  if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
+  return level;
+ }
  return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,chargingKit,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

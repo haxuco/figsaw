@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {renderQuality as quality} from './render-quality.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 import { figpalSwayPose } from './character-motion.js';
 import { createFloatingBones } from './floating-bones.js?v=no-skulls';
@@ -102,7 +103,7 @@ export function createFigpalVats(){
  const linkPoints=[];
  for(let j=0;j<=12;j++){const a=j/12*Math.PI;linkPoints.push(new THREE.Vector3(Math.cos(a)*.015,.010+Math.sin(a)*.015,0));}
  for(let j=0;j<=12;j++){const a=Math.PI+j/12*Math.PI;linkPoints.push(new THREE.Vector3(Math.cos(a)*.015,-.010+Math.sin(a)*.015,0));}
- const chainGeometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),32,.0048,6,true);
+ const chainGeometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),quality.chainSegments,.0048,quality.chainRadialSegments,true);
  const chainDummy=new THREE.Object3D(),chainUp=new THREE.Vector3(0,1,0),chainTwist=new THREE.Quaternion();
  function chainRun(points,parent,maxLinks=null){
   const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),length=curve.getLength();
@@ -142,7 +143,7 @@ export function createFigpalVats(){
   for(const a of[.15,2.24,4.34]){const px=Math.cos(a)*.485,pz=Math.sin(a)*.485;rod([px,.22,pz],[px,1.23,pz],.021,steel,vat);}
   for(const side of[-1,1]){line([[side*.47,.96,0],[side*.58,.96,0],[side*.58,.74,0],[side*.48,.74,0]],.022,steel,vat);}
   // A wet, uneven open meniscus, rather than a solid lid.
-  const surfaceGeometry=new THREE.RingGeometry(0,.444,64,16);surfaceGeometry.rotateX(-Math.PI/2);
+  const surfaceGeometry=new THREE.RingGeometry(0,.444,quality.mobile?32:48,quality.mobile?6:10);surfaceGeometry.rotateX(-Math.PI/2);
   const surface=mesh(surfaceGeometry,liquidTop,vat);surface.position.y=1.074;surface.castShadow=false;surface.renderOrder=4;
   ring(.441,.006,1.075,liquidTop,vat).renderOrder=4;
   const bubbleData=Array.from({length:48},()=>({x:(random()-.5)*.61,z:(random()-.5)*.61,r:.007+random()**2*.023,phase:random(),speed:.15+random()*.17}));
