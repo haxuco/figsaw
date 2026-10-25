@@ -289,10 +289,8 @@ export function createOffice(renderer,viewerPosition){
  devicePanel(.88,.59,.018,[0,.295,0],aluminum,laptopLid);
  devicePanel(.856,.566,.005,[0,.295,.010],keyBlack,laptopLid);
  for(const x of[-.34,.34])for(const z of[-.21,.21])sphere([.025,.006,.025],[x,-.014,z],rubber,laptop);
- // An off-center vinyl sticker leaves the middle of the aluminum lid bare.
+ // The off-center Figma decal has a transparent backing; only the colored mark prints on the lid.
  const logoCanvas=document.createElement('canvas');logoCanvas.width=256;logoCanvas.height=384;const sticker=logoCanvas.getContext('2d');
- sticker.fillStyle='#d4d1c8';sticker.beginPath();sticker.roundRect(4,4,248,376,34);sticker.fill();
- sticker.fillStyle='#f1eee5';sticker.beginPath();sticker.roundRect(8,8,240,368,31);sticker.fill();
  drawFigmaMark(sticker,28,42,200);
  const figmaMap=texture(logoCanvas),figmaMat=new THREE.MeshStandardMaterial({map:figmaMap,transparent:true,alphaTest:.1,roughness:.64,metalness:.03,emissiveMap:figmaMap,emissive:0xffffff,emissiveIntensity:.14});
  const lidEmblem=mesh(new THREE.PlaneGeometry(.115,.1725),figmaMat,laptopLid);lidEmblem.name='Off-center Figma vinyl sticker';lidEmblem.position.set(.265,.365,-.0108);lidEmblem.rotation.set(0,Math.PI,-.14);lidEmblem.castShadow=false;
