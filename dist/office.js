@@ -8,6 +8,7 @@ import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
 import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-contact.js';
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
+import { createLightInsects } from './light-insects.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -467,6 +468,7 @@ export function createOffice(renderer,viewerPosition){
 
  // One crooked overhead light and a small desk lamp provide practical light sources.
  const ceilingFixture=createFailingFluorescent();office.add(ceilingFixture.group);
+ const ceilingInsects=createLightInsects();ceilingInsects.group.position.y=-.36;ceilingFixture.group.add(ceilingInsects.group);
  for(const x of[-.66,.66])rod([x,3.30,-.55],[x,2.98,-.55],.006,black);
  cable([[.85,3.30,-.6],[1.03,2.8,-.65],[1.26,2.86,-.7],[1.30,3.30,-.7]],.007,black);
  const deskLamp=new THREE.Group();deskLamp.position.set(-2.1,.88,-3.20);backDesk.parent.add(deskLamp);cylinder(.11,.035,[0,0,0],black,deskLamp);rod([0,0,0],[.05,.31,0],.016,steel,deskLamp);rod([.05,.31,0],[.22,.40,.02],.013,steel,deskLamp);const shade=mesh(new THREE.ConeGeometry(.12,.13,20,1,true),steel,deskLamp);shade.position.set(.23,.37,.02);sphere([.04,.025,.04],[.23,.32,.02],new THREE.MeshBasicMaterial({color:0xe6c184}),deskLamp);
@@ -701,6 +703,7 @@ export function createOffice(renderer,viewerPosition){
  box([.94,.065,.13],[-.95,2.78,.11],steel,rear);
  const rearTube=cylinder(.013,.82,[-.95,2.741,.14],new THREE.MeshBasicMaterial({color:0x738b85}),rear,12);rearTube.rotation.z=Math.PI/2;rearTube.castShadow=false;
  const rearTask=new THREE.SpotLight(0x92aaa0,3.4,3.6,1.0,.85,2);rearTask.position.set(-.95,2.72,.36);rearTask.target.position.set(-1.12,1.35,.04);rear.add(rearTask,rearTask.target);
+ const rearInsects=createLightInsects({flies:5,moths:2,spread:[.48,.12,.22],seed:71});rearInsects.group.position.set(-.95,2.52,.43);rear.add(rearInsects.group);
  // Old drawers, a box of abandoned prototypes and dangling network leads below the board.
  const filing=new THREE.Group();filing.name='Damaged filing cabinets';filing.position.set(-1.12,0,.26);rear.add(filing);
  box([1.52,.77,.43],[0,.385,0],doorPaint,filing);box([1.56,.035,.46],[0,.795,0],steel,filing);
@@ -739,6 +742,6 @@ export function createOffice(renderer,viewerPosition){
  office.add(createFallenMobile(viewerPosition,floorSupport));
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
- function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
+ function update(time,reducedMotion){figpalVats.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);return level;}
  return {group:office,laptop:laptopControl,catMug:mugPose,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
