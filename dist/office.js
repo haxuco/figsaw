@@ -10,7 +10,7 @@ import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-cont
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
-import { createFloorRodents } from './floor-rodents.js?v=fewer-faster';
+import { createFloorRodents } from './floor-rodents.js';
 import { createChargingKit } from './charging-kit.js';
 import { createKetchupKey } from './ketchup-key.js';
 import { createTankLeaks } from './tank-leaks.js';
@@ -754,12 +754,12 @@ export function createOffice(renderer,viewerPosition){
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
- const rodents=createFloorRodents({room:office,floorSupport});office.add(rodents.group);
+ const rodents=createFloorRodents({room:office,floorSupport,viewerPosition});office.add(rodents.group);
  function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
- function update(time,reducedMotion){
+ function update(time,reducedMotion,viewer=viewerPosition){
   ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
-  if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
+  if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
  return {group:office,laptop:laptopControl,catMug:mugPose,acidLeaks,chargingKit,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};

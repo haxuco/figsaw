@@ -688,7 +688,7 @@ function render(){
  else if(mugFinished)endGame("The mug's pointed ears hit your eyes. Everything goes dark. Game over.");
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active,mugTrap.handPose||laptopOpening.handPose);
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);updateChargingHint();
- fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion);
+ fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.
