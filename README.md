@@ -39,3 +39,5 @@ A first-person hand with tapered fingers, natural proportions, subtle knuckle cr
 Speech stops as soon as a Figpal fully becomes a skeleton. Raising it, lowering it again, idle chatter and the timer finale cannot trigger another bubble or spoken plea for that skeleton. Starting a fresh round restores speech with the living Figpals.
 
 When Figsaw stops cycling and begins his opening line, the camera eases over 1.4 seconds into the supplied speaking view at position [1.85221, 0.821615, 3.1149], looking at [1.155084, 0.748275, 2.401713], with a 48.36° field of view. The initial ride-in view stays unchanged. Manual camera movement cancels the transition, R replays it with the entrance, and reduced-motion mode applies the final framing immediately.
+
+A worn handsaw lies on the floor beside the countdown timer, with a tapered, rust-pitted steel blade, individually modeled teeth, and a scratched wooden handle with an open grip and slotted brass fasteners. It uses the same floor-contact placement and room reflections as the surrounding props.

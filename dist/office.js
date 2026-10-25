@@ -7,6 +7,7 @@ import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bur
 import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
 import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-contact.js';
 import { drawFigmaMark } from './figma-mark.js';
+import { createFloorHandsaw } from './floor-handsaw.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -279,6 +280,7 @@ export function createOffice(renderer,viewerPosition){
  // A separate floor prop beside the laptop, turned slightly clockwise from the viewer.
  const timerPosition=laptop.position.clone().add(new THREE.Vector3(1.18,0,0).applyAxisAngle(new THREE.Vector3(0,1,0),laptop.rotation.y));
  const countdown=createFloorTimer(viewerPosition,timerPosition);office.add(countdown.group);
+ const handsaw=createFloorHandsaw(timerPosition);office.add(handsaw.group);onFloor(handsaw.group);
  const aluminum=material(0x879194,.35,null,.72),keyBlack=material(0x101517,.70);
  // Both halves share the same rounded footprint, including the bevel's outer extent.
  function devicePanel(w,h,t,pos,mat,parent,flat=false){const b=Math.min(.012,w/6,h/6,t/6),part=mesh(bevelBox(w-2*b,h-2*b,t,.026-b),mat,parent);part.position.set(...pos);if(flat)part.rotation.x=-Math.PI/2;return part;}
@@ -730,7 +732,7 @@ export function createOffice(renderer,viewerPosition){
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
  office.add(createFallenMobile(viewerPosition,floorSupport));
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
- function setEnvironment(map){displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
+ function setEnvironment(map){handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
  return {group:office,laptop:laptopControl,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
