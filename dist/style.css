@@ -42,8 +42,11 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene.over-mug:not(:active){cursor:pointer}
 #mug-eye-impact{position:fixed;inset:0;z-index:99;pointer-events:none;opacity:0}
 #mug-eye-impact[hidden]{display:none}
-#mug-eye-impact i{position:absolute;top:46%;left:30%;width:56vmax;aspect-ratio:1;transform:translate(-50%,-50%) scale(var(--eye-scale,.035));will-change:transform;border-radius:50%;background:radial-gradient(circle,#ef171f 0 25%,#c80813 55%,#a6000bde 72%,#8a000000 100%);box-shadow:0 0 12px 3px #c000003d}
-#mug-eye-impact i+i{left:70%}
+#mug-eye-impact .eye-wound{position:absolute;top:46%;left:20%;width:0;height:0}
+#mug-eye-impact .eye-wound+.eye-wound{left:80%}
+#mug-eye-impact .wound-mark{position:absolute;width:64vmax;height:64vmax;overflow:visible;transform:translate(-50%,-50%) scale(var(--eye-scale,.035));transform-origin:50% 50%;will-change:transform}
+#mug-eye-impact .blood-streaks{position:absolute;top:0;width:34vmax;height:84vh;overflow:visible;opacity:var(--drip-opacity,0);transform:translateX(-50%) scaleX(var(--drip-width,.12)) scaleY(var(--drip-length,0));transform-origin:50% 0;will-change:transform}
+#mug-eye-impact .eye-wound+.eye-wound .blood-streaks{height:92vh}
 #game-over{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#000;color:#fff;opacity:0;text-align:center}
 #game-over[hidden],.game-over-content[hidden]{display:none}
 #game-over h1{margin:0 0 30px;color:#ff2424;font:500 clamp(56px,10vw,112px)/1.1 "Grenze Gotisch",Georgia,serif;letter-spacing:.065em}

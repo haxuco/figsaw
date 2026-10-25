@@ -26,17 +26,17 @@ test('both visible ear tips approach the eye marks throughout the sip on desktop
   const face=new THREE.Vector3(0,0,1).applyQuaternion(mug.getWorldQuaternion(new THREE.Quaternion())).applyQuaternion(camera.quaternion.clone().invert());
   assert.ok(face.z<-.999,'the mug must turn 180 degrees before drinking');
   let previousWidth=0;
-  for(const elapsed of[2.12,2.5,2.9,3.36,3.70]){
+  for(const elapsed of[2.12,2.5,3.0,3.70,4.05]){
    trap.update(4+elapsed);
    const tips=['Mug left ear tip','Mug right ear tip'].map(name=>mug.getObjectByName(name).getWorldPosition(new THREE.Vector3()).project(camera));
    const width=Math.abs(tips[1].x-tips[0].x);assert.ok(width>=previousWidth-1e-6,'the tips must approach the viewer');previousWidth=width;
    for(const tip of tips){assert.ok(Math.abs(tip.y-.08)<1e-6,'ear drops below the eye line');assert.ok(tip.z>-1&&tip.z<1,'ear is clipped before impact');}
-   if(elapsed===3.70)for(const tip of tips)assert.ok(Math.abs(Math.abs(tip.x)-.40)<1e-6,'each ear must meet its red eye mark');
+   if(elapsed===4.05)for(const tip of tips)assert.ok(Math.abs(Math.abs(tip.x)-.60)<1e-6,'each ear must meet its red eye mark');
   }
-  trap.update(7.78);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0,'the two red marks appear before any blackout');
-  trap.reset();assert.equal(trap.start(10),true);trap.update(13.70);
+  trap.update(8.13);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0,'the two red marks appear before any blackout');
+  trap.reset();assert.equal(trap.start(10),true);trap.update(14.05);
   const tip=mug.getObjectByName('Mug left ear tip').getWorldPosition(new THREE.Vector3()).project(camera);
-  assert.ok(Math.abs(Math.abs(tip.x)-.40)<1e-6,'reset must preserve the same eye alignment');
+  assert.ok(Math.abs(Math.abs(tip.x)-.60)<1e-6,'reset must preserve the same eye alignment');
  }
 });
 
@@ -56,7 +56,7 @@ test('mug remains locked before detaching and resets after game over',()=>{
  const {mug,restraint,trap}=fixture();const home=mug.position.clone(),rotation=mug.quaternion.clone();
  assert.equal(trap.start(0),false);
  restraint.requestReach(0);restraint.update(.7);restraint.detach(1);assert.equal(trap.start(4),true);
- assert.equal(trap.update(9.7),true);assert.equal(trap.finished,true);assert.equal(trap.blackout,1);
+ assert.equal(trap.update(11.4),true);assert.equal(trap.finished,true);assert.equal(trap.blackout,1);
  trap.reset();assert.equal(trap.active,false);assert.equal(trap.blackout,0);assert.equal(trap.eyeImpact,0);assert.equal(trap.eyeGrowth,0);assert.ok(home.distanceTo(mug.position)<1e-7);assert.ok(rotation.angleTo(mug.quaternion)<1e-7);
  assert.equal(trap.start(10),true);assert.equal(trap.update(11.3,true),true);
 });
@@ -65,7 +65,7 @@ test('mug remains locked before detaching and resets after game over',()=>{
 test('ear contact remains visible before the fade, including reduced motion',()=>{
  for(const reduced of [false,true]){
   const {restraint,trap}=fixture();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
-  const hit=reduced?.22:3.78,fade=reduced?.90:5.18;
+  const hit=reduced?.22:4.13,fade=reduced?.90:6.825;
   trap.update(4+hit,reduced);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0);
   trap.update(4+hit+.35,reduced);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0);
   trap.update(4+fade,reduced);assert.ok(trap.blackout>.2&&trap.blackout<.9);assert.equal(trap.eyeImpact,1);
@@ -74,12 +74,20 @@ test('ear contact remains visible before the fade, including reduced motion',()=
 
 test('the cup finishes its closer approach before the red marks grow and fade',()=>{
  const {restraint,trap}=fixture();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
- trap.update(7.36);assert.equal(trap.eyeImpact,0,'do not poke at the old, farther-away contact point');
+ trap.update(7.90);assert.equal(trap.eyeImpact,0,'do not poke at the old, farther-away contact point');
  let previous=0;
- for(const elapsed of[3.76,3.95,4.2,4.5,4.8,5.2]){
+ for(const elapsed of[4.11,4.4,4.9,5.4,6.0,6.35]){
   trap.update(4+elapsed);assert.equal(trap.eyeImpact,1);assert.ok(trap.eyeGrowth>=previous);previous=trap.eyeGrowth;
-  if(elapsed<=4.8)assert.equal(trap.blackout,0,'give the expanding marks time to be seen');
+  if(elapsed<=6.35)assert.equal(trap.blackout,0,'give the expanding marks time to be seen');
  }
- assert.ok(Math.abs(trap.eyeGrowth-1)<1e-9);assert.equal(trap.update(9.7),true);assert.equal(trap.blackout,1);
- trap.reset();assert.equal(trap.eyeGrowth,0);assert.equal(trap.eyeImpact,0);
+ assert.ok(Math.abs(trap.eyeGrowth-1)<1e-9);assert.equal(trap.update(11.4),true);assert.equal(trap.blackout,1);
+ assert.ok(trap.eyeDrip>.95,'drips travel down the screen before blackout');
+ trap.reset();assert.equal(trap.eyeGrowth,0);assert.equal(trap.eyeImpact,0);assert.equal(trap.eyeDrip,0);
+});
+
+
+test('reduced motion keeps the shorter fade and skips running blood',()=>{
+ const {restraint,trap}=fixture();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
+ trap.update(4.6,true);assert.equal(trap.eyeDrip,0);assert.ok(trap.eyeGrowth<=.12);assert.equal(trap.blackout,0);
+ assert.equal(trap.update(5.3,true),true);assert.equal(trap.blackout,1);
 });
