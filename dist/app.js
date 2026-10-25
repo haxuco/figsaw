@@ -334,6 +334,7 @@ const entrancePath=new THREE.CatmullRomCurve3([
  [.35,groundOffset,-1.10],[.24,groundOffset,-.66],[.12,groundOffset,.10]
 ].map(point=>new THREE.Vector3(...point)),false,'centripetal');
 entrancePath.arcLengthDivisions=240;
+const entranceDelay=1.0,entranceDuration=8.5;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
 const arrivalDialogue=document.querySelector('#figsaw-dialogue');
 const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
@@ -361,8 +362,8 @@ function showFigsawDialogue(index){
  if(index===0)countdownStartTime=speech.startTime+speech.duration;
 }
 function updateEntrance(time){
- const elapsed=time-entranceStartedAt-1.0;
- const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,8.5);
+ const elapsed=time-entranceStartedAt-entranceDelay;
+ const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,entranceDuration);
  entrancePath.getPointAt(progress,ridePoint);entrancePath.getTangentAt(progress,rideDirection);
  model.position.copy(ridePoint);model.rotation.y=Math.atan2(rideDirection.x,rideDirection.z);
  // Turn the stone partly toward the saved viewpoint while the wheels follow the route.
@@ -383,7 +384,7 @@ const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 let gameEnded=false;
-restartGame.addEventListener('click',()=>{resetView();canvas.focus({preventScroll:true});});
+restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
 const chargingHint=document.querySelector('#charging-hint');let hoveredKeyAction=null,hoveredChargingAction=null,chargingToast='',chargingToastUntil=0;
 const chainMenu=createRestraintMenu(()=>{
@@ -510,7 +511,35 @@ function operateHoist(index){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){scheduleFrame();ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;gameEnded=false;acidLeaks.reset();mugTrap.reset();mugEyeImpact.hidden=true;mugEyeImpact.style.opacity='0';gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;document.body.classList.remove('game-over','mug-impact');canvas.inert=false;laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=state.time;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView({skipIntro=false}={}){
+ scheduleFrame();
+ ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
+ chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;
+ gameEnded=false;acidLeaks.reset();mugTrap.reset();mugEyeImpact.hidden=true;mugEyeImpact.style.opacity='0';
+ gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
+ document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
+ laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();
+ restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
+ finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
+ resetting=!skipIntro;
+ entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
+ entranceArrived=skipIntro;entranceArrivedAt=state.time;
+ arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;
+ dialogueLineIndex=skipIntro?dialogueLines.length-1:-1;nextDialogueAt=Infinity;
+ state.jaw=0;state.talkUntil=0;nextDialogueVisibilityCheck=0;
+ countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;
+ countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';
+ if(skipIntro){
+  // Resume at the completed introduction, without replaying speech or the ride.
+  // Use the same exact arrival view and give this attempt a fresh five minutes.
+  arrivalDialogue.querySelector('.dialogue-bubble span').textContent=dialogueLines[dialogueLineIndex];
+  arrivalCameraMove.start(state.time,cameraPosition,state);
+  arrivalCameraMove.update(state.time,cameraPosition,state,true);
+  updateEntrance(state.time);
+  countdown.start();countdownAnnouncement.textContent='The five-minute countdown has started.';
+ }
+}
+
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
