@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="1400" viewBox="0 0 512 700">
+ <title>Heinz Tomato Ketchup — 750 ml glass bottle label</title>
+ <defs>
+  <path id="shield" d="M256 23 C189 23 126 40 71 70 L95 150 Q101 169 83 169 L41 169 Q31 169 35 183 L111 661 Q256 676 401 661 L477 183 Q481 169 471 169 L429 169 Q411 169 417 150 L441 70 C386 40 323 23 256 23 Z"/>
+  <path id="brand-arch" d="M112 178 Q256 119 400 178"/>
+  <path id="grown-arc" d="M191 475 A68 68 0 0 0 321 475"/>
+  <path id="leaf" d="M0 0 C-13 -2 -30 -15 -27 -29 C-11 -28 3 -14 0 0 Z"/>
+  <radialGradient id="tomato" cx="32%" cy="27%" r="76%"><stop stop-color="#ef6b29"/><stop offset=".52" stop-color="#d83717"/><stop offset="1" stop-color="#9f2a11"/></radialGradient>
+ </defs>
+ <use xlink:href="#shield" fill="#fbfbf5" stroke="#f5f5ef" stroke-width="7"/>
+ <use xlink:href="#shield" transform="translate(256 350) scale(.945 .958) translate(-256 -350)" fill="none" stroke="#c4a948" stroke-width="14"/>
+ <use xlink:href="#shield" transform="translate(256 350) scale(.872 .910) translate(-256 -350)" fill="none" stroke="#4c873c" stroke-width="10"/>
+ <g font-family="Arial,Helvetica,sans-serif" text-anchor="middle">
+  <text fill="#161717" font-family="Arial Black,Arial,Helvetica,sans-serif" font-weight="900" font-size="74" textLength="280" lengthAdjust="spacingAndGlyphs"><textPath xlink:href="#brand-arch" startOffset="50%">HEINZ</textPath></text>
+  <text x="256" y="204" fill="#bc6870" font-family="Georgia,serif" font-size="14">EST <tspan font-size="28">1869</tspan> EST</text>
+  <text x="256" y="280" fill="#171918" font-weight="900" font-size="69" textLength="338" lengthAdjust="spacingAndGlyphs">TOMATO</text>
+  <text x="256" y="344" fill="#171918" font-weight="900" font-size="66" textLength="330" lengthAdjust="spacingAndGlyphs">KETCHUP</text>
+  <text x="256" y="375" fill="#b59d50" font-family="Georgia,serif" font-size="21" letter-spacing="2"><tspan font-size="25" font-style="italic">57</tspan> VARIETIES</text>
+  <path d="M159 494 C134 443 159 405 215 410 C270 387 351 407 365 495 L376 573" fill="none" stroke="#739c3d" stroke-width="5"/>
+  <path d="M256 439 C258 423 246 408 235 403" fill="none" stroke="#4d7b27" stroke-width="4"/>
+  <g fill="#75a63d">
+   <use xlink:href="#leaf" transform="translate(164 415) rotate(-34) scale(.95)"/>
+   <use xlink:href="#leaf" transform="translate(156 437) rotate(-17) scale(.85)"/>
+   <use xlink:href="#leaf" transform="translate(150 458) rotate(-32) scale(.8)"/>
+   <use xlink:href="#leaf" transform="translate(162 476) rotate(-44) scale(.72)"/>
+   <use xlink:href="#leaf" transform="translate(170 437) rotate(116) scale(.8)"/>
+   <use xlink:href="#leaf" transform="translate(175 463) rotate(123) scale(.78)"/>
+   <use xlink:href="#leaf" transform="translate(327 413) rotate(103) scale(1.1)"/>
+   <use xlink:href="#leaf" transform="translate(344 425) rotate(85) scale(.94)"/>
+  </g>
+  <ellipse cx="256" cy="467" rx="47" ry="44" fill="url(#tomato)"/>
+  <path d="M239 431 Q226 437 222 451" fill="none" stroke="#f9a55b" stroke-width="5" stroke-linecap="round" opacity=".7"/>
+  <path d="M256 438 L238 425 L250 427 L255 417 L260 429 L277 424 L268 436 L281 440 L263 441 L255 449 L250 440 L234 441 Z" fill="#5e8a2e"/>
+  <text fill="#b49d54" font-size="14" letter-spacing="1.1"><textPath xlink:href="#grown-arc" startOffset="50%">GROWN, NOT MADE</textPath></text>
+  <text x="256" y="585" fill="#b62026" font-size="35" font-weight="800" textLength="255" lengthAdjust="spacingAndGlyphs">TOMATO SAUCE</text><text x="256" y="620" fill="#b62026" font-size="35" font-weight="800">750 ml</text>
+ </g>
+ </svg>

@@ -453,30 +453,21 @@ export function createOffice(renderer,viewerPosition){
  const ketchup=new THREE.MeshPhysicalMaterial({color:0xd72e13,roughness:.31,clearcoat:1,clearcoatRoughness:.18});
  const bottleGlass=new THREE.MeshPhysicalMaterial({color:0xf0f1dc,roughness:.13,transparent:true,opacity:.16,depthWrite:false,clearcoat:1,clearcoatRoughness:.08});
  const bottleCap=material(0xd6ddd0,.49),capSeam=material(0x899589,.69);
- function ketchupLabel(){
-  const[c,ctx]=canvas(512);c.height=640;
-  function shield(){ctx.beginPath();ctx.moveTo(256,30);ctx.quadraticCurveTo(356,31,422,89);ctx.lineTo(457,102);ctx.lineTo(382,591);ctx.lineTo(130,591);ctx.lineTo(55,102);ctx.lineTo(90,89);ctx.quadraticCurveTo(157,31,256,30);ctx.closePath();}
-  shield();ctx.fillStyle='#e8e5d0';ctx.fill();ctx.strokeStyle='#f6f0db';ctx.lineWidth=23;ctx.stroke();ctx.strokeStyle='#255d38';ctx.lineWidth=12;ctx.stroke();
-  ctx.save();ctx.translate(256,310);ctx.scale(.93,.945);ctx.translate(-256,-310);shield();ctx.strokeStyle='#54754a';ctx.lineWidth=3;ctx.stroke();ctx.restore();
-  ctx.textAlign='center';ctx.fillStyle='#15271b';ctx.font='900 54px Georgia,serif';ctx.fillText('HEINZ',256,151);
-  ctx.font='900 48px Arial,sans-serif';ctx.fillText('TOMATO',256,224);ctx.fillText('KETCHUP',256,278);
-  ctx.font='20px Georgia,serif';ctx.fillStyle='#49603e';ctx.fillText('57 VARIETIES',256,318);
-  // A tomato and simple vines keep the label readable even when the bottle is small.
-  ctx.strokeStyle='#48713f';ctx.lineWidth=7;ctx.beginPath();ctx.moveTo(164,455);ctx.quadraticCurveTo(133,396,164,349);ctx.moveTo(348,455);ctx.quadraticCurveTo(379,396,348,349);ctx.stroke();
-  for(const side of[-1,1])for(let i=0;i<4;i++){ctx.fillStyle=i%2?'#557f43':'#3a6535';ctx.beginPath();ctx.ellipse(256+side*(103+(i%2)*12),362+i*26,18,8,side*.65,0,Math.PI*2);ctx.fill();}
-  ctx.fillStyle='#c9381d';ctx.beginPath();ctx.ellipse(256,412,52,46,0,0,Math.PI*2);ctx.fill();ctx.fillStyle='#e75d32';ctx.beginPath();ctx.ellipse(238,399,16,22,.5,0,Math.PI*2);ctx.fill();
-  ctx.fillStyle='#315f32';ctx.beginPath();for(let i=0;i<10;i++){const a=-Math.PI/2+i*Math.PI/5,r=i%2?8:30,x=256+Math.cos(a)*r,y=377+Math.sin(a)*r*.55;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.closePath();ctx.fill();
-  ctx.fillStyle='#3f5941';ctx.font='20px Georgia,serif';ctx.fillText('GROWN, NOT MADE',256,505);ctx.font='15px Arial,sans-serif';ctx.fillText('TOMATO KETCHUP',256,540);
-  // Subtle scratches and dirty edges fit the abandoned room without hiding the label.
-  ctx.save();shield();ctx.clip();speckle(ctx,512,1600,'76,63,38',.14);for(let i=0;i<28;i++){ctx.strokeStyle='rgba(112,91,55,.12)';ctx.lineWidth=range(.5,2);const x=range(75,440),y=range(70,585);ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+range(6,28),y+range(-2,3));ctx.stroke();}ctx.restore();
-  return new THREE.MeshStandardMaterial({map:texture(c),transparent:true,alphaTest:.15,roughness:.84,side:THREE.DoubleSide});
+ // Distinct front and neck artwork follows the supplied 750 ml / 500 mL reference.
+ const labelLoader=new THREE.TextureLoader();
+ function ketchupLabel(file){
+  const map=labelLoader.load(new URL(`./labels/${file}.svg`,import.meta.url).href);
+  map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=Math.min(8,renderer.capabilities.getMaxAnisotropy());
+  return new THREE.MeshStandardMaterial({map,transparent:true,alphaTest:.15,roughness:.72,side:THREE.DoubleSide});
  }
- const ketchupPaper=ketchupLabel();
+ const glassLabel=ketchupLabel('ketchup-glass'),squeezeLabel=ketchupLabel('ketchup-squeeze'),neckLabel=ketchupLabel('ketchup-neck');
+ // Preserve the seeded room clutter after replacing the former procedural label.
+ for(let i=0;i<8140;i++)random();
  function radiusAt(profile,y){for(let i=1;i<profile.length;i++)if(profile[i][1]>=y){const[a,ay]=profile[i-1],[b,by]=profile[i];return THREE.MathUtils.lerp(a,b,(y-ay)/(by-ay||1));}return profile.at(-1)[0];}
- function bottleLabel(parent,profile,bottom,top,depth=1,span=1.02){
+ function bottleLabel(parent,profile,bottom,top,paper,depth=1,span=1.02){
   const geo=new THREE.PlaneGeometry(1,1,24,16),p=geo.attributes.position,uv=geo.attributes.uv;
   for(let i=0;i<p.count;i++){const a=(uv.getX(i)*2-1)*span,y=THREE.MathUtils.lerp(bottom,top,uv.getY(i)),r=radiusAt(profile,y)+.0018;p.setXYZ(i,Math.sin(a)*r,y,Math.cos(a)*r*depth+.0008);}
-  geo.computeVertexNormals();const label=mesh(geo,ketchupPaper,parent);label.castShadow=false;return label;
+  geo.computeVertexNormals();const label=mesh(geo,paper,parent);label.castShadow=false;return label;
  }
  function bottleShell(profile,mat,parent,depth=1){const body=mesh(new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),48),mat,parent);body.scale.z=depth;return body;}
  function placeBottle(bottle,x,z,rotation,center,scale){
@@ -486,14 +477,14 @@ export function createOffice(renderer,viewerPosition){
  const glassProfile=[[0,0],[.063,0],[.076,.014],[.080,.047],[.079,.19],[.069,.267],[.049,.342],[.030,.410],[.029,.447],[.033,.454],[.032,.471],[0,.471]];
  const filling=glassProfile.filter(p=>p[1]<.44).map(([r,y])=>[Math.max(0,r-.0035),y+.004]);filling.push([.026,.443],[0,.443]);
  bottleShell(filling,ketchup,glassKetchup);const glassBody=bottleShell(glassProfile,bottleGlass,glassKetchup);glassBody.castShadow=false;
- bottleLabel(glassKetchup,glassProfile,.047,.240);bottleLabel(glassKetchup,glassProfile,.365,.432,1,.95);
+ bottleLabel(glassKetchup,glassProfile,.047,.240,glassLabel);bottleLabel(glassKetchup,glassProfile,.365,.432,neckLabel,1,.95);
  cylinder(.037,.036,[0,.480,0],bottleCap,glassKetchup,32);cylinder(.0365,.006,[0,.461,0],capSeam,glassKetchup,32);
  for(let i=0;i<30;i++){const a=i/30*Math.PI*2;rod([Math.cos(a)*.037,.467,Math.sin(a)*.037],[Math.cos(a)*.037,.494,Math.sin(a)*.037],.0011,capSeam,glassKetchup);}
  const glassBottom=mesh(new THREE.TorusGeometry(.070,.003,6,32),bottleGlass,glassKetchup);glassBottom.rotation.x=Math.PI/2;glassBottom.position.y=.016;
  placeBottle(glassKetchup,-.28,2.92,[-.25,.45,Math.PI/2],.25,.82);
  const squeezeKetchup=new THREE.Group();squeezeKetchup.name='Discarded squeeze ketchup bottle';
  const squeezeProfile=[[0,.058],[.055,.058],[.065,.075],[.098,.105],[.115,.15],[.109,.25],[.118,.36],[.112,.415],[.092,.438],[0,.438]];
- bottleShell(squeezeProfile,ketchup,squeezeKetchup,.62);bottleLabel(squeezeKetchup,squeezeProfile,.122,.403,.62,1.04);
+ bottleShell(squeezeProfile,ketchup,squeezeKetchup,.62);bottleLabel(squeezeKetchup,squeezeProfile,.122,.403,squeezeLabel,.62,1.04);
  const flipCap=cylinder(.069,.060,[0,.034,0],bottleCap,squeezeKetchup,40);flipCap.scale.z=.73;
  const lidSeam=cylinder(.0694,.003,[0,.014,0],capSeam,squeezeKetchup,40);lidSeam.scale.z=.73;
  rounded([.042,.012,.010],[0,.014,.051],bottleCap,squeezeKetchup);

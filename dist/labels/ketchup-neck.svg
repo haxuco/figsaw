@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" width="1024" height="768" viewBox="0 0 512 384">
+<title>Glass bottle neck label — World's Favourite Tomato Sauce</title>
+<defs><path id="neck-arch" d="M119 176 A139 139 0 0 1 393 176"/></defs>
+<path d="M0 13 Q256 36 512 13 L512 369 Q256 347 0 369Z" fill="#f8f7ed"/>
+<path d="M0 52 Q256 75 512 52 M0 325 Q256 302 512 325" fill="none" stroke="#b59a4c" stroke-width="15"/>
+<path d="M0 72 Q256 95 512 72 M0 305 Q256 282 512 305" fill="none" stroke="#65915c" stroke-width="10"/>
+<ellipse cx="256" cy="191" rx="165" ry="176" fill="#b49a4d"/>
+<ellipse cx="256" cy="191" rx="153" ry="164" fill="#f9f8f0" stroke="#504531" stroke-width="3"/>
+<g text-anchor="middle" font-family="Arial,Helvetica,sans-serif">
+<text font-weight="800" font-size="29" letter-spacing="1" fill="#35312f"><textPath xlink:href="#neck-arch" startOffset="50%">WORLD'S FAVOURITE</textPath></text>
+<text x="256" y="153" font-family="Georgia,serif" font-size="16" fill="#6d8a55">SINCE</text>
+<text x="256" y="190" font-family="Georgia,serif" font-size="34" fill="#6d8a55">1869</text>
+<text x="256" y="241" fill="#bc3032" font-size="45" font-weight="900" textLength="209" lengthAdjust="spacingAndGlyphs">TOMATO</text>
+<text x="256" y="289" fill="#bc3032" font-size="43" font-weight="900" textLength="164" lengthAdjust="spacingAndGlyphs">SAUCE</text>
+</g></svg>
