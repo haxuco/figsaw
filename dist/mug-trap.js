@@ -14,7 +14,7 @@ export function createMugTrap({mug,camera,restraint}){
  const handle=mug.getObjectByName('Mug handle grip'),earTips=['Mug left ear tip','Mug right ear tip'].map(name=>mug.getObjectByName(name));
  const earCenter=new THREE.Vector3(),earPoint=new THREE.Vector3(),earOffset=new THREE.Vector3(),earSpan=new THREE.Vector3(),mugScale=new THREE.Vector3();
  const hand={position:new THREE.Vector3(),quaternion:new THREE.Quaternion(),blend:0,grip:0,reveal:0,gripKind:'handle'};
- let startedAt=null,finished=false,blackout=0,eyeImpact=0;
+ let startedAt=null,finished=false,blackout=0,eyeImpact=0,eyeGrowth=0;
  function start(time){
   if(restraint.locked||startedAt!==null||finished||!restraint.requestReach(time))return false;
   mug.updateWorldMatrix(true,false);mug.getWorldQuaternion(floorRotation);
@@ -28,23 +28,23 @@ export function createMugTrap({mug,camera,restraint}){
   drinkRotation.setFromAxisAngle(new THREE.Vector3(1,0,0),.82);
   localRotation.copy(drinkRotation).multiply(halfTurn);
   earSpan.multiply(mugScale).applyQuaternion(localRotation);
-  // The two red eye marks are at 39% / 61% horizontally and 46% vertically.
-  // Solve a visible contact plane from their spacing rather than clipping the
-  // ears behind the camera's near plane. Keep that eye line through the sip.
-  const projection=camera.projectionMatrix.elements,contactDepth=Math.max(camera.near*2,Math.abs(earSpan.x)*.5*projection[0]/.22);
+  // Come nearly twice as close before contact. The ear tips now meet the eye
+  // marks at 30% / 70% horizontally, while remaining in front of the near plane.
+  const projection=camera.projectionMatrix.elements,contactDepth=Math.max(camera.near*2,Math.abs(earSpan.x)*.5*projection[0]/.40);
   function eyeLine(depth,out){return out.set(0,.08*depth/projection[5],-depth).applyQuaternion(eyeRotation).add(eyePosition);}
   eyeLine(contactDepth+.30,heldPosition);eyeLine(contactDepth,drinkPosition);
-  startedAt=time;blackout=eyeImpact=0;hand.blend=hand.grip=hand.reveal=0;return true;
+  startedAt=time;blackout=eyeImpact=eyeGrowth=0;hand.blend=hand.grip=hand.reveal=0;return true;
  }
  function update(time,reducedMotion=false){
   if(startedAt===null||finished)return false;
   const elapsed=time-startedAt;
   if(reducedMotion){
    eyeImpact=smooth(elapsed,.15,.20);
+   eyeGrowth=.12*smooth(elapsed,.20,.65);
    blackout=smooth(elapsed,.65,1.15);
    if(elapsed<1.25)return false;
   }else{
-   const lift=smooth(elapsed,.82,2.12),sip=smooth(elapsed,2.28,3.36);
+   const lift=smooth(elapsed,.82,2.12),sip=smooth(elapsed,2.28,3.70);
    drinkRotation.setFromAxisAngle(new THREE.Vector3(1,0,0),.82*sip);
    localRotation.copy(eyeRotation).multiply(drinkRotation).multiply(halfTurn);
    worldRotation.slerpQuaternions(floorRotation,localRotation,lift);
@@ -53,7 +53,7 @@ export function createMugTrap({mug,camera,restraint}){
    // Derive the cup's origin from the moving ear target on every frame so
    // tipping the mug cannot push the ears back below the viewer's eyes.
    earOffset.copy(earCenter).multiply(mugScale).applyQuaternion(worldRotation);worldPosition.sub(earOffset);
-   worldPosition.addScaledVector(recoil,smooth(elapsed,3.42,3.80));
+   worldPosition.addScaledVector(recoil,smooth(elapsed,3.82,4.20));
    mug.position.copy(worldPosition);mug.parent.worldToLocal(mug.position);
    mug.parent.getWorldQuaternion(parentRotation);mug.quaternion.copy(parentRotation.invert()).multiply(worldRotation);
    mug.updateWorldMatrix(true,false);
@@ -62,16 +62,17 @@ export function createMugTrap({mug,camera,restraint}){
    // half-turn so the wrist still points back toward the viewer's forearm.
    hand.quaternion.copy(worldRotation).multiply(halfTurn).multiply(handleRotation);
    hand.blend=smooth(elapsed,0,.72);hand.grip=smooth(elapsed,.48,.80);hand.reveal=smooth(elapsed,0,.22);
-   // Hold the two contact marks visibly before the black layer covers them.
-   eyeImpact=smooth(elapsed,3.36,3.40);
-   blackout=smooth(elapsed,3.95,4.55);
-   if(elapsed<4.65)return false;
+   // Tiny contact points spread into broad red blurs before darkness takes over.
+   eyeImpact=smooth(elapsed,3.70,3.76);
+   eyeGrowth=smooth(elapsed,3.76,5.20);
+   blackout=smooth(elapsed,4.85,5.50);
+   if(elapsed<5.60)return false;
   }
   finished=true;blackout=1;restraint.endReach();return true;
  }
  function reset(){
-  startedAt=null;finished=false;blackout=eyeImpact=0;mug.position.copy(homePosition);mug.quaternion.copy(homeRotation);mug.updateWorldMatrix(true,false);
+  startedAt=null;finished=false;blackout=eyeImpact=eyeGrowth=0;mug.position.copy(homePosition);mug.quaternion.copy(homeRotation);mug.updateWorldMatrix(true,false);
   hand.blend=hand.grip=hand.reveal=0;restraint.endReach();
  }
- return {start,update,reset,get active(){return startedAt!==null&&!finished;},get finished(){return finished;},get blackout(){return blackout;},get eyeImpact(){return eyeImpact;},get handPose(){return startedAt!==null&&!finished?hand:null;}};
+ return {start,update,reset,get active(){return startedAt!==null&&!finished;},get finished(){return finished;},get blackout(){return blackout;},get eyeImpact(){return eyeImpact;},get eyeGrowth(){return eyeGrowth;},get handPose(){return startedAt!==null&&!finished?hand:null;}};
 }

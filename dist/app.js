@@ -539,7 +539,7 @@ function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;
- gameEnded=false;acidLeaks.reset();mugTrap.reset();sawTrap.reset();mugEyeImpact.hidden=true;mugEyeImpact.style.opacity='0';
+ gameEnded=false;acidLeaks.reset();mugTrap.reset();sawTrap.reset();mugEyeImpact.hidden=true;mugEyeImpact.style.opacity='0';mugEyeImpact.style.removeProperty('--eye-scale');
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -742,7 +742,7 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
  const sawFinished=sawTrap.update(t,reducedMotion),blackout=Math.max(mugTrap.blackout,sawTrap.blackout,acidLeaks.blackout(t));
  mugEyeImpact.hidden=mugTrap.eyeImpact<=0||blackout>=1;
- if(mugTrap.eyeImpact>0){mugEyeImpact.style.opacity=String(mugTrap.eyeImpact);document.body.classList.add('mug-impact');}
+ if(mugTrap.eyeImpact>0){mugEyeImpact.style.opacity=String(mugTrap.eyeImpact);mugEyeImpact.style.setProperty('--eye-scale',String(.035+.965*mugTrap.eyeGrowth));document.body.classList.add('mug-impact');}
  if(blackout>0){gameOver.hidden=false;gameOver.style.opacity=String(blackout);document.body.classList.add('mug-impact');}
  if(sawFinished)endGame('You used the saw before finding the key. Your hand is lost. Game over.');
  else if(acidFinished)endGame('The corrosive green liquid reaches you. Game over.');
