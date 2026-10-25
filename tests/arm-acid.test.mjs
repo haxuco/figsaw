@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {solveReachElbow,createReachingForearm} from '../dist/reaching-arm.js';
 import {createPlayerRestraint} from '../dist/player-restraint.js';
+import {createLaptopOpening} from '../dist/laptop-opening.js';
 import {createDrainJet} from '../dist/acid-surface.js';
 import {createAcidFlow} from '../dist/acid-flow.js';
 
@@ -23,15 +24,26 @@ test('reach uses fixed limb lengths and a full taper into the fitted wrist',()=>
  assert.ok([...positions.array].every(Number.isFinite));
 });
 
-test('hooked fingertip stays on the lid contact in both camera framings',()=>{
- const camera=new THREE.PerspectiveCamera(62,1,.06,35),restraint=createPlayerRestraint(camera);
- restraint.requestReach(0);restraint.update(.8);restraint.detach(1);restraint.requestReach(2);
- const target=new THREE.Vector3(.08,-.12,-.8),rotation=new THREE.Quaternion().setFromEuler(new THREE.Euler(-.3,0,-.1));
- for(const fov of[62,48.36]){
-  camera.fov=fov;camera.updateProjectionMatrix();camera.updateMatrixWorld();
-  restraint.update(3.5,false,false,{position:target,quaternion:rotation,blend:1,grip:1,reveal:1});
-  const tip=restraint.group.getObjectByName('Lid contact fingertip').getWorldPosition(new THREE.Vector3());
-  assert.ok(tip.distanceTo(target)<1e-6);
+test('unlocked laptop opens without showing the hand and restores the view',()=>{
+ for(const fov of[62,48.36])for(const reducedMotion of[false,true]){
+  const camera=new THREE.PerspectiveCamera(fov,1,.06,35),restraint=createPlayerRestraint(camera);
+  const object=new THREE.Group(),cameraPosition=new THREE.Vector3(1.85,.82,3.11),home=cameraPosition.clone(),state={yaw:.8,pitch:-.1,zoom:.78};
+  let progress=0;
+  const laptop={object,get isOpen(){return progress===1;},setOpenProgress(value){progress=value;},getLidGrip(point){return object.localToWorld(point.set(0,.1+progress*.4,.3));}};
+  const opening=createLaptopOpening({laptop,restraint,cameraPosition,state});
+  assert.equal(opening.start(0),false,'locked players cannot open the lid');
+  restraint.requestReach(0);restraint.update(.8);restraint.detach(1);
+  assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,false);
+  assert.equal(opening.start(3),true);
+  for(const elapsed of[0,.4,.9,1.5,2.2,2.8,3.5]){
+   opening.update(3+elapsed,reducedMotion);restraint.update(3+elapsed,reducedMotion,true,opening.handPose);
+   assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,false);
+  }
+  assert.equal(progress,1);assert.equal(opening.active,false);
+  assert.ok(cameraPosition.distanceTo(home)<1e-6);assert.deepEqual(state,{yaw:.8,pitch:-.1,zoom:.78});
+  restraint.reset();restraint.requestReach(10);restraint.update(10.7);
+  assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,true,'a new game restores the restrained reach');
+  assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,true);
  }
 });
 

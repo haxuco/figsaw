@@ -131,6 +131,7 @@ export function createPlayerRestraint(camera,options={}){
   const framing=Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/Math.tan(THREE.MathUtils.degToRad(62/2));
   space.scale.set(framing,framing,1);space.updateWorldMatrix(true,false);
   space.visible=pose.visible;
+  arm.visible=pose.locked;
   if(!pose.visible)return pose.openLaptop;
   pipeHook.copy(pipeAnchor);space.worldToLocal(pipeHook);
   const reveal=lidHand?lidHand.reveal:reducedMotion?1:pose.reveal,withdraw=(1-reveal)*.55;
@@ -200,7 +201,9 @@ export function createPlayerRestraint(camera,options={}){
  function detach(time){
   if(!state.locked)return false;
   releasedWrist.copy(wrist);releasedElbow.copy(elbow);releasedRotation.copy(hand.quaternion);releasedCuffRotation.copy(cuff.quaternion);releasedCuffPosition.copy(cuff.position);hasReleasePose=true;
-  return state.detach(time);
+  const detached=state.detach(time);
+  if(detached)arm.visible=false;
+  return detached;
  }
  function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);

@@ -27,19 +27,15 @@ test('mug turns its face away and brings the far-rim ears to eye level',()=>{
  trap.update(7.42);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0,'the two red marks appear before any blackout');
 });
 
-test('curled grip stays attached to the handle across the lift in both camera framings',()=>{
+test('mug pickup moves the prop without revealing the unlocked hand or chain',()=>{
  for(const fov of [62,48.36]){
-  const {mug,restraint,trap}=fixture(fov);restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
+  const {mug,restraint,trap}=fixture(fov),home=mug.position.clone();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
   for(const elapsed of [.82,1.2,1.8,2.2,2.8,3.25,4.0]){
    trap.update(4+elapsed);restraint.update(4+elapsed,false,true,trap.handPose);
-   const contact=restraint.group.getObjectByName('Mug handle contact').getWorldPosition(new THREE.Vector3());
-   const handle=mug.getObjectByName('Mug handle grip').getWorldPosition(new THREE.Vector3());
-   assert.ok(contact.distanceTo(handle)<1e-6,'palm loses the mug handle');
-   const finger=restraint.group.getObjectByName('Finger 2');assert.equal(finger.morphTargetInfluences[0],1);
-   assert.ok(Math.abs(finger.parent.rotation.x)<.2,'knuckle is not bent backward as a rigid digit');
+   assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,false);
+   assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,false);
+   if(elapsed>1.2)assert.ok(mug.position.distanceTo(home)>.1,'the mug must still lift from the floor');
   }
-  restraint.update(8,false,true,{position:new THREE.Vector3(0,0,-.6),quaternion:new THREE.Quaternion(),blend:1,grip:1,reveal:1});
-  assert.equal(restraint.group.getObjectByName('Finger 2').morphTargetInfluences[0],0,'mug grip must not change the laptop pose');
  }
 });
 
