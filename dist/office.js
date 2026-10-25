@@ -226,6 +226,28 @@ export function createOffice(renderer){
  for(let i=0;i<14;i++){const p=box([range(.3,.7),.012,range(.3,.8)],[range(-3.4,3.4),.007,range(-3.5,3.7)],material(i%2?0xb9bcb0:0xc6c7b6,.98,fabricMap));p.rotation.y=range(-.15,.15);}
 
  // Product-design whiteboards: screen layouts, mobile flows, notes and erased marker smears.
+ // Uneven eraser passes leave ghost lines; dirt and drips collect around the frames.
+ function wearWhiteboard(ctx,base,patches){
+  ctx.save();ctx.lineCap='round';
+  for(const[x,y,w,h]of patches){
+   for(let row=0;row<13;row++){
+    const yy=y+row*h/12;
+    ctx.strokeStyle=base;ctx.globalAlpha=range(.65,.94);ctx.lineWidth=range(12,27);
+    ctx.beginPath();ctx.moveTo(x+range(-18,35),yy);ctx.quadraticCurveTo(x+w*.45,yy+range(-12,12),x+w+range(-35,18),yy+range(-8,8));ctx.stroke();
+   }
+   ctx.globalAlpha=1;
+   for(let i=0;i<8;i++)cloud(ctx,x+random()*w,y+random()*h,range(13,43),'54,66,61',range(.035,.09));
+  }
+  ctx.globalAlpha=1;
+  for(let i=0;i<95;i++){
+   const x=random()*1024,y=random()<.55?range(800,1045):random()*1024;
+   cloud(ctx,x,y,range(14,95),i%3?'44,49,38':'103,77,42',range(.045,.16));
+  }
+  const grime=ctx.createLinearGradient(0,0,0,1024);grime.addColorStop(0,'rgba(43,44,32,.30)');grime.addColorStop(.13,'rgba(43,44,32,0)');grime.addColorStop(.77,'rgba(43,44,32,0)');grime.addColorStop(1,'rgba(44,40,27,.38)');ctx.fillStyle=grime;ctx.fillRect(0,0,1024,1024);
+  for(let i=0;i<23;i++){const x=random()*1024,y=range(8,105);ctx.strokeStyle=`rgba(86,67,38,${range(.06,.17)})`;ctx.lineWidth=range(1.5,6);ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x+4,y+60,x-3,y+125,x+range(-5,5),y+range(130,460));ctx.stroke();}
+  speckle(ctx,1024,12000,'36,42,30',.21);
+  ctx.restore();
+ }
  function wireframeMap(mobile){
   const[c,ctx]=canvas(1024);ctx.fillStyle='#bfc4b6';ctx.fillRect(0,0,1024,1024);
   ctx.strokeStyle='#304a4d';ctx.fillStyle='#304a4d';ctx.lineWidth=4;ctx.font='28px sans-serif';ctx.fillText(mobile?'ONBOARDING / FIRST RUN':'WORKSPACE / DASHBOARD',45,67);
@@ -247,7 +269,7 @@ export function createOffice(renderer){
    }
   }
   ctx.strokeStyle='#7d453b';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(510,905,357,48,-.02,0,Math.PI*2);ctx.stroke();ctx.font='25px sans-serif';ctx.fillStyle='#7d453b';ctx.fillText(mobile?'simplify the first step / test again':'less noise — keep the primary action visible',180,915);
-  for(let i=0;i<40;i++)cloud(ctx,random()*1024,random()*1024,range(15,100),'53,62,51',.06);return texture(c);
+  wearWhiteboard(ctx,'#bfc4b6',mobile?[[345,225,290,290],[65,570,220,170],[660,765,280,130]]:[[570,215,350,235],[145,500,280,200],[220,855,430,95]]);return texture(c);
  }
  for(let i=0;i<2;i++){
   const g=new THREE.Group();g.name='Whiteboard with interface wireframes';g.position.set(i?2.25:.12,2.20,-3.94);g.rotation.z=i?-.025:.012;office.add(g);
@@ -264,6 +286,7 @@ export function createOffice(renderer){
   for(const z of[-.25,.25])sphere([.047,.045,.032],[x,.035,z],black,partition);
  }
  box([2.68,1.94,.05],[0,1.85,0],silver,partition);
+ const missingNotes=new Set([1,4,7,9,13,17,20,22,24]);
  const[cPlanning,planning]=canvas(1024);planning.fillStyle='#c2c7ba';planning.fillRect(0,0,1024,1024);
  for(let i=0;i<65;i++)cloud(planning,random()*1024,random()*1024,range(15,110),'60,69,55',.065);
  planning.strokeStyle='rgba(38,62,63,.65)';planning.fillStyle='rgba(38,62,63,.65)';planning.lineWidth=3;
@@ -272,6 +295,15 @@ export function createOffice(renderer){
   planning.strokeRect(x+12,625,166,102);planning.beginPath();planning.moveTo(x+12,625);planning.lineTo(x+178,727);planning.moveTo(x+178,625);planning.lineTo(x+12,727);planning.stroke();
   for(let j=0;j<4;j++)planning.fillRect(x+15,753+j*19,137-j%2*39,3);planning.strokeRect(x+15,843,160,28);
   if(i<2){planning.beginPath();planning.moveTo(x+198,727);planning.lineTo(x+235,727);planning.lineTo(x+222,717);planning.moveTo(x+235,727);planning.lineTo(x+222,737);planning.stroke();}
+ }
+ wearWhiteboard(planning,'#c2c7ba',[[130,620,285,170],[407,735,280,165],[685,530,190,150]]);
+ // Pale paper-shaped ghosts and old adhesive remain where notes have fallen away.
+ for(const index of missingNotes){
+  const x=(-1.10+(index%9)*.273)/2.60*1024+512;
+  const y=(.5-(2.63-Math.floor(index/9)*.28-1.85)/1.86)*1024;
+  planning.fillStyle='rgba(203,203,175,.20)';planning.fillRect(x-40,y-59,80,118);
+  planning.fillStyle='rgba(111,96,51,.17)';planning.fillRect(x-34,y-56,68,8);
+  for(let j=0;j<9;j++){planning.fillStyle='rgba(77,67,39,.15)';planning.fillRect(x+range(-33,33),y-53+range(-2,6),range(1,3),range(2,5));}
  }
  const planningMap=texture(cPlanning),planningSurface=mesh(new THREE.PlaneGeometry(2.60,1.86),new THREE.MeshStandardMaterial({map:planningMap,roughness:.75,emissive:0xffffff,emissiveMap:planningMap,emissiveIntensity:.025}),partition);planningSurface.position.set(0,1.85,.027);
  box([2.58,.025,.13],[0,.87,.045],silver,partition);
@@ -286,9 +318,9 @@ export function createOffice(renderer){
   for(let i=0;i<pos.count;i++){const yy=pos.getY(i);pos.setZ(i,Math.max(0,-yy-.015)**2*3.3);}geo.computeVertexNormals();
   const map=texture(c),m=mesh(geo,new THREE.MeshStandardMaterial({map,roughness:.96,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),parent);m.position.set(x,y,z);m.rotation.z=range(-.13,.13);return m;
  }
- for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(row===2&&col===4)continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.040,row*9+col);}
- for(let i=0;i<5;i++)sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.040,28+i);
- const fallenNote=sticky(office,-1.65,.024,.54,33);fallenNote.rotation.set(-Math.PI/2,0,.6);
+ for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(missingNotes.has(row*9+col))continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.040,row*9+col);}
+ for(let i=0;i<5;i++){if(i===1||i===4)continue;sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.040,28+i);}
+ for(let i=0;i<4;i++){const fallenNote=sticky(office,-1.70-i*.30,.024,-.38+i*.26,33+i);fallenNote.rotation.set(-Math.PI/2,0,.6+i*.73);}
 
  // One crooked overhead light and a small desk lamp provide practical light sources.
  const lamp=new THREE.Group();lamp.position.set(.22,2.98,-.55);lamp.rotation.set(.02,.12,-.075);office.add(lamp);box([1.50,.09,.28],[0,0,0],steel,lamp);

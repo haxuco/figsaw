@@ -299,11 +299,27 @@ for(const side of[-1,1]){
 }
 const knot=mesh(new THREE.SphereGeometry(1,24,16),ribbonMaterial,bowTie);knot.position.set(0,0,.07);knot.scale.set(.105,.12,.075);
 
-// Keep Figsaw in the clear aisle between the abandoned workstations and recreation area.
-model.scale.setScalar(.52);model.position.set(-.28,-.53*.52+.012,-.10);model.rotation.y=-.30;
+// Half-size Figsaw rides from the shadowed coffee corner into the open aisle.
+const modelScale=.26,groundOffset=-.53*modelScale+.012;
+model.scale.setScalar(modelScale);
+const entrancePath=new THREE.CatmullRomCurve3([
+ [2.45,groundOffset,-2.40],[1.70,groundOffset,-2.20],[.90,groundOffset,-1.65],
+ [-.05,groundOffset,-1.10],[-.92,groundOffset,-.05],[-.95,groundOffset,.65]
+].map(point=>new THREE.Vector3(...point)),false,'centripetal');
+entrancePath.arcLengthDivisions=240;
+const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
+let entranceStartedAt=0;
+function updateEntrance(time){
+ const elapsed=time-entranceStartedAt-1.0;
+ const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,8.5);
+ entrancePath.getPointAt(progress,ridePoint);entrancePath.getTangentAt(progress,rideDirection);
+ model.position.copy(ridePoint);model.rotation.y=Math.atan2(rideDirection.x,rideDirection.z);
+ setRollingDistance(progress*entranceLength/modelScale);
+}
+updateEntrance(0);
 const office=createOffice(renderer);scene.add(office);
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
-function resetView(){resetting=true;}
+function resetView(){resetting=true;entranceStartedAt=clock.elapsedTime;}
 
 document.addEventListener('keydown',event=>{
  if(event.code==='Space'){event.preventDefault();state.space=true;}
@@ -343,7 +359,7 @@ canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;s
 
 function resize(){
  const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
- renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=(camera.aspect<.85?76:62)*state.zoom;camera.updateProjectionMatrix();
+ renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=(camera.aspect<.85?82:62)*state.zoom;camera.updateProjectionMatrix();
 }
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
@@ -355,15 +371,17 @@ function render(){
  }
  // Look around from a prone eye position; zoom changes the lens, never the eye height.
  camera.position.copy(floorEye);
- viewDirection.set(-Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(state.yaw)*Math.cos(state.pitch));
+ const viewYaw=state.yaw+(camera.aspect<.85?.13:0);
+ viewDirection.set(-Math.sin(viewYaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(viewYaw)*Math.cos(state.pitch));
  cameraTarget.copy(floorEye).add(viewDirection);camera.lookAt(cameraTarget);
- const fov=(camera.aspect<.85?76:62)*state.zoom;
+ const fov=(camera.aspect<.85?82:62)*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
  const mouthTarget=state.space?1:t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
+ updateEntrance(clock.elapsedTime);
+ model.updateMatrixWorld(true);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
- setRollingDistance(reducedMotion?0:t*.85);
  renderer.render(scene,camera);requestAnimationFrame(render);
 }
 render();
