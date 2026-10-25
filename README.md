@@ -1,12 +1,14 @@
 # Figsaw
 
-A full-window Three.js viewer showing only the rock and its red tricycle against a plain background. There is no page interface, logo, text overlay, scenery, platform, foliage, particle effect, or audio.
+A full-window Three.js scene of Figsaw on his red tricycle inside an abandoned technology office. Old CRT workstations, shattered monitors, open computer cases, overturned chairs, broken laptops, loose circuit boards, paper, cables, and damaged ceiling panels fill the room. A neglected coffee station includes an espresso machine, cups, spills, refrigerator and water cooler. The foosball table has missing players, bent rods, and a damaged leg. Bent window blinds and an overhead fluorescent provide muted green lighting and shadows.
 
-The rock has a thick black outline, a shallow marionette jaw with gently curved seams, narrow rough lipstick, tightly wound spirals on subtly raised cheeks, small round black eyes with red irises, moss markings, and a red bow tie. Its eyes follow the camera and never blink. Mouth travel is limited to 0.12 scene units, opening into a recessed cavity.
+All models and wear textures are generated locally, with no remote asset dependencies. There are no interface overlays. The visual references are [dasy444’s abandoned office](https://sketchfab.com/3d-models/office-is-old-abandoned-free-3977a108b2304b85a698f3dda1777015) and the [Neo apartment recreation](https://www.reddit.com/r/ClaudeAI/comments/1x6x6x7/3d_recreation_of_neo_apartment_from_the_matrix/); their model and texture files are not bundled.
 
-The tricycle has raised silver handlebars, burgundy grips, an arched red frame, one large front wheel and two small rear wheels, thin steel spokes, and a black seat. The rock sits directly on the seat without a body or limbs. Wheels rotate at a shared rolling speed, and the front-wheel cranks carry pedal platforms that remain level. Automatic cycling respects reduced-motion preferences.
+Figsaw retains his thick black outline, shallow marionette jaw, narrow rough lipstick, tight spirals on raised cheeks, small round black eyes with red irises, moss markings, and red bow tie. His eyes follow the camera and never blink. Mouth travel is limited to 0.12 local units with a recessed cavity. The rock sits directly on the seat without a body or limbs.
 
-Drag or use arrow keys to orbit, scroll to zoom, hold Space to open the mouth, tap the rock for a short mouth animation, and press R to reset the default side view. Camera framing adapts to the viewport.
+The tricycle wheels rotate at a shared rolling speed. Its front-wheel cranks carry pedal platforms that remain level. Automatic cycling respects reduced-motion preferences.
+
+Drag or use arrow keys to look around, scroll to move closer, hold Space to open the mouth, tap Figsaw for a short mouth animation, and press R to reset. Camera movement stays within the office. Portrait framing uses a wider field of view.
 
 Serve `dist` with any static HTTP server:
 
