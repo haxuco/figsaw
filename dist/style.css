@@ -49,7 +49,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #mug-eye-impact .eye-wound+.eye-wound .blood-streaks{height:92vh}
 #game-over{position:fixed;inset:0;z-index:100;display:grid;place-items:center;background:#000;color:#fff;opacity:0;text-align:center}
 #game-over[hidden],.game-over-content[hidden]{display:none}
-#game-over h1{margin:0 0 30px;color:#ff2424;font:500 clamp(56px,10vw,112px)/1.1 "Grenze Gotisch",Georgia,serif;letter-spacing:.065em}
+#game-over h1{margin:0 0 30px;color:#ff2424;font:500 clamp(56px,10vw,112px)/1.1 "Grenze Gotisch",Georgia,serif;letter-spacing:-.035em}
 #restart-game{border:1px solid #ffffff35;border-radius:3px;padding:10px 22px;background:transparent;color:#bbb;font:14px Georgia,serif;cursor:pointer}
 #restart-game:hover,#restart-game:focus-visible{color:#fff;border-color:#fff;outline:2px solid #ffffff40;outline-offset:4px}
 .mug-impact .view-tools,.mug-impact #figsaw-dialogue,.mug-impact #figpal-dialogues,.game-over #chain-menu{visibility:hidden}
