@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=weathered-industrial';
+import { createOffice } from './office.js?v=brighter-liquid';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 
 const canvas=document.querySelector('#scene');

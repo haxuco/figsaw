@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { weatheredMetal } from './industrial-materials.js';
+import { weatheredMetal } from './industrial-materials.js?v=brighter-liquid';
 
 // Discrete ballast failures, not a rapid repeating strobe. Each tube fails separately.
 export function fluorescentLevels(time,reducedMotion=false){

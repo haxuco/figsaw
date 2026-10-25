@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js?v=weathered-industrial';
+import { createFigpalVats } from './figpal-vats.js?v=brighter-liquid';
 
-import { createFailingFluorescent } from './failing-fluorescent.js';
+import { createFailingFluorescent } from './failing-fluorescent.js?v=brighter-liquid';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';

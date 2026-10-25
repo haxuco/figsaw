@@ -39,8 +39,8 @@ export function createTankMaterials(){
  const haze=new THREE.MeshStandardMaterial({map:hazeMap,roughness:.9,bumpMap:glassBump,bumpScale:.002,transparent:true,depthWrite:false,side:THREE.DoubleSide});
  const waterMap=pixels((u,v)=>{const n=grain(u+11,v+7),m=noise(u*12,v*9);return [.11+n*.19,.24+n*.35,.026+m*.08];},256,true);
  const sedimentMap=pixels((u,v)=>{const n=grain(u+5,v+3),s=smooth(v);return [.10+n*.12+s*.06,.17+n*.22+s*.12,.025+n*.055,.93-s*.43];},256,true);
- const fluid=new THREE.MeshPhysicalMaterial({map:sedimentMap,color:0xc9db91,roughness:.26,transparent:true,opacity:.76,depthWrite:false,side:THREE.DoubleSide,emissive:0x1e3b05,emissiveIntensity:.28,envMapIntensity:.35});
- const liquidTop=new THREE.MeshPhysicalMaterial({map:waterMap,color:0xffffff,roughness:.17,metalness:0,ior:1.333,clearcoat:1,clearcoatRoughness:.12,side:THREE.DoubleSide,emissive:0x243b07,emissiveIntensity:.18,envMapIntensity:1.15});
+ const fluid=new THREE.MeshPhysicalMaterial({map:sedimentMap,color:0xc9db91,roughness:.26,transparent:true,opacity:.76,depthWrite:false,side:THREE.DoubleSide,emissive:0x1e3b05,emissiveIntensity:.48,envMapIntensity:.35});
+ const liquidTop=new THREE.MeshPhysicalMaterial({map:waterMap,color:0xffffff,roughness:.17,metalness:0,ior:1.333,clearcoat:1,clearcoatRoughness:.12,side:THREE.DoubleSide,emissive:0x243b07,emissiveIntensity:.30,envMapIntensity:1.15});
  // Slow advecting currents in the colour map; geometric waves supply moving normals.
  const waterTime={value:0};
  liquidTop.onBeforeCompile=shader=>{shader.uniforms.waterTime=waterTime;shader.fragmentShader='uniform float waterTime;\n'+shader.fragmentShader;shader.fragmentShader=shader.fragmentShader.replace('#include <map_fragment>',`#ifdef USE_MAP

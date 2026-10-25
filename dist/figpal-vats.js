@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { weatheredMetal, createTankMaterials } from './industrial-materials.js';
+import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // All shapes, markings, glass, liquid and wear are local procedural assets.
@@ -152,7 +152,7 @@ export function createFigpalVats(){
   const dial=mesh(new THREE.CircleGeometry(.052,24),cream,vat);dial.position.set(.32,1.19,.391);line([[.32,1.19,.395],[.30,1.219,.395]],.003,ink,vat);
   const drain=cylinder(.038,.17,[.37,.25,.37],steel,vat);drain.rotation.x=Math.PI/2;
   const valve=mesh(new THREE.TorusGeometry(.068,.008,6,24),ribOrange,vat);valve.position.set(.37,.25,.47);rod([.31,.25,.47],[.43,.25,.47],.006,ribOrange,vat);
-  const glow=new THREE.PointLight(0x6b9c25,.42,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
+  const glow=new THREE.PointLight(0x6b9c25,.58,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
   vats.push({surface,bubbles,bubbleData,foam,ripples,phase:i*1.7});
 
   const facing=Math.atan2(1.85221-x,3.1149-tankZ);
