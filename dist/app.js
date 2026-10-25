@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { createOffice } from './office.js?v=monitor-glass-rear-wall';
+import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 
 const canvas=document.querySelector('#scene');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -313,10 +314,15 @@ entrancePath.arcLengthDivisions=240;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
 const arrivalDialogue=document.querySelector('#figsaw-dialogue');
 const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
-const dialogueText='Figsaw: I want to play a game...';
+const dialogueText='I want to play a game...';
 const dialogueAnchor=new THREE.Vector3(),dialogueProjection=new THREE.Vector3();
 const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
-let entranceStartedAt=0,entranceArrived=false,dialogueOccluded=false,nextDialogueVisibilityCheck=0;
+let entranceStartedAt=0,entranceArrived=false,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
+function showFigsawDialogue(text){
+ arrivalDialogue.querySelector('.dialogue-bubble span').textContent=text;
+ dialogueAnnouncement.textContent=`Figsaw: ${text}`;
+ dialogueSpeech=reducedMotion?null:createDialogueSpeech(text,state.time);
+}
 function updateEntrance(time){
  const elapsed=time-entranceStartedAt-1.0;
  const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,8.5);
@@ -327,7 +333,7 @@ function updateEntrance(time){
  const relativeYaw=THREE.MathUtils.euclideanModulo(viewerYaw-model.rotation.y+Math.PI,Math.PI*2)-Math.PI;
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70);
  setRollingDistance(progress*entranceLength/modelScale);
- if(progress===1&&!entranceArrived){entranceArrived=true;dialogueAnnouncement.textContent=dialogueText;}
+ if(progress===1&&!entranceArrived){entranceArrived=true;showFigsawDialogue(dialogueText);}
 }
 updateEntrance(0);
 const {group:office,laptop,setDisplayEnvironment}=createOffice(renderer,homePosition);scene.add(office);
@@ -382,7 +388,7 @@ function openLaptop(){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';nextDialogueVisibilityCheck=0;}
+function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -493,10 +499,12 @@ function render(){
  cameraTarget.copy(cameraPosition).add(viewDirection);camera.lookAt(cameraTarget);
  const fov=homeCamera.fov*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
- const mouthTarget=state.space?1:t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
+ updateEntrance(clock.elapsedTime);
+ const dialogueMouth=dialogueMouthAmount(dialogueSpeech,t);
+ const tapMouth=t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
+ const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
- updateEntrance(clock.elapsedTime);
  laptop.update(dt,reducedMotion);
  model.updateMatrixWorld(true);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
