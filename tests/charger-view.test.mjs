@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createDrawerCamera} from '../dist/drawer-camera.js';
 import {createChargerCableGeometry} from '../dist/charger-cable.js';
+import {createMacBookAdapter,createPowerStrip,createMainsLeadGeometry} from '../dist/charging-hardware.js';
 
 function viewFixture(){
  const position=new THREE.Vector3(1.85,.82,3.11),state={yaw:.78,pitch:-.07,zoom:.78};
@@ -17,6 +18,45 @@ test('drawer view looks into the tray, holds for pickup, then restores the saved
  const focus=position.clone();controller.update(90);assert.ok(position.equals(focus),'do not leave before the player grabs the charger');
  controller.restore(91);controller.update(92);assert.equal(controller.active,false);
  assert.ok(position.distanceTo(home.position)<1e-8);assert.ok(Math.abs(state.yaw-home.yaw)<1e-8);assert.equal(state.pitch,home.pitch);assert.equal(state.zoom,home.zoom);
+});
+
+test('upright adapter, charging lead and mains lead clear the power strip throughout insertion',()=>{
+ const scene=new THREE.Group(),{group:strip,adapterSeat,leadExit}=createPowerStrip();scene.add(strip);
+ strip.position.set(1.94,.035,3.72);strip.rotation.y=-.16;
+ const {group:adapter,exit:adapterExit}=createMacBookAdapter();strip.add(adapter);adapter.position.copy(adapterSeat.position);
+ const laptop=new THREE.Group(),connector=new THREE.Group();scene.add(laptop,connector);laptop.position.set(.45,.03,2.18);laptop.rotation.y=.98;
+ const connectorExit=new THREE.Object3D();connectorExit.position.x=-.057;connector.add(connectorExit);
+ const floorSupport=()=>.003,vertex=new THREE.Vector3(),local=new THREE.Vector3();
+ scene.updateMatrixWorld(true);
+ assert.ok(new THREE.Vector3(1,0,0).transformDirection(adapterExit.matrixWorld).y>.999,'USB-C cable must leave upward');
+ adapter.traverse(m=>{if(m.name==='Downward AC prong'){
+  const p=strip.worldToLocal(m.getWorldPosition(new THREE.Vector3()));assert.ok(Math.abs(Math.abs(p.x-adapterSeat.position.x)-.014)<1e-8);assert.ok(Math.abs(p.z+.012)<1e-8,'prongs align with the first socket slots');
+ }});
+ function clearStrip(geometry){
+  const positions=geometry.attributes.position;
+  for(let i=0;i<positions.count;i++){
+   vertex.fromBufferAttribute(positions,i);assert.ok(vertex.y>=floorSupport()-.00001,'cable must rest above the floor');
+   strip.worldToLocal(local.copy(vertex));
+   assert.ok(Math.abs(local.x)>.327||Math.abs(local.z)>.070||local.y>.043||local.y<-.032,`cable clips power strip at ${local.toArray()}`);
+  }
+ }
+ for(const lift of[0,.08,.19])for(const progress of[0,.5,1]){
+  adapter.position.y=adapterSeat.position.y+lift;connector.quaternion.copy(laptop.quaternion);
+  connector.position.copy(laptop.localToWorld(new THREE.Vector3(-.446-.032-(1-progress)*.12,.002+(1-progress)*.028,-.18)));
+  const geometry=createChargerCableGeometry({adapterExit,connectorExit,laptop,floorSupport,strip});clearStrip(geometry);
+  const positions=geometry.attributes.position;
+  for(let i=0;i<positions.count;i++){
+   adapter.worldToLocal(local.fromBufferAttribute(positions,i));
+   assert.ok(Math.abs(local.x)>.075||Math.abs(local.z)>.037||local.y>.162||local.y<.005,'USB-C cable cuts through adapter shell');
+  }
+  geometry.dispose();
+ }
+ const mains=createMainsLeadGeometry({exit:leadExit,wallPlug:new THREE.Vector3(2.15,.30,4.35),floorSupport});clearStrip(mains);
+ const positions=mains.attributes.position,first=new THREE.Vector3(),last=new THREE.Vector3(),ring=positions.count/8-1;
+ for(let j=0;j<7;j++){first.add(vertex.fromBufferAttribute(positions,j));last.add(vertex.fromBufferAttribute(positions,ring*8+j));}
+ first.divideScalar(7);last.divideScalar(7);
+ assert.ok(first.distanceTo(leadExit.getWorldPosition(vertex))<1e-6);assert.ok(last.distanceTo(new THREE.Vector3(2.15,.30,4.35))<1e-6,'mains lead connects all the way to the wall plug');
+ mains.dispose();
 });
 test('early close, manual navigation and reduced motion do not leave a camera override running',()=>{
  const {position,state,home,controller}=viewFixture();controller.start(0);controller.update(.3);controller.restore(.3);controller.update(1.3);

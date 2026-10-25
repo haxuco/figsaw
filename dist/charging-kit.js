@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {createChargingState} from './charging-state.js';
 import {createChargerCableGeometry} from './charger-cable.js';
+import {createMacBookAdapter,createPowerStrip,createMainsLeadGeometry} from './charging-hardware.js';
 
 export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  const group=new THREE.Group();group.name='Interactive MacBook charging kit';
@@ -27,34 +28,21 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  for(const x of[-.33,.33])box([.015,.27,.36],[x,-.01,.025],drawerMaterial,drawer);
  box([.66,.27,.015],[0,-.01,-.155],drawerMaterial,drawer);
  for(const x of[-.348,.348])box([.013,.027,.43],[x,-.08,.015],metal,drawer);
- const brick=new THREE.Group();brick.name='MacBook USB-C power adapter';brick.userData.chargingAction='charger';drawer.add(brick);brick.position.set(.105,-.097,.045);
- rounded([.145,.075,.145],[0,0,0],white,brick);
- box([.147,.001,.147],[0,-.009,0],ivory,brick);
- for(const x of[-.016,.016])box([.005,.025,.015],[x,-.049,0],metal,brick);
- box([.003,.015,.027],[.074,.006,0],rubber,brick);
- const adapterPlug=new THREE.Group();adapterPlug.visible=false;brick.add(adapterPlug);
- rounded([.032,.016,.022],[.095,.006,0],white,adapterPlug);
- const adapterSleeve=mesh(new THREE.CylinderGeometry(.0048,.007,.024,12),ivory,adapterPlug);adapterSleeve.rotation.z=-Math.PI/2;adapterSleeve.position.set(.121,.006,0);
- const adapterExit=new THREE.Object3D();adapterExit.name='Adapter cable exit';adapterExit.position.set(.133,.006,0);brick.add(adapterExit);
- const adapterText=label('96W USB-C',.086,.022,[0,.009,.075],brick);adapterText.material.color.setHex(0x999b92);
+ const {group:brick,plug:adapterPlug,exit:adapterExit}=createMacBookAdapter();drawer.add(brick);
+ const drawerBrickPosition=new THREE.Vector3(.105,-.105,-.055);
+ brick.position.copy(drawerBrickPosition);brick.rotation.x=Math.PI/2;
+ const adapterText=label('96W USB-C',.077,.018,[0,.082,-.034],brick);adapterText.rotation.y=Math.PI;adapterText.material.color.setHex(0x999b92);
  const coil=new THREE.Group();coil.name='Coiled charger cable';coil.userData.chargingAction='charger';drawer.add(coil);coil.position.set(-.145,-.127,.06);
  const coiled=[];for(let i=0;i<=120;i++){const a=i/120*Math.PI*6;coiled.push([Math.cos(a)*(.086+i*.00012),i*.000045,Math.sin(a)*.060]);}
  tube(coiled,.0045,white,coil);rounded([.041,.014,.019],[.12,.01,0],white,coil);box([.014,.009,.014],[.145,.01,0],metal,coil);
- const strip=new THREE.Group();strip.name='Powered floor power strip';strip.userData.chargingAction='strip';strip.position.set(1.94,floorSupport(1.94,3.72)+.032,3.72);strip.rotation.y=-.16;group.add(strip);
- rounded([.51,.055,.12],[0,0,0],ivory,strip);
- for(const x of[-.16,-.055,.05,.155]){
-  box([.079,.001,.082],[x,.029,0],white,strip);
-  for(const z of[-.020,.020])box([.021,.002,.006],[x-.009,.031,z],rubber,strip);
-  const hole=mesh(new THREE.CircleGeometry(.007,12),rubber,strip);hole.rotation.x=-Math.PI/2;hole.position.set(x+.022,.031,0);
- }
- const rocker=rounded([.035,.011,.057],[.224,.032,0],new THREE.MeshStandardMaterial({color:0x9d392a,roughness:.4}),strip);rocker.rotation.z=.07;
- box([.008,.002,.020],[.224,.039,0],green,strip);
+ const {group:strip,leadExit,adapterSeat}=createPowerStrip();
+ strip.position.set(1.94,floorSupport(1.94,3.72)+.032,3.72);strip.rotation.y=-.16;group.add(strip);
+ label('SURGE',.040,.012,[.253,.043,-.042],strip).rotation.x=-Math.PI/2;
  // The strip has a real lead running to a wall socket behind the viewer.
  const outlet=rounded([.12,.16,.018],[2.15,.27,4.424],ivory,group);
  for(const y of[.235,.30]){box([.065,.042,.006],[2.15,y,4.411],white,group);for(const x of[2.136,2.164])box([.005,.016,.003],[x,y+.004,4.406],rubber,group);}
  rounded([.054,.043,.055],[2.15,.30,4.383],rubber,group);
- const stripEnd=strip.localToWorld(new THREE.Vector3(-.265,0,0));
- tube([stripEnd,[1.57,.018,3.80],[1.61,.015,4.04],[1.98,.015,4.25],[2.16,.07,4.34],[2.15,.30,4.35]],.007,rubber).raycast=()=>{};
+ const mains=mesh(createMainsLeadGeometry({exit:leadExit,wallPlug:new THREE.Vector3(2.15,.30,4.35),floorSupport}),rubber);mains.name='Power strip mains lead to wall socket';mains.raycast=()=>{};
  const port=new THREE.Group();port.name='MacBook charging port';port.userData.chargingAction='laptop';port.position.set(-.446,.002,-.18);laptop.object.add(port);
  box([.005,.010,.035],[0,0,0],rubber,port);
  const portPick=mesh(new THREE.BoxGeometry(.045,.048,.085),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}),port);portPick.castShadow=false;
@@ -69,7 +57,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  const point=new THREE.Vector3(),plugTarget=new THREE.Vector3();
  function updateWire(progress){
   const geometry=wire?.geometry;
-  const next=createChargerCableGeometry({adapterExit,connectorExit,laptop:laptop.object,floorSupport});
+  const next=createChargerCableGeometry({adapterExit,connectorExit,laptop:laptop.object,floorSupport,strip});
   if(!wire){wire=mesh(next,white);wire.name='Charging cable resting across the floor';wire.raycast=()=>{};}else{wire.geometry=next;geometry.dispose();}
   lastWireProgress=progress;
  }
@@ -78,7 +66,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
   if(locked)return message;
   if(before==='drawer'&&state.phase==='carrying'){brick.visible=false;coil.visible=false;}
   if(before==='carrying'&&state.phase==='powered'){
-   strip.add(brick);brick.visible=true;brick.rotation.set(0,0,0);brick.position.set(-.16,.075,0);plugStarted=time;
+   strip.add(brick);brick.visible=true;brick.rotation.set(0,0,0);brick.position.copy(adapterSeat.position);plugStarted=time;
    group.add(coil);coil.visible=true;coil.rotation.set(0,.4,0);coil.position.set(1.70,floorSupport(1.70,3.42)+.008,3.42);
   }
   if(before==='powered'&&state.phase==='charging'){connectStarted=time;connector.visible=true;adapterPlug.visible=true;coil.visible=false;}
@@ -87,7 +75,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
  function update(time,reducedMotion=false){
   const dt=lastTime===null?0:Math.max(0,Math.min(.05,time-lastTime));lastTime=time;state.update(dt);
   const target=state.drawerOpen?1:0;drawerProgress=reducedMotion?target:THREE.MathUtils.damp(drawerProgress,target,8,dt);drawer.position.z=drawerProgress*.43;
-  if(state.phase==='powered'||state.phase==='charging')brick.position.y=.075+(reducedMotion?0:.19*(1-THREE.MathUtils.smootherstep(time-plugStarted,0,.65)));
+  if(state.phase==='powered'||state.phase==='charging')brick.position.y=adapterSeat.position.y+(reducedMotion?0:.19*(1-THREE.MathUtils.smootherstep(time-plugStarted,0,.65)));
   if(state.phase==='charging'){
    const progress=reducedMotion?1:THREE.MathUtils.smootherstep(time-connectStarted,0,.65);
    port.getWorldPosition(plugTarget);connector.quaternion.copy(laptop.object.getWorldQuaternion(new THREE.Quaternion()));
@@ -102,7 +90,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial}){
    batteryPaint.strokeStyle=charging?'#93dba3':'#e3b36d';batteryPaint.lineWidth=5;batteryPaint.strokeRect(405,25,72,44);batteryPaint.fillRect(480,37,7,19);batteryPaint.fillRect(413,33,56*level/100,28);batteryMap.needsUpdate=true;
   }
  }
- function reset(){state.reset();drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.set(.105,-.097,.045);brick.rotation.set(0,0,0);coil.position.set(-.145,-.127,.06);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
+ function reset(){state.reset();drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.copy(drawerBrickPosition);brick.rotation.set(Math.PI/2,0,0);coil.position.set(-.145,-.127,.06);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
  function hint(action){
   if(action==='drawer')return state.drawerOpen?'Close charger drawer':'Open charger drawer';
   if(action==='charger')return 'Take MacBook charger + cable';
