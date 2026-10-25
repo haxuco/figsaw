@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {weatheredMetal} from './industrial-materials.js?v=brighter-liquid';
-import {createRestraintState} from './restraint-state.js?v=camera-hand';
+import {createRestraintState} from './restraint-state.js?v=hinged-cuff';
 
 const UP=new THREE.Vector3(0,1,0);
 export function createPlayerRestraint(camera){
@@ -40,7 +40,9 @@ export function createPlayerRestraint(camera){
   }
   const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();return mesh(geo,skin,parent);
  }
- const forearm=skinForm(arm,[[0,0,0,.069,.053],[-.06,0,0,.070,.053],[-.22,.003,0,.066,.049],[-.42,.006,0,.060,.042],[-.64,.006,0,.051,.034],[-.82,.003,0,.043,.029],[-1,0,0,.038,.026]],40);
+ const upperarm=skinForm(arm,[[0,0,0,.074,.058],[-.18,.004,0,.073,.056],[-.42,.008,.003,.069,.052],[-.70,.006,.002,.061,.047],[-1,0,0,.054,.042]],40);upperarm.name='Upper arm';
+ const elbowJoint=ball(arm,[0,0,0],[.056,.046,.052]);elbowJoint.name='Bent elbow';
+ const forearm=skinForm(arm,[[0,0,0,.054,.042],[-.12,.004,.002,.058,.043],[-.30,.010,.004,.057,.041],[-.52,.012,.004,.051,.036],[-.73,.008,.002,.044,.030],[-.90,.003,0,.039,.027],[-1,0,0,.038,.026]],40);forearm.name='Tapered forearm';
  const hand=new THREE.Group();hand.name='Right hand with tapered fingers and fine knuckle creases';arm.add(hand);
  skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.028,-.006,0,.049,.029],[-.060,-.006,-.001,.057,.029],[-.098,-.002,-.003,.057,.026],[-.128,.002,-.004,.052,.022],[-.146,.004,-.005,.043,.015],[-.152,.004,-.005,.006,.004]],40);
  const fingers=[];
@@ -57,14 +59,28 @@ export function createPlayerRestraint(camera){
  // Tendon relief stays shallow and skin-colored instead of dark cartoon outlines.
  for(const x of[-.036,-.010,.020,.043])tube(hand,[[x*.45,.025,-.008],[x*.78,.028,-.060],[x,.022,-.122]],.00065,skin);
  const restraint=new THREE.Group();restraint.name='Wrist cuff and chain — right-click to detach';restraint.userData.playerChain=true;space.add(restraint);
- const cuff=new THREE.Group();restraint.add(cuff);
- function cuffHalf(start,end){const shape=new THREE.Shape();shape.absarc(0,0,.053,start,end,false);shape.lineTo(Math.cos(end)*.043,Math.sin(end)*.043);shape.absarc(0,0,.043,end,start,true);shape.closePath();const m=mesh(new THREE.ExtrudeGeometry(shape,{depth:.045,bevelEnabled:true,bevelSize:.002,bevelThickness:.002,bevelSegments:2,curveSegments:24}),iron,cuff);m.position.z=-.0225;return m;}
- const halves=[cuffHalf(-Math.PI/2,Math.PI/2),cuffHalf(Math.PI/2,Math.PI*1.5)];
- const clasp=mesh(new THREE.BoxGeometry(.033,.045,.052),edge,cuff);clasp.position.x=.059;
- const keyhole=ball(cuff,[.077,0,.017],[.004,.009,.003],black);
- for(const y of[-.015,.015])ball(cuff,[.078,y,-.012],[.004,.004,.003],edge);
- const hinge=rod(cuff,[-.051,0,-.035],[-.051,0,.035],.012,edge);
- const cuffPick=mesh(new THREE.CylinderGeometry(.071,.071,.10,16),invisible,cuff);cuffPick.rotation.x=Math.PI/2;cuffPick.castShadow=false;
+ const cuff=new THREE.Group();cuff.name='Close-fitting oval wrist cuff';restraint.add(cuff);
+ const hingeX=-.044;
+ function cuffHalf(start,end,parent){
+  const shape=new THREE.Shape();shape.absellipse(0,0,.047,.034,start,end,false);
+  shape.lineTo(Math.cos(end)*.0405,Math.sin(end)*.028);
+  shape.absellipse(0,0,.0405,.028,end,start,true);shape.closePath();
+  const geo=new THREE.ExtrudeGeometry(shape,{depth:.030,bevelEnabled:true,bevelSize:.0008,bevelThickness:.0008,bevelSegments:2,curveSegments:32});
+  const m=mesh(geo,iron,parent);m.position.z=-.015;return m;
+ }
+ const lowerCuff=cuffHalf(Math.PI,Math.PI*2,cuff);lowerCuff.name='Fixed lower cuff';
+ // Both halves meet at the left hinge pin. The upper half rotates around that
+ // physical edge, never around the wrist center or along the forearm.
+ const gate=new THREE.Group();gate.name='Hinged upper cuff';gate.position.x=hingeX;cuff.add(gate);
+ const upperCuff=cuffHalf(0,Math.PI,gate);upperCuff.position.x=-hingeX;
+ rod(cuff,[hingeX,0,-.023],[hingeX,0,.023],.0055,edge);
+ for(const z of[-.021,.021])ball(cuff,[hingeX,0,z],[.0065,.0065,.002],edge);
+ const receiver=mesh(new THREE.BoxGeometry(.013,.016,.033),iron,cuff);receiver.position.set(.046,-.007,0);
+ const latch=new THREE.Group();latch.name='Spring-loaded locking clip';latch.position.set(.045-hingeX,.008,0);gate.add(latch);
+ const clasp=mesh(new THREE.BoxGeometry(.009,.021,.025),edge,latch);clasp.position.set(.003,-.008,0);
+ ball(latch,[.008,-.006,.006],[.0018,.004,.0015],black);
+ const chainEye=mesh(new THREE.TorusGeometry(.010,.0032,8,20),edge,cuff);chainEye.position.set(.051,-.019,0);chainEye.rotation.y=Math.PI/2;
+ const cuffPick=mesh(new THREE.CylinderGeometry(.060,.060,.07,16),invisible,cuff);cuffPick.rotation.x=Math.PI/2;cuffPick.castShadow=false;
  // Rear-wall pipe and proper bolted pipe saddles establish the other end of the tether.
  const pipes=new THREE.Group();pipes.name='Rusted rear pipe anchoring the wrist chain';group.add(pipes);
  tube(pipes,[[3.30,.13,4.16],[3.30,.42,4.16],[3.30,2.16,4.16],[3.27,2.32,4.16],[2.78,2.34,4.16]],.045,iron);
@@ -79,9 +95,12 @@ export function createPlayerRestraint(camera){
  const linkGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),48,.0045,7,true);
  const links=new THREE.InstancedMesh(linkGeo,edge,360);links.name='Heavy interlocking wrist chain';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;restraint.add(links);
  const pickLinks=new THREE.InstancedMesh(new THREE.SphereGeometry(1,8,6),invisible,360);pickLinks.frustumCulled=false;restraint.add(pickLinks);
- const wrist=new THREE.Vector3(),elbow=new THREE.Vector3(),start=new THREE.Vector3(),delta=new THREE.Vector3(),tangent=new THREE.Vector3(),dummy=new THREE.Object3D();
- const restWrist=new THREE.Vector3(.32,-.32,-.72),restElbow=new THREE.Vector3(.48,-.61,-.18);
- const chainedReach=new THREE.Vector3(.04,-.28,-.94),freeReach=new THREE.Vector3(-.20,-.31,-1.04),worldPoint=new THREE.Vector3();
+ const wrist=new THREE.Vector3(),elbow=new THREE.Vector3(),shoulder=new THREE.Vector3(),start=new THREE.Vector3(),delta=new THREE.Vector3(),tangent=new THREE.Vector3(),dummy=new THREE.Object3D();
+ const restWrist=new THREE.Vector3(.29,-.30,-.78),restElbow=new THREE.Vector3(.48,-.43,-.56);
+ const chainedReach=new THREE.Vector3(.13,-.27,-.87),freeReach=new THREE.Vector3(-.14,-.31,-.97),worldPoint=new THREE.Vector3();
+ const reachElbow=new THREE.Vector3(.41,-.35,-.64),freeElbow=new THREE.Vector3(.15,-.39,-.78),shoulderOffset=new THREE.Vector3(.12,-.34,.22),boneAxis=new THREE.Vector3(0,0,-1);
+ const releasedWrist=new THREE.Vector3(),releasedElbow=new THREE.Vector3(),releasedRotation=new THREE.Quaternion(),releasedCuffRotation=new THREE.Quaternion();
+ let hasReleasePose=false;
  let chainLength=3;
  const sideways=new THREE.Vector3(1,0,0),samples=Array.from({length:49},()=>new THREE.Vector3());
  function chainPoint(t,amplitude,out){out.copy(start).lerp(pipeHook,t);out.addScaledVector(sideways,Math.sin(Math.PI*t)*amplitude);out.y-=Math.sin(Math.PI*t)*amplitude*.9;worldPoint.copy(out);space.localToWorld(worldPoint);worldPoint.y=Math.max(.032,worldPoint.y);space.worldToLocal(worldPoint);out.copy(worldPoint);return out;}
@@ -105,19 +124,47 @@ export function createPlayerRestraint(camera){
   if(!pose.visible)return pose.openLaptop;
   pipeHook.copy(pipeAnchor);space.worldToLocal(pipeHook);
   const reveal=reducedMotion?1:pose.reveal,withdraw=(1-reveal)*.55;
-  wrist.copy(restWrist).lerp(pose.locked?chainedReach:freeReach,reach);wrist.y-=withdraw;
+  wrist.copy(restWrist).lerp(pose.locked?chainedReach:freeReach,reach);
   if(pose.locked)wrist.y+=reducedMotion?0:pose.strain;
-  elbow.copy(restElbow).lerp(pose.locked?new THREE.Vector3(.35,-.57,-.28):new THREE.Vector3(.19,-.57,-.42),reach);elbow.y-=withdraw;
-  forearm.position.copy(elbow);delta.copy(wrist).sub(elbow);forearm.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,-1),delta.clone().normalize());forearm.scale.z=delta.length();
-  hand.position.copy(wrist);hand.rotation.set(-.10-reach*.08,-.10+reach*.18,-.08+reach*.04);
+  // Two fixed-length limb segments articulate at the elbow instead of stretching
+  // one long cylinder from the bottom of the screen to the hand.
+  elbow.copy(restElbow).lerp(pose.locked?reachElbow:freeElbow,reach);
+  const releaseActive=!pose.locked&&pose.releaseElapsed<1.8&&hasReleasePose;
+  const hingeOpen=reducedMotion&&!pose.locked?1:pose.hingeOpen;
+  const cuffDrop=reducedMotion&&!pose.locked?1:pose.cuffDrop;
+  if(releaseActive){
+   wrist.copy(releasedWrist);elbow.copy(releasedElbow);
+   const pull=reducedMotion?1:pose.handFree;
+   wrist.y+=pull*.055;wrist.z+=pull*.025;
+  }
+  wrist.y-=withdraw;elbow.y-=withdraw;
+  delta.copy(elbow).sub(wrist).setLength(.35);elbow.copy(wrist).add(delta);
+  shoulder.copy(elbow).add(shoulderOffset);
+  upperarm.position.copy(shoulder);delta.copy(elbow).sub(shoulder);upperarm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());upperarm.scale.z=delta.length();
+  forearm.position.copy(elbow);delta.copy(wrist).sub(elbow);forearm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());forearm.scale.z=.35;
+  elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearm.quaternion);
+  hand.position.copy(wrist);hand.quaternion.copy(forearm.quaternion);hand.rotateX(-.12+reach*.08);hand.rotateY(.13-reach*.06);hand.rotateZ(-.04);
+  if(releaseActive)hand.quaternion.slerp(releasedRotation,1-pose.handFree);
   fingers.forEach((f,i)=>{f.rotation.x=-.06+(1-reach)*(.11+i*.015);});
-  if(pose.locked){cuff.position.copy(wrist);cuff.rotation.copy(hand.rotation);halves[0].rotation.y=halves[1].rotation.y=0;}
-  else{cuff.position.copy(restWrist).lerp(new THREE.Vector3(.49,-.68,-.36),pose.release);cuff.position.y-=withdraw;cuff.rotation.set(pose.release*Math.PI/2,0,pose.release*.45);halves[0].rotation.y=pose.release*1.12;halves[1].rotation.y=-pose.release*.72;}
-  cuff.updateMatrix();start.set(.079,0,0).applyMatrix4(cuff.matrix);
+  if(pose.locked){
+   cuff.position.copy(wrist);cuff.quaternion.copy(hand.quaternion);gate.rotation.z=0;latch.rotation.z=0;
+  }else{
+   // Hold the cuff on the wrist while the clip snaps and the gate swings clear.
+   // Only then can the open cuff fall; it never travels over the closed hand.
+   cuff.position.copy(releasedWrist);cuff.position.y-=withdraw+cuffDrop*.32;cuff.position.x+=cuffDrop*.08;
+   cuff.quaternion.copy(releasedCuffRotation);cuff.rotateX(cuffDrop*.8);cuff.rotateZ(cuffDrop*.42);
+   gate.rotation.z=hingeOpen*1.95;latch.rotation.z=-(reducedMotion?1:pose.unlatch)*.85;
+  }
+  cuff.updateMatrix();start.set(.051,-.019,0).applyMatrix4(cuff.matrix);
   chainLength=start.distanceTo(pipeHook)+(pose.locked?.24*(1-reach)+.018:.42);updateChain();
   return pose.openLaptop;
  }
- function reset(){state.reset();update(0,true);}
+ function detach(time){
+  if(!state.locked)return false;
+  releasedWrist.copy(wrist);releasedElbow.copy(elbow);releasedRotation.copy(hand.quaternion);releasedCuffRotation.copy(cuff.quaternion);hasReleasePose=true;
+  return state.detach(time);
+ }
+ function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);
- return {group,target:restraint,state,update,reset,setEnvironment(map){for(const mat of[iron,edge,skin,nails]){mat.envMap=map;mat.envMapIntensity=mat===skin?.35:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach:time=>state.detach(time)};
+ return {group,target:restraint,state,update,reset,setEnvironment(map){for(const mat of[iron,edge,skin,nails]){mat.envMap=map;mat.envMapIntensity=mat===skin?.35:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
 }
