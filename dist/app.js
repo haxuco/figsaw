@@ -4,7 +4,7 @@ import {batchStaticScenery} from './static-batching.js';
 import {createRoomReflections} from './room-reflections.js';
 import {createPerformanceReport} from './performance-report.js';
 import { createOffice } from './office.js?v=fewer-faster';
-import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
+import { FIGPAL_PLEAS, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { formatCountdown } from './countdown-clock.js';
@@ -13,6 +13,8 @@ import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
 import { createLaptopOpening } from './laptop-opening.js';
 import { createDrawerCamera } from './drawer-camera.js';
+import { createFigpalRounds } from './figpal-rounds.js';
+import { createFigpalCamera } from './figpal-camera.js';
 import { createSawTrap } from './saw-trap.js';
 import { createMugImpactOverlay } from './mug-impact.js';
 import { createMugTrap } from './mug-trap.js?v=locked-mug';
@@ -407,7 +409,8 @@ const chainMenu=createRestraintMenu(()=>{
  if(!ketchupKey.hasKey){keyFeedback('The shackle is locked. Find its key first.');return;}
  if(restraint.detach(state.time)){restraintStatus.textContent='Instance detached. Your wrist is free. You can open the laptop, drink from the cat mug, or turn a tank drain valve.';canvas.classList.remove('over-chain');canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('Your wrist is chained to the rear pipes. Pour the glass ketchup bottle beside the cat mug, collect the key, then click or right-click the shackle and choose Detach instance to free your hand.','Your wrist is free. Click the laptop, cat mug, or a red tank drain valve to use it.'));}
 },{canDetach:()=>ketchupKey.hasKey,onBlocked:()=>keyFeedback('The shackle is locked. Find its key first.')});
-const finale=createFinaleCue(figpalHoists);
+const figpalRounds=createFigpalRounds(figpalHoists,countdown);
+const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 const displayEnvironment=createRoomReflections(renderer);
@@ -422,7 +425,7 @@ const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,ca
 useMobileMaterials(scene);
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
- if(!entranceArrived||finale.active){arrivalDialogue.hidden=true;return;}
+ if(!entranceArrived||figpalRounds.active){arrivalDialogue.hidden=true;return;}
  // Keep the bubble attached to the crown as the viewer walks or turns around.
  puppet.localToWorld(dialogueAnchor.set(-.28,bodyHeight+.24,0));
  dialogueProjection.copy(dialogueAnchor).project(camera);
@@ -456,7 +459,7 @@ function interactionAt(event){
 }
 function keyFeedback(message){chargingToast=message;chargingToastUntil=state.time+4.5;restraintStatus.textContent=message;}
 function useKeyObject(action){
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  arrivalCameraMove.cancel();resetting=false;
  if(action==='pour'){
   if(ketchupKey.pour(state.time))keyFeedback('You tip the bottle. Something metal is sliding through the ketchup…');
@@ -467,7 +470,7 @@ function useKeyObject(action){
  }
 }
 function useCharging(action){
- if(!action||laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(!action||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  const wasOpen=chargingKit.drawerOpen,previousPhase=chargingKit.phase;
  hoveredChargingAction=null;canvas.classList.remove('over-charging');
  if(restraint.locked)restraint.requestReach(state.time);
@@ -481,10 +484,10 @@ function useCharging(action){
 }
 function updateChargingHint(){
  const label=state.time<chargingToastUntil?chargingToast:hoveredKeyAction?ketchupKey.hint(hoveredKeyAction):hoveredChargingAction?chargingKit.hint(hoveredChargingAction):ketchupKey.hasKey&&restraint.locked?'Shackle key collected · Click the shackle to unlock':chargingKit.hint(null);
- if(chargingHint.textContent!==label)chargingHint.textContent=label;chargingHint.hidden=!label||gameEnded||mugTrap.active||sawTrap.active||laptopOpening.active;
+ if(chargingHint.textContent!==label)chargingHint.textContent=label;chargingHint.hidden=!label||gameEnded||figpalRounds.active||mugTrap.active||sawTrap.active||laptopOpening.active;
 }
 function openLaptop(){
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(restraint.locked){
   restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. You can't reach the laptop.";return;
  }
@@ -503,7 +506,7 @@ function finishOpeningLaptop(fromHand=false){
  canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro').replace(' Click the laptop or press Enter to open it.',''));
 }
 function grabMug(){
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. Detach the shackle before picking up the mug.";return;}
  if(!mugTrap.start(state.time))return;
  drawerCamera.cancel();
@@ -512,7 +515,7 @@ function grabMug(){
  restraintStatus.textContent='You pick up the cat mug by its handle and raise it for a drink.';
 }
 function grabSaw(){
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(ketchupKey.hasKey){keyFeedback('You already have the key. There is no need to use the saw.');return;}
  if(!sawTrap.start(state.time))return;
  drawerCamera.cancel();arrivalCameraMove.cancel();resetting=false;releaseControls();chainMenu.hide();
@@ -520,7 +523,7 @@ function grabSaw(){
  restraintStatus.textContent='You pick up the saw and start sawing at your chained wrist.';
 }
 function openTankValve(index){
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. Detach the shackle before turning a tank valve.";return;}
  if(acidLeaks.open(index,state.time,restraint.locked)){
   drawerCamera.cancel();
@@ -533,17 +536,41 @@ function nearestTankValve(){
  figpalHoists.valves.forEach((valve,index)=>{valve.object.getWorldPosition(point);const d=point.distanceToSquared(cameraPosition);if(d<distance){distance=d;nearest=index;}});
  return nearest;
 }
+let figpalRoundFinished=false;
+function updateFigpalRound(time){
+ if(countdownStartTime!==null&&time>=countdownStartTime){
+  countdown.start();countdownStartTime=null;
+  countdownAnnouncement.textContent='The five-minute countdown has started.';
+ }
+ const event=figpalRounds.update(time,laptopOpening.active||mugTrap.active||sawTrap.active||acidLeaks.dying||fireHazard.dying);
+ if(event?.type==='lower'){
+  releaseControls();chainMenu.hide();arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;
+  figpalCamera.start(event.index,time);figpalBubbles.hide();figpalBubbles.show(event.index,time);
+  countdownAnnouncement.textContent=`Time is up. Figpal ${event.index+1} is lowering into the green liquid. ${FIGPAL_PLEAS[event.index]}`;
+ }else if(event?.type==='return'){
+  figpalBubbles.hide();figpalCamera.restore(time);
+ }else if(event?.type==='restart'){
+  countdownAnnouncement.textContent=`The timer resets to five minutes. ${event.remaining} Figpal${event.remaining===1?' remains':'s remain'}.`;
+ }else if(event?.type==='ending'){
+  releaseControls();chainMenu.hide();figpalBubbles.hide();arrivalDialogue.hidden=true;
+  countdownAnnouncement.textContent='All three Figpals have been lowered into the acid.';
+ }else if(event?.type==='gameover')figpalRoundFinished=true;
+ const seconds=countdown.update();
+ if(seconds!==lastCountdownSeconds){countdownReadout.textContent=formatCountdown(seconds);lastCountdownSeconds=seconds;}
+}
+
 function endGame(message){
  if(gameEnded)return;gameEnded=true;
- drawerCamera.cancel();
+ drawerCamera.cancel();figpalCamera.cancel();
+ gameOver.hidden=false;gameOver.style.opacity='1';
  releaseControls();chainMenu.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
  document.body.classList.add('game-over');canvas.inert=true;
  gameOverContent.hidden=false;restartGame.focus({preventScroll:true});
  restraintStatus.textContent=message;
 }
 function operateHoist(index){
- if(mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
- const message=toggleHoist(index);if(!message)return;
+ if(figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ const message=toggleHoist(index);if(!message){document.querySelector('#hoist-status').textContent='Wait for the moving hoist to stop before operating another.';return;}
  const lowering=figpalHoists.isLowered(index);
  if(lowering)figpalBubbles.show(index,state.time);else figpalBubbles.hide(index);
  document.querySelector('#hoist-status').textContent=lowering&&figpalHoists.canSpeak(index)?`${message} ${FIGPAL_PLEAS[index]}`:message;
@@ -560,7 +587,7 @@ function resetView({skipIntro=false}={}){
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
- finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
+ figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
  resetting=!skipIntro;
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
@@ -587,7 +614,7 @@ document.addEventListener('keydown',event=>{
   if(event.code==='KeyR'&&!event.repeat){event.preventDefault();resetView();canvas.focus({preventScroll:true});}
   return;
  }
- if((laptopOpening.active||mugTrap.active||sawTrap.active||acidLeaks.dying||fireHazard.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
+ if((figpalRounds.active||laptopOpening.active||mugTrap.active||sawTrap.active||acidLeaks.dying||fireHazard.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
  if(chainMenu.active)return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
  if(movementKeys.has(event.code)){event.preventDefault();arrivalCameraMove.cancel();drawerCamera.cancel();pressedKeys.add(event.code);resetting=false;return;}
@@ -611,21 +638,21 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('keyup',event=>{pressedKeys.delete(event.code);if(event.code==='Space')state.space=false;});
 window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
-createTouchNavigation({canvas,state,keys:pressedKeys,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;},canInteract:()=>!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying});
+createTouchNavigation({canvas,state,keys:pressedKeys,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;},canInteract:()=>!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
- if(mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(restraint.locked&&interactionAt(event)===restraint.target)chainMenu.show(event.clientX,event.clientY);else chainMenu.hide();
 });
 canvas.addEventListener('pointerdown',event=>{
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(event.button!==0)return;
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
  lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
 });
 canvas.addEventListener('pointermove',event=>{
- if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
+ if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
  if(dragPointer===null){const hit=interactionAt(event);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
@@ -651,7 +678,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>{hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopOpening.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -719,6 +746,7 @@ function render(){
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
  drawerCamera.update(t,reducedMotion);
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
+ updateFigpalRound(t);figpalCamera.update(t,reducedMotion);
  const viewYaw=state.yaw;
  // Walk along the floor plane relative to the view; E/Q independently change eye height.
  const forward=Number(pressedKeys.has('KeyW'))-Number(pressedKeys.has('KeyS'));
@@ -736,19 +764,6 @@ function render(){
  cameraTarget.copy(cameraPosition).add(viewDirection);camera.lookAt(cameraTarget);
  const fov=homeCamera.fov*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
- if(countdownStartTime!==null&&t>=countdownStartTime){
-  countdown.start();countdownStartTime=null;
-  countdownAnnouncement.textContent='The five-minute countdown has started.';
- }
- const countdownSeconds=countdown.update();
- if(countdownSeconds!==lastCountdownSeconds){
-  countdownReadout.textContent=formatCountdown(countdownSeconds);lastCountdownSeconds=countdownSeconds;
-  if(countdownSeconds===0)countdownAnnouncement.textContent='The countdown has reached zero.';
- }
- if(finale.update(countdown.status,t)){
-  figpalBubbles.showAll(t);
-  countdownAnnouncement.textContent=`Time is up. All three Figpals are lowering into the green liquid. ${FIGPAL_PLEAS.filter((_,index)=>figpalHoists.canSpeak(index)).join(' ')}`;
- }
  const dialogueMouth=dialogueMouthAmount(dialogueSpeech,t);
  const tapMouth=t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
  const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);
@@ -760,11 +775,12 @@ function render(){
  if(acidLeaks.dying||fireHazard.dying)releaseControls();
  const mugFinished=mugTrap.update(t,reducedMotion);
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
- const sawFinished=sawTrap.update(t,reducedMotion),blackout=Math.max(mugTrap.blackout,sawTrap.blackout,acidLeaks.blackout(t),fireHazard.blackout(t));
+ const sawFinished=sawTrap.update(t,reducedMotion),blackout=Math.max(mugTrap.blackout,sawTrap.blackout,acidLeaks.blackout(t),fireHazard.blackout(t),figpalRounds.blackout(t));
  mugImpactOverlay.update(mugTrap,blackout);
  if(mugTrap.eyeImpact>0)document.body.classList.add('mug-impact');
  if(blackout>0){gameOver.hidden=false;gameOver.style.opacity=String(blackout);document.body.classList.add('mug-impact');}
- if(sawFinished)endGame('You used the saw before finding the key. Your hand is lost. Game over.');
+ if(figpalRoundFinished)endGame('All three Figpals have been lowered into the acid. Game over.');
+ else if(sawFinished)endGame('You used the saw before finding the key. Your hand is lost. Game over.');
  else if(fireFinished)endGame('The fire reaches you before the sprinklers can stop it. Game over.');
  else if(acidFinished)endGame('The corrosive green liquid reaches you. Game over.');
  else if(mugFinished)endGame("The mug's pointed ears hit your eyes. Everything goes dark. Game over.");
@@ -784,7 +800,7 @@ function render(){
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
- renderer.render(scene,camera);updateArrivalDialogue(t);hangingPleas.update(t,finale.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
+ renderer.render(scene,camera);updateArrivalDialogue(t);hangingPleas.update(t,figpalRounds.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
   if(frameSamples>30&&slowFrames/frameSamples>.65&&requestedPixelRatio>quality.minPixelRatio){requestedPixelRatio=Math.max(quality.minPixelRatio,requestedPixelRatio-.2);resize();}

@@ -234,8 +234,21 @@ export function createFigpalVats(){
   rigs.push({rig,hanger,transformation,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
- function toggleHoist(index){const rig=rigs[index];if(!rig)return null;rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.65:rig.homeHeight;return `Figpal ${index+1}${rig.transformation.transformed?"'s bones":''} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;}
- function lowerAll(){for(const rig of rigs){rig.lowered=true;rig.targetHeight=.65;}}
+ const movingIndex=()=>{const index=rigs.findIndex(rig=>Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
+ function lower(index){
+  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index))return false;
+  rig.lowered=true;rig.targetHeight=.65;return true;
+ }
+ function toggleHoist(index){
+  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index))return null;
+  rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.65:rig.homeHeight;
+  return `Figpal ${index+1}${rig.transformation.transformed?"'s bones":''} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;
+ }
+ function getFocusView(index,eye,target){
+  const rig=rigs[index];
+  rig.rig.localToWorld(eye.set(0,1.65,2.7));
+  rig.rig.localToWorld(target.set(0,Math.max(1.03,rig.height*.55+.59),0));
+ }
  function reset(){
   for(const rig of rigs){
    rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
@@ -277,5 +290,8 @@ export function createFigpalVats(){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,valves,toggleHoist,isLowered:index=>rigs[index]?.lowered??false,canSpeak,isHanging,lowerAll,reset,speechAnchors,setEnvironment};
+ return {group,update,valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
+  isLowered:index=>rigs[index]?.lowered??false,
+  isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
+  canSpeak,isHanging,reset,speechAnchors,setEnvironment};
 }

@@ -23,20 +23,6 @@ export function createHangingPleas(hoists,bubbles,random=Math.random){
  };
 }
 
-// A state transition, rather than a repeating zero-second action or a toggle.
-export function createFinaleCue(hoists){
- let startedAt=null;
- return {
-  update(status,time){
-   if(status!=='finished'||startedAt!==null)return false;
-   startedAt=time;hoists.lowerAll();return true;
-  },
-  reset(){if(startedAt!==null)hoists.reset();startedAt=null;},
-  get active(){return startedAt!==null;},
-  elapsed(time){return startedAt===null?-1:Math.max(0,time-startedAt);}
- };
-}
-
 // Fixed-size bubbles stay centered on their own 3D anchors without reflowing.
 export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
  const container=document.querySelector('#figpal-dialogues');
