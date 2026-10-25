@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=tank-decal';
+import { createOffice } from './office.js?v=plush-grounded';
 import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=toon-hand';
 import { createRestraintMenu } from './restraint-menu.js?v=detach-icon';

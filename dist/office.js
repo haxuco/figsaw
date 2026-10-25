@@ -2,7 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=tank-decal';
 
-import { createFallenMobile } from './fallen-mobile.js?v=ground-contact';
+import { createFallenMobile } from './fallen-mobile.js?v=plush-grounded';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
 import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
 import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-contact.js';

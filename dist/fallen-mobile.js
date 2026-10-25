@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { settleOnFloor, drapeFloorCable } from './floor-contact.js';
+import { settleOnFloor, drapeFloorCable, floorClearance } from './floor-contact.js';
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
 export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
@@ -33,7 +33,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   const g=new THREE.Group();g.name=`${kind} mobile animal`;
   const mat=kind==='Pig'?pink:kind==='Elephant'?blue:kind==='Tiger'?tigerMat:ochre;
   // The rump is rounded in two lobes, with an actual sewn centre seam and a tail.
-  ball([0,.065,-.025],[.112,.091,.154],mat,g);
+  const body=ball([0,.065,-.025],[.112,.091,.154],mat,g);body.name='Soft body resting on the floor';
   for(const side of[-1,1])ball([side*.047,.073,.080],[.077,.090,.090],mat,g);
   line([[0,.13,.116],[0,.092,.166],[0,.036,.160],[0,.008,.136]],.0018,thread,g);
   for(const side of[-1,1])for(const z of[-.106,.100]){
@@ -67,15 +67,36 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   // Fabric seam on each flank and a small suspension tab on the shoulder.
   for(const side of[-1,1])line([[side*.10,.10,.07],[side*.113,.065,-.02],[side*.094,.092,-.10]],.0015,thread,g);
   const tab=mesh(new THREE.TorusGeometry(.014,.004,6,16,Math.PI*1.75),cord,g);tab.position.set(0,.158,-.065);tab.rotation.x=Math.PI/2;
-  return {object:g,tab};
+  return {object:g,tab,body};
+ }
+ // Plush rests on its broad body, not on a single projecting paw or trunk.
+ // Compress only the underside against the actual concrete/carpet surface.
+ function settlePlush(object,body){
+  object.updateWorldMatrix(true,true);
+  const position=object.getWorldPosition(new THREE.Vector3());position.y-=floorClearance(body,floorSupport)+.006;
+  object.parent.worldToLocal(position);object.position.copy(position);object.updateWorldMatrix(true,true);
+  const vertex=new THREE.Vector3(),inverse=new THREE.Matrix4();
+  object.traverse(part=>{
+   if(!part.isMesh)return;
+   const geometry=part.geometry.clone(),points=geometry.attributes.position;inverse.copy(part.matrixWorld).invert();let compressed=false;
+   for(let i=0;i<points.count;i++){
+    vertex.fromBufferAttribute(points,i).applyMatrix4(part.matrixWorld);
+    const floor=floorSupport(vertex.x,vertex.z)+.0006;
+    if(vertex.y>=floor)continue;
+    vertex.y=floor;vertex.applyMatrix4(inverse);points.setXYZ(i,vertex.x,vertex.y,vertex.z);compressed=true;
+   }
+   if(compressed){points.needsUpdate=true;geometry.computeVertexNormals();geometry.computeBoundingBox();geometry.computeBoundingSphere();part.geometry=geometry;}
+   else geometry.dispose();
+  });
+  object.userData.floorProp=true;
  }
  // The support has toppled as one piece; the clamp, bent arch and music box lie low.
  const stand=new THREE.Group();stand.name='Toppled mobile support';group.add(stand);
- box([.16,.055,.12],[-.60,.048,.48],agedIvory,stand);
- box([.12,.028,.10],[-.60,.094,.48],agedIvory,stand);
- rod([-.60,.074,.48],[-.60,.16,.48],.012,metal,stand);
- ball([-.60,.163,.48],[.043,.012,.020],agedIvory,stand);
- line([[-.59,.075,.44],[-.63,.082,.10],[-.48,.085,-.30],[-.20,.19,-.47],[.12,.23,-.39],[.19,.13,-.13],[.04,.105,0]],.013,agedIvory,stand);
+ box([.16,.055,.12],[-.60,.0305,.48],agedIvory,stand);
+ box([.12,.028,.10],[-.60,.0765,.48],agedIvory,stand);
+ rod([-.60,.0565,.48],[-.60,.1425,.48],.012,metal,stand);
+ ball([-.60,.1455,.48],[.043,.012,.020],agedIvory,stand);
+ line([[-.59,.039,.44],[-.63,.017,.10],[-.48,.017,-.30],[-.20,.020,-.47],[.12,.019,-.39],[.19,.017,-.13],[.04,.052,0]],.013,agedIvory,stand);
  settleOnFloor(stand,floorSupport);
  const hub=new THREE.Group();hub.name='Scuffed mobile music box';hub.position.set(0,.116,0);hub.rotation.set(.21,0,-.18);group.add(hub);
  const drum=mesh(new THREE.CylinderGeometry(.103,.103,.068,40),agedIvory,hub);
@@ -85,25 +106,29 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  rod([0,-.02,-.093],[0,-.02,-.145],.005,metal,hub);ball([0,-.02,-.150],[.026,.012,.005],metal,hub);
  group.updateMatrixWorld(true);settleOnFloor(hub,floorSupport);
  const ends=[[-.37,.068,.035],[.34,.103,-.025],[.018,.058,-.33],[-.025,.075,.34]];
- for(const end of ends)end[1]=Math.max(floorSupport(group.position.x+end[0],group.position.z+end[2])+.008,end[1]-.039);
- rod(ends[0],ends[1],.007,metal);rod(ends[2],ends[3],.007,metal);
- for(const p of ends){const ring=mesh(new THREE.TorusGeometry(.014,.003,6,16),metal);ring.rotation.x=Math.PI/2;ring.position.set(...p);}
+ for(const end of ends){end[1]=floorSupport(group.position.x+end[0],group.position.z+end[2])+.0076;rod([0,hub.position.y,0],end,.007,metal);}
+ for(const p of ends){const ring=mesh(new THREE.TorusGeometry(.014,.003,6,16),metal);ring.rotation.x=Math.PI/2;ring.position.set(p[0],p[1]-.004,p[2]);}
  const placements=[
-  {kind:'Pig',x:.29,z:.35,rear:true,yaw:-.12,roll:.23,arm:3},
-  {kind:'Tiger',x:-.38,z:.17,rear:true,yaw:.36,roll:-.28,arm:0},
-  {kind:'Elephant',x:.34,z:-.29,rear:false,yaw:-.28,roll:-.73,arm:1},
-  {kind:'Fox',x:-.27,z:-.43,rear:true,yaw:1.12,roll:.57,arm:2}
+  {kind:'Pig',x:.29,z:.35,rear:true,yaw:-.12,roll:.08,arm:3},
+  {kind:'Tiger',x:-.38,z:.17,rear:true,yaw:.36,roll:-.12,arm:0},
+  {kind:'Elephant',x:.34,z:-.29,rear:false,yaw:-.28,roll:-.24,arm:1},
+  {kind:'Fox',x:-.27,z:-.43,rear:true,yaw:1.12,roll:.20,arm:2}
  ];
  for(const p of placements){
-  const {object,tab}=makeAnimal(p.kind);object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
+  const {object,tab,body}=makeAnimal(p.kind);object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
   const toward=Math.atan2(viewerPosition.x-(group.position.x+p.x),viewerPosition.z-(group.position.z+p.z));
-  object.rotation.set(p.kind==='Pig'?-.12:.08,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
-  group.updateMatrixWorld(true);settleOnFloor(object,floorSupport);group.updateMatrixWorld(true);
+  object.rotation.set(p.kind==='Pig'?-.06:.03,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
+  group.updateMatrixWorld(true);settlePlush(object,body);group.updateMatrixWorld(true);
   const end=group.worldToLocal(tab.getWorldPosition(new THREE.Vector3())),start=ends[p.arm];
   const string=line([start,[start[0]+.06,.024,start[2]+.08],[(start[0]+end.x)/2-.05,.023,(start[2]+end.z)/2+.08],[end.x-.04,.025,end.z+.035],end.toArray()],.0021,cord);string.userData.anchorStart=string.userData.anchorEnd=true;drapeFloorCable(string,floorSupport);
-  // Faint contact shadow keeps the dropped toys visually grounded in the clutter.
-  const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),fade=sc.createRadialGradient(32,32,1,32,32,32);fade.addColorStop(0,'rgba(0,0,0,.42)');fade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=fade;sc.fillRect(0,0,64,64);
-  const shadow=mesh(new THREE.PlaneGeometry(.42,.48),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.rotation.z=-object.rotation.y;shadow.position.set(p.x,floorSupport(group.position.x+p.x,group.position.z+p.z)+.0002,p.z);shadow.castShadow=false;
+  // A close contact shadow conforms to carpet edges instead of hovering above them.
+  const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),fade=sc.createRadialGradient(32,32,5,32,32,32);fade.addColorStop(0,'rgba(0,0,0,.65)');fade.addColorStop(.48,'rgba(0,0,0,.32)');fade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=fade;sc.fillRect(0,0,64,64);
+  const bounds=new THREE.Box3().setFromObject(object),size=bounds.getSize(new THREE.Vector3()),center=group.worldToLocal(bounds.getCenter(new THREE.Vector3()));
+  const shadowGeometry=new THREE.PlaneGeometry(size.x+.05,size.z+.05,12,12);shadowGeometry.rotateX(-Math.PI/2);shadowGeometry.translate(center.x,0,center.z);
+  const points=shadowGeometry.attributes.position;
+  for(let i=0;i<points.count;i++)points.setY(i,floorSupport(group.position.x+points.getX(i),group.position.z+points.getZ(i))+.0002);
+  shadowGeometry.computeVertexNormals();
+  const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;
  }
  return group;
 }
