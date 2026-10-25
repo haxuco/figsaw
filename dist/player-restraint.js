@@ -42,15 +42,15 @@ export function createPlayerRestraint(camera){
  const hand=new THREE.Group();hand.name='Cartoon right hand';arm.add(hand);
  // Keep the wrist narrow enough for the existing fitted cuff; exaggerate only
  // the palm and fingers so the same hinged release still clears the hand.
- skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.028,-.005,0,.055,.034],[-.060,-.005,0,.064,.037],[-.098,-.002,-.002,.064,.034],[-.128,.002,-.003,.059,.028],[-.146,.004,-.004,.046,.020],[-.155,.004,-.004,.006,.004]],40);
+ skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.030,-.005,0,.059,.036],[-.066,-.005,0,.071,.040],[-.108,-.002,-.002,.071,.037],[-.140,.002,-.003,.065,.031],[-.160,.004,-.004,.051,.022],[-.170,.004,-.004,.006,.004]],40);
  const fingers=[];
- for(const [i,x,length]of[[0,-.049,.109],[1,-.015,.124],[2,.021,.116],[3,.053,.091]]){
-  const finger=new THREE.Group();finger.position.set(x,-.002,-.125+(i===3?.012:0));finger.rotation.y=(i-1.4)*-.035;hand.add(finger);fingers.push(finger);
-  const r=i===3?.016:.0185;
+ for(const [i,x,length,spread]of[[0,-.056,.120,.19],[1,-.018,.136,.055],[2,.023,.128,-.08],[3,.060,.100,-.23]]){
+  const finger=new THREE.Group();finger.position.set(x,-.002,-.137+(i===3?.013:0));finger.rotation.y=spread;hand.add(finger);fingers.push(finger);
+  const r=i===3?.0175:.020;
   skinForm(finger,[[.014,0,0,r*.92,r*.90],[0,0,0,r,r],[-length*.22,0,-.002,r,r*.98],[-length*.48,0,-.005,r*.96,r*.94],[-length*.70,0,-.009,r*.92,r*.90],[-length*.84,0,-.012,r*.86,r*.84],[-length*.94,0,-.014,r*.64,r*.64],[-length*.985,0,-.014,r*.30,r*.30],[-length,0,-.014,.0003,.0003]]);
  }
- const thumb=new THREE.Group();thumb.position.set(-.043,-.008,-.037);thumb.rotation.y=.71;thumb.rotation.z=-.26;hand.add(thumb);
- skinForm(thumb,[[.018,0,0,.031,.028],[0,0,0,.030,.028],[-.024,-.003,0,.027,.025],[-.046,-.005,.002,.024,.023],[-.065,-.006,.002,.023,.022],[-.081,-.006,.001,.019,.018],[-.092,-.006,0,.011,.011],[-.097,-.006,0,.0003,.0003]]);
+ const thumb=new THREE.Group();thumb.position.set(-.049,-.008,-.041);thumb.rotation.y=.88;thumb.rotation.z=-.26;hand.add(thumb);
+ skinForm(thumb,[[.018,0,0,.033,.030],[0,0,0,.032,.030],[-.027,-.003,0,.029,.027],[-.051,-.005,.002,.026,.025],[-.072,-.006,.002,.025,.024],[-.089,-.006,.001,.021,.020],[-.101,-.006,0,.012,.012],[-.107,-.006,0,.0003,.0003]]);
  const restraint=new THREE.Group();restraint.name='Wrist cuff and chain — right-click to detach';restraint.userData.playerChain=true;space.add(restraint);
  const cuff=new THREE.Group();cuff.name='Close-fitting oval wrist cuff';restraint.add(cuff);
  const hingeX=-.044;
@@ -89,9 +89,10 @@ export function createPlayerRestraint(camera){
  const links=new THREE.InstancedMesh(linkGeo,edge,360);links.name='Heavy interlocking wrist chain';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;restraint.add(links);
  const pickLinks=new THREE.InstancedMesh(new THREE.SphereGeometry(1,8,6),invisible,360);pickLinks.frustumCulled=false;restraint.add(pickLinks);
  const wrist=new THREE.Vector3(),elbow=new THREE.Vector3(),shoulder=new THREE.Vector3(),start=new THREE.Vector3(),delta=new THREE.Vector3(),tangent=new THREE.Vector3(),dummy=new THREE.Object3D();
- const restWrist=new THREE.Vector3(.29,-.30,-.78),restElbow=new THREE.Vector3(.48,-.43,-.56);
- const chainedReach=new THREE.Vector3(.13,-.27,-.87),freeReach=new THREE.Vector3(-.14,-.31,-.97),worldPoint=new THREE.Vector3();
- const reachElbow=new THREE.Vector3(.41,-.35,-.64),freeElbow=new THREE.Vector3(.15,-.39,-.78),shoulderOffset=new THREE.Vector3(.12,-.34,.22),boneAxis=new THREE.Vector3(0,0,-1);
+ // A shorter reach keeps the hand close and the elbow below the camera frame.
+ const restWrist=new THREE.Vector3(.29,-.36,-.73),restElbow=new THREE.Vector3(.45,-.65,-.50);
+ const chainedReach=new THREE.Vector3(.15,-.31,-.77),freeReach=new THREE.Vector3(-.08,-.32,-.83),worldPoint=new THREE.Vector3();
+ const reachElbow=new THREE.Vector3(.43,-.66,-.54),freeElbow=new THREE.Vector3(.22,-.68,-.58),shoulderOffset=new THREE.Vector3(.12,-.34,-.05),boneAxis=new THREE.Vector3(0,0,-1);
  const releasedWrist=new THREE.Vector3(),releasedElbow=new THREE.Vector3(),releasedRotation=new THREE.Quaternion(),releasedCuffRotation=new THREE.Quaternion();
  let hasReleasePose=false;
  let chainLength=3;

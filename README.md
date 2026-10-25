@@ -47,3 +47,5 @@ The reaching hand uses rounded cartoon proportions, cel shading, and dark silhou
 Each glass canister carries the supplied #OPENTOWORK decal, wrapped to the curved front with a transparent center. A gently bobbing Figpal-shaped skull sits inside each opening; limited drift keeps the skulls framed, while the tanks retain their different sets of loose bones.
 
 The fallen mobile rests low on the floor: its animals lie on gently compressed bodies instead of balancing on projecting paws, the bent support lies flat, and the loose crossbar ends and cords touch the surface. Contact shadows conform to the concrete and carpet beneath each plush.
+
+The reaching hand has a slightly larger palm and fingers with a relaxed spread. Its shorter camera-relative reach keeps the elbow below the frame, including the unlocked reach; the wrist size and hinged cuff remain fitted.
