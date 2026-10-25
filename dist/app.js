@@ -302,12 +302,12 @@ for(const side of[-1,1]){
 }
 const knot=mesh(new THREE.SphereGeometry(1,24,16),ribbonMaterial,bowTie);knot.position.set(0,0,.07);knot.scale.set(.105,.12,.075);
 
-// Half-size Figsaw rides from the shadowed coffee corner into the open aisle.
+// Half-size Figsaw rides from the shadowed coffee corner into the ceiling light's central pool.
 const modelScale=.26,groundOffset=-.53*modelScale+.012;
 model.scale.setScalar(modelScale);
 const entrancePath=new THREE.CatmullRomCurve3([
  [2.45,groundOffset,-2.40],[1.70,groundOffset,-2.20],[.90,groundOffset,-1.65],
- [-.05,groundOffset,-1.10],[-.88,groundOffset,.30],[-.60,groundOffset,1.22]
+ [.35,groundOffset,-1.10],[.24,groundOffset,-.66],[.12,groundOffset,.10]
 ].map(point=>new THREE.Vector3(...point)),false,'centripetal');
 entrancePath.arcLengthDivisions=240;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
