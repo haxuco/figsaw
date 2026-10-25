@@ -1,7 +1,8 @@
 import * as THREE from './vendor/three.module.js';
+import { settleOnFloor, drapeFloorCable } from './floor-contact.js';
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
-export function createFallenMobile(viewerPosition){
+export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
@@ -69,19 +70,22 @@ export function createFallenMobile(viewerPosition){
   return {object:g,tab};
  }
  // The support has toppled as one piece; the clamp, bent arch and music box lie low.
- box([.16,.055,.12],[-.60,.048,.48],agedIvory);
- box([.12,.028,.10],[-.60,.094,.48],agedIvory);
- rod([-.60,.074,.48],[-.60,.16,.48],.012,metal);
- ball([-.60,.163,.48],[.043,.012,.020],agedIvory,group);
- line([[-.59,.075,.44],[-.63,.082,.10],[-.48,.085,-.30],[-.20,.19,-.47],[.12,.23,-.39],[.19,.13,-.13],[.04,.105,0]],.013,agedIvory);
+ const stand=new THREE.Group();stand.name='Toppled mobile support';group.add(stand);
+ box([.16,.055,.12],[-.60,.048,.48],agedIvory,stand);
+ box([.12,.028,.10],[-.60,.094,.48],agedIvory,stand);
+ rod([-.60,.074,.48],[-.60,.16,.48],.012,metal,stand);
+ ball([-.60,.163,.48],[.043,.012,.020],agedIvory,stand);
+ line([[-.59,.075,.44],[-.63,.082,.10],[-.48,.085,-.30],[-.20,.19,-.47],[.12,.23,-.39],[.19,.13,-.13],[.04,.105,0]],.013,agedIvory,stand);
+ settleOnFloor(stand,floorSupport);
  const hub=new THREE.Group();hub.name='Scuffed mobile music box';hub.position.set(0,.116,0);hub.rotation.set(.21,0,-.18);group.add(hub);
  const drum=mesh(new THREE.CylinderGeometry(.103,.103,.068,40),agedIvory,hub);
  const seam=mesh(new THREE.TorusGeometry(.103,.002,6,40),thread,hub);seam.rotation.x=Math.PI/2;
  const button=ball([0,.039,0],[.034,.009,.034],ochre,hub);
  for(let j=0;j<5;j++)box([.030,.002,.002],[-.049+j*.019,.035,.041],thread,hub);
  rod([0,-.02,-.093],[0,-.02,-.145],.005,metal,hub);ball([0,-.02,-.150],[.026,.012,.005],metal,hub);
- group.updateMatrixWorld(true);hub.position.y+=.021-new THREE.Box3().setFromObject(hub,true).min.y;
+ group.updateMatrixWorld(true);settleOnFloor(hub,floorSupport);
  const ends=[[-.37,.068,.035],[.34,.103,-.025],[.018,.058,-.33],[-.025,.075,.34]];
+ for(const end of ends)end[1]=Math.max(floorSupport(group.position.x+end[0],group.position.z+end[2])+.008,end[1]-.039);
  rod(ends[0],ends[1],.007,metal);rod(ends[2],ends[3],.007,metal);
  for(const p of ends){const ring=mesh(new THREE.TorusGeometry(.014,.003,6,16),metal);ring.rotation.x=Math.PI/2;ring.position.set(...p);}
  const placements=[
@@ -94,12 +98,12 @@ export function createFallenMobile(viewerPosition){
   const {object,tab}=makeAnimal(p.kind);object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
   const toward=Math.atan2(viewerPosition.x-(group.position.x+p.x),viewerPosition.z-(group.position.z+p.z));
   object.rotation.set(p.kind==='Pig'?-.12:.08,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
-  group.updateMatrixWorld(true);object.position.y=.021-new THREE.Box3().setFromObject(object,true).min.y;group.updateMatrixWorld(true);
+  group.updateMatrixWorld(true);settleOnFloor(object,floorSupport);group.updateMatrixWorld(true);
   const end=group.worldToLocal(tab.getWorldPosition(new THREE.Vector3())),start=ends[p.arm];
-  line([start,[start[0]+.06,.024,start[2]+.08],[(start[0]+end.x)/2-.05,.023,(start[2]+end.z)/2+.08],[end.x-.04,.025,end.z+.035],end.toArray()],.0021,cord);
+  const string=line([start,[start[0]+.06,.024,start[2]+.08],[(start[0]+end.x)/2-.05,.023,(start[2]+end.z)/2+.08],[end.x-.04,.025,end.z+.035],end.toArray()],.0021,cord);string.userData.anchorStart=string.userData.anchorEnd=true;drapeFloorCable(string,floorSupport);
   // Faint contact shadow keeps the dropped toys visually grounded in the clutter.
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),fade=sc.createRadialGradient(32,32,1,32,32,32);fade.addColorStop(0,'rgba(0,0,0,.42)');fade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=fade;sc.fillRect(0,0,64,64);
-  const shadow=mesh(new THREE.PlaneGeometry(.42,.48),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.rotation.z=-object.rotation.y;shadow.position.set(p.x,.019,p.z);shadow.castShadow=false;
+  const shadow=mesh(new THREE.PlaneGeometry(.42,.48),new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.rotation.x=-Math.PI/2;shadow.rotation.z=-object.rotation.y;shadow.position.set(p.x,floorSupport(group.position.x+p.x,group.position.z+p.z)+.0002,p.z);shadow.castShadow=false;
  }
  return group;
 }

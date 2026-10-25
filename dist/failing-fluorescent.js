@@ -1,29 +1,41 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal } from './industrial-materials.js?v=brighter-liquid';
 
-// Hard ballast cutouts and abrupt restarts, in short irregular clusters.
-// Each tube has a small independent delay, with long steady stretches between failures.
-const failureEvents=[
- [3.70,.15,.015],[4.22,.22,0],[4.96,.34,.025],
- [10.20,.94,0],[11.62,.16,.02],[12.25,.28,.04],
- [19.40,.18,0],[20.03,.25,.025],[21.05,.68,0],[25.10,.24,.06]
-];
+// Seeded ballast faults: new uneven bursts every cycle, not a repeating metronome.
+const eventCache=new Map(),cycleLength=31.7;
+function failureEvents(cycle){
+ if(eventCache.has(cycle))return eventCache.get(cycle);
+ let seed=(0x93ad23+Math.imul(cycle,2654435761))>>>0;
+ const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const events=[];let start=.65+random()*1.4;
+ while(start<cycleLength-2){
+  const count=2+Math.floor(random()*5);
+  for(let i=0;i<count;i++){
+   const duration=.028+random()*.072;
+   events.push([start,duration,random()*.045,random()>.23]);
+   start+=duration+.045+random()*.16;
+  }
+  if(random()<.42){events.push([start,.22+random()*.40,.005,true]);start+=.75;}
+  start+=1.3+random()*4.2;
+ }
+ // Retain only nearby cycles; long-running countdown sessions do not grow the cache.
+ if(eventCache.size>4)eventCache.delete(eventCache.keys().next().value);
+ eventCache.set(cycle,events);return events;
+}
 export function fluorescentLevels(time,reducedMotion=false){
  if(reducedMotion)return [.88,.79];
+ const cycle=Math.floor(time/cycleLength),t=time-cycle*cycleLength,events=failureEvents(cycle);
  return [0,1].map(index=>{
-  const t=((time+index*.055)%27.8+27.8)%27.8;
   let level=index?.79:.88;
-  for(let i=0;i<failureEvents.length;i++){
-   const [start,duration,low]=failureEvents[i];if(index===1&&i===4)continue;
-   if(t>=start&&t<start+duration){
-    const edge=Math.min((t-start)/.008,(start+duration-t)/.014,1);
+  for(let i=0;i<events.length;i++){
+   const [base,duration,low,both]=events[i];if(index===1&&!both)continue;
+   const start=base+(index?((i%3)-1)*.013:0),end=start+duration;
+   if(t>=start&&t<end){
+    const edge=Math.min((t-start)/.003,(end-t)/.005,1);
     level=THREE.MathUtils.lerp(level,low,Math.max(0,edge));
-   }else if(t>=start+duration&&t<start+duration+.075){
-    // A brief striking surge, then an immediate return to the normal output.
-    level*=1+.12*(1-(t-start-duration)/.075);
-   }
+   }else if(t>=end&&t<end+.025){level*=1+.16*(1-(t-end)/.025);}
   }
-  return level*(.98+.02*Math.sin(time*1.7+index));
+  return level*(.985+.015*Math.sin(time*8.7+index));
  });
 }
 export function createFailingFluorescent(){

@@ -1,8 +1,8 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 import { figpalSwayPose } from './character-motion.js';
-import { createFloatingBones } from './floating-bones.js?v=varied-remains';
-import { createFigpalTransformation } from './figpal-transformation.js';
+import { createFloatingBones } from './floating-bones.js?v=comical-skulls';
+import { createFigpalTransformation } from './figpal-transformation.js?v=comical-skulls';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // All shapes, markings, glass, liquid and wear are local procedural assets.

@@ -1,14 +1,17 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js?v=skeletal-figpals';
+import { createFigpalVats } from './figpal-vats.js?v=comical-skulls';
 
-import { createFallenMobile } from './fallen-mobile.js?v=left-rear';
-import { createFailingFluorescent } from './failing-fluorescent.js?v=hard-cutouts';
+import { createFallenMobile } from './fallen-mobile.js?v=ground-contact';
+import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
 import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
+import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-contact.js';
 import { drawFigmaMark } from './figma-mark.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
+ const floorProps=[],floorCables=[];
+ const onFloor=object=>{floorProps.push(object);return object;};
  let seed=87021;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const range=(a,b)=>a+(b-a)*random();
  function canvas(size=512){const c=document.createElement('canvas');c.width=c.height=size;return[c,c.getContext('2d')];}
@@ -32,7 +35,7 @@ export function createOffice(renderer,viewerPosition){
  function sphere(size,pos,mat,parent=office){const m=mesh(new THREE.SphereGeometry(1,20,12),mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
  function cylinder(radius,height,pos,mat=steel,parent=office,segments=12){const m=mesh(new THREE.CylinderGeometry(radius,radius,height,segments),mat,parent);m.position.set(...pos);return m;}
  function rod(a,b,r=.015,mat=steel,parent=office){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start);const m=cylinder(r,direction.length(),start.clone().add(end).multiplyScalar(.5).toArray(),mat,parent);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());return m;}
- function cable(points,r=.008,mat=black,parent=office){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));return mesh(new THREE.TubeGeometry(curve,Math.max(20,points.length*8),r,6,false),mat,parent);}
+ function cable(points,r=.008,mat=black,parent=office){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const wire=mesh(new THREE.TubeGeometry(curve,Math.max(20,points.length*8),r,6,false),mat,parent);if(parent===office&&points.some(p=>p[1]<.06))floorCables.push(wire);return wire;}
  function bevelBox(w,h,d,r=.025){r=Math.min(r,w*.45,h*.45);const s=new THREE.Shape();const x=w/2,y=h/2;s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.quadraticCurveTo(x,-y,x,-y+r);s.lineTo(x,y-r);s.quadraticCurveTo(x,y,x-r,y);s.lineTo(-x+r,y);s.quadraticCurveTo(-x,y,-x,y-r);s.lineTo(-x,-y+r);s.quadraticCurveTo(-x,-y,-x+r,-y);const b=Math.min(.012,w/6,h/6,d/6),g=new THREE.ExtrudeGeometry(s,{depth:d-b*2,bevelEnabled:true,bevelSize:b,bevelThickness:b,bevelSegments:2,steps:1,curveSegments:4});g.translate(0,0,-d/2+b);return g;}
  function rounded(size,pos,mat,parent=office){const m=mesh(bevelBox(...size),mat,parent);m.position.set(...pos);return m;}
  function dirtOverlay(width,height,parent,floor=false){const[c,ctx]=canvas(1024);
@@ -41,7 +44,7 @@ export function createOffice(renderer,viewerPosition){
   speckle(ctx,1024,17000,'16,25,17',.28);const m=mesh(new THREE.PlaneGeometry(width,height),new THREE.MeshStandardMaterial({map:texture(c),transparent:true,depthWrite:false,roughness:1}),parent);m.castShadow=false;return m;
  }
  // A decayed office shell, rather than bathroom tiles: plaster, wall panels and old carpet.
- box([7.8,.15,8.6],[0,-.085,.2],concrete);
+ box([7.8,.15,8.6],[0,-.075,.2],concrete);
  const floorDirt=dirtOverlay(7.8,8.6,office,true);floorDirt.rotation.x=-Math.PI/2;floorDirt.position.set(0,.003,.2);
  const backWall=box([7.8,3.35,.16],[0,1.675,-4.08],plaster);
  const leftWall=box([.16,3.35,8.6],[-3.98,1.675,.2],material(0x829085,.98,plasterMap));
@@ -88,7 +91,7 @@ export function createOffice(renderer,viewerPosition){
   box([.18,.16,.032],[0,.36,-.03],monitorMetal,group);
   sphere([.004,.004,.003],[.35,.163,.022],type==='live'?new THREE.MeshBasicMaterial({color:0x8cbb60}):black,group);
   for(let i=0;i<11;i++)box([.015,.002,.003],[-.25+i*.05,.585,-.020],steel,group);
-  cable([[.10,.23,-.05],[.15,.04,-.08],[.23,-.31,-.18]],.006,black,group);return group;
+  const powerCable=cable([[.10,.23,-.05],[.15,.04,-.08],[.23,-.31,-.18]],.006,black,group);powerCable.name='Monitor power cable';powerCable.userData.ignoreFloorContact=true;return group;
  }
  const keyGeometry=new THREE.BoxGeometry(.023,.008,.023);
  function keyboard(parent,pos,angle=0){const group=new THREE.Group();group.position.set(...pos);group.rotation.y=angle;parent.add(group);rounded([.47,.035,.18],[0,0,0],plastic,group);
@@ -110,10 +113,10 @@ export function createOffice(renderer,viewerPosition){
  const sideDesk=desk(-1.10,-2.25,2.6,0);
  for(let i=0;i<3;i++){monitor(sideDesk,[-.84+i*.83,.86,-.10],range(-.2,.2),i===0?'live':'hole',.9);keyboard(sideDesk,[-.84+i*.83,.87,.30],range(-.2,.2));}
  // Fallen hardware and open cases are actual objects, not floor decals.
- const fallen=monitor(office,[-.80,.31,-1.45],.42,'hole',.95);fallen.rotation.z=.21;
- const tipped=monitor(office,[-2.72,.24,2.58],-.45,'cracked',.73);tipped.rotation.x=-.56;tipped.rotation.z=.24;
- const looseTower=tower(office,[-2.22,.13,-.72],.35,true);looseTower.rotation.z=Math.PI/2;
- for(let i=0;i<3;i++)tower(office,[-3.32,0,-2.45+i*.31],-.18,true).scale.setScalar(.90);
+ const fallen=monitor(office,[-.80,.31,-1.45],.42,'hole',.95);fallen.rotation.set(-1.38,.42,.21);onFloor(fallen);
+ const tipped=monitor(office,[-2.72,.24,2.58],-.45,'cracked',.73);tipped.rotation.x=-.56;tipped.rotation.z=.24;onFloor(tipped);
+ const looseTower=tower(office,[-2.22,.13,-.72],.35,true);looseTower.rotation.z=Math.PI/2;onFloor(looseTower);
+ for(let i=0;i<3;i++)onFloor(tower(office,[-3.32,0,-2.45+i*.31],-.18,true)).scale.setScalar(.90);
 
  // Aeron-inspired chairs: curved open mesh, broad back shells, lumbar supports and cast bases.
  // Keep their wear generation independent of the established room's random layout.
@@ -175,6 +178,7 @@ export function createOffice(renderer,viewerPosition){
   const wheel=new THREE.Group();wheel.position.set(x,y,z);wheel.rotation.y=angle;parent.add(wheel);
   rod([0,.028,0],[0,.078,.015],.012,chairMetal,wheel);
   for(const side of[-1,1]){const tire=cylinder(.039,.022,[side*.021,0,0],rubber,wheel,16);tire.rotation.z=Math.PI/2;sphere([.002,.018,.018],[side*.033,0,0],chairEdge,wheel);}
+  return wheel;
  }
  function chairBase(parent,missing=-1){
   const base=new THREE.Group();base.name='Five-spoke caster base';parent.add(base);
@@ -189,7 +193,7 @@ export function createOffice(renderer,viewerPosition){
  }
  function settleChairPart(group,x,z,rotation){
   group.position.set(x,0,z);group.rotation.set(...rotation);group.updateMatrixWorld(true);
-  group.position.y=.012-new THREE.Box3().setFromObject(group).min.y;return group;
+  return onFloor(group);
  }
  function aeronChair(x,z,rotation,damage={}){
   const g=new THREE.Group();g.name='Broken Aeron-style mesh chair';office.add(g);
@@ -214,7 +218,7 @@ export function createOffice(renderer,viewerPosition){
  const looseBase=chairBase(office,1);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
  const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-.75,2.30,[-1.60,.22,-.40]);
  const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
- chairCaster(office,2.37,.045,2.84,.7);chairCaster(office,-2.15,.045,.95,-.4);
+ onFloor(chairCaster(office,2.37,.045,2.84,.7));onFloor(chairCaster(office,-2.15,.045,.95,-.4));
  seed=roomSeed;
  for(let i=0;i<11;i++){const x=range(-3.3,.9),z=range(-3,-1);cable([[x,.83,z],[x+.15,.52,z+.2],[x-.12,.04,z+.45],[x+.31,.022,z+.83],[x+.62,.02,z+.47]],.009,black);}
  // Loose network cables snake across the clear central aisle.
@@ -318,7 +322,7 @@ export function createOffice(renderer,viewerPosition){
  const speakerDots=new THREE.InstancedMesh(new THREE.CircleGeometry(.0012,5),black,480);
  for(let i=0;i<480;i++){const o=new THREE.Object3D(),side=i<240?-1:1,j=i%240;o.position.set(side*(.355+(j%8)*.006),.017,-.196+Math.floor(j/8)*.0085);o.rotation.x=-Math.PI/2;o.updateMatrix();speakerDots.setMatrixAt(i,o.matrix);}laptop.add(speakerDots);
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
- cable([[-.445,.002,-.19],[-.56,-.010,-.20],[-.72,-.016,-.06],[-.83,-.016,.21],[-1.12,-.016,.48]],.006,black,laptop);
+ const charger=cable([[-.445,.002,-.19],[-.56,-.010,-.20],[-.72,-.016,-.06],[-.83,-.016,.21],[-1.12,-.016,.48]],.006,black,laptop);charger.userData.ignoreFloorContact=true;charger.userData.anchorStart=true;floorCables.push(charger);
  const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
  const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
  let laptopOpened=false,laptopProgress=0;
@@ -347,11 +351,12 @@ export function createOffice(renderer,viewerPosition){
   const p=sheet.geometry.attributes.position;for(let j=0;j<p.count;j++)p.setZ(j,Math.abs(Math.sin(p.getX(j)*33+crease)*Math.sin(p.getY(j)*24+curl))*.0015+oldHeight*.008);
   floorPapers.push(sheet);
  }
- for(let i=0;i<95;i++){let x=range(-3.65,3.65),z=range(-3.7,4);if(Math.abs(x)<.8&&z>-.8&&z<1.3)x-=1.7;const piece=box([range(.025,.17),range(.015,.065),range(.035,.20)],[x,range(.025,.055),z],debrisMats[i%4]);piece.rotation.set(range(-.13,.13),random()*Math.PI*2,range(-.13,.13));}
- for(let i=0;i<9;i++){const chip=new THREE.Group();chip.position.set(range(-3,3),.028,range(-2,3));chip.rotation.y=random()*6;office.add(chip);box([.18,.012,.24],[0,0,0],board,chip);for(let j=0;j<4;j++)box([.035,.017,.05],[-.055+(j%2)*.10,.013,-.07+Math.floor(j/2)*.12],black,chip);}
- for(let i=0;i<12;i++){const p=box([.09,.018,.09],[range(-3.5,3.5),.03,range(-3.4,3.7)],black);p.rotation.y=random()*6;box([.06,.003,.03],[p.position.x,.041,p.position.z],plastic).rotation.y=p.rotation.y;}
+ for(let i=0;i<95;i++){let x=range(-3.65,3.65),z=range(-3.7,4);if(Math.abs(x)<.8&&z>-.8&&z<1.3)x-=1.7;const piece=box([range(.025,.17),range(.015,.065),range(.035,.20)],[x,range(.025,.055),z],debrisMats[i%4]);piece.rotation.set(range(-.13,.13),random()*Math.PI*2,range(-.13,.13));piece.name='Fallen casing fragment';onFloor(piece);}
+ for(let i=0;i<9;i++){const chip=new THREE.Group();chip.position.set(range(-3,3),.028,range(-2,3));chip.rotation.y=random()*6;office.add(chip);chip.name='Loose circuit board';onFloor(chip);box([.18,.012,.24],[0,0,0],board,chip);for(let j=0;j<4;j++)box([.035,.017,.05],[-.055+(j%2)*.10,.013,-.07+Math.floor(j/2)*.12],black,chip);}
+ for(let i=0;i<12;i++){const p=box([.09,.018,.09],[range(-3.5,3.5),.03,range(-3.4,3.7)],black);p.rotation.y=random()*6;box([.06,.003,.03],[0,.011,0],plastic,p);p.name='Broken key cap';onFloor(p);}
  // A few torn carpet squares and lifted corners break up the concrete floor.
  for(let i=0;i<14;i++){const p=box([range(.3,.7),.012,range(.3,.8)],[range(-3.4,3.4),.007,range(-3.5,3.7)],material(i%2?0x888c7c:0x9b9a85,.98,fabricMap));p.rotation.y=range(-.15,.15);carpetPatches.push(p);}
+ const floorSupport=createFloorSupport(carpetPatches);
 
  // Product-design whiteboards: screen layouts, mobile flows, notes and erased marker smears.
  // Uneven eraser passes leave ghost lines; dirt and drips collect around the frames.
@@ -478,7 +483,7 @@ export function createOffice(renderer,viewerPosition){
  }
  function bottleShell(profile,mat,parent,depth=1){const body=mesh(new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),48),mat,parent);body.scale.z=depth;return body;}
  function placeBottle(bottle,x,z,rotation,center,scale){
-  const pose=new THREE.Group();pose.name=bottle.name;pose.add(bottle);bottle.position.y=-center;office.add(pose);pose.position.set(x,0,z);pose.rotation.set(...rotation);pose.scale.setScalar(scale);pose.updateMatrixWorld(true);pose.position.y=.006-new THREE.Box3().setFromObject(pose,true).min.y;return pose;
+  const pose=new THREE.Group();pose.name=bottle.name;pose.add(bottle);bottle.position.y=-center;office.add(pose);pose.position.set(x,0,z);pose.rotation.set(...rotation);pose.scale.setScalar(scale);pose.updateMatrixWorld(true);return settleOnFloor(pose,floorSupport);
  }
  const glassKetchup=new THREE.Group();glassKetchup.name='Discarded glass ketchup bottle';
  const glassProfile=[[0,0],[.063,0],[.076,.014],[.080,.047],[.079,.19],[.069,.267],[.049,.342],[.030,.410],[.029,.447],[.033,.454],[.032,.471],[0,.471]];
@@ -534,19 +539,19 @@ export function createOffice(renderer,viewerPosition){
  const mugPose=new THREE.Group();mugPose.name='Spilled animal mug in the left foreground';mugPose.add(earMug);earMug.position.y=-.135;office.add(mugPose);
  const mouthAxis=new THREE.Vector3(-.55,-.05,.83).normalize(),faceAxis=new THREE.Vector3(.54,.66,.39);faceAxis.addScaledVector(mouthAxis,-faceAxis.dot(mouthAxis)).normalize();
  const sideAxis=new THREE.Vector3().crossVectors(mouthAxis,faceAxis).normalize();mugPose.quaternion.setFromRotationMatrix(new THREE.Matrix4().makeBasis(sideAxis,mouthAxis,faceAxis));
- mugPose.scale.setScalar(.72);mugPose.position.set(.24,0,3.02);mugPose.updateMatrixWorld(true);mugPose.position.y=.012-new THREE.Box3().setFromObject(mugPose,true).min.y;mugPose.updateMatrixWorld(true);
+ mugPose.scale.setScalar(.72);mugPose.position.set(.24,0,3.02);mugPose.updateMatrixWorld(true);settleOnFloor(mugPose,floorSupport);mugPose.updateMatrixWorld(true);
  // Find the lowest point of the open rim so the spill visibly meets the cup.
  const rimSlope=Math.hypot(sideAxis.y,faceAxis.y),rimPoint=earMug.localToWorld(new THREE.Vector3(-.134*sideAxis.y/rimSlope,.254,-.134*faceAxis.y/rimSlope));
- const spillDirection=new THREE.Vector3(mouthAxis.x,0,mouthAxis.z).normalize(),poolCenter=rimPoint.clone().addScaledVector(spillDirection,.23);poolCenter.y=.018;
+ const spillDirection=new THREE.Vector3(mouthAxis.x,0,mouthAxis.z).normalize(),poolCenter=rimPoint.clone().addScaledVector(spillDirection,.23);poolCenter.y=floorSupport(poolCenter.x,poolCenter.z)+.001;
  const wetCoffee=new THREE.MeshPhysicalMaterial({color:0x51402b,roughness:.13,metalness:.04,clearcoat:1,clearcoatRoughness:.08,transparent:true,opacity:.94,side:THREE.DoubleSide});
  const coffeeEdge=new THREE.MeshStandardMaterial({color:0x8a7049,roughness:.40,transparent:true,opacity:.68,depthWrite:false,side:THREE.DoubleSide});
  function coffeePuddle(x,z,rx,rz,phase=0){
   const outline=new THREE.Shape();for(let i=0;i<=80;i++){const a=i/80*Math.PI*2,r=1+.11*Math.sin(a*3+phase)+.065*Math.sin(a*7-.3)+.025*Math.cos(a*13),xx=Math.cos(a)*rx*r,zz=Math.sin(a)*rz*r;i?outline.lineTo(xx,zz):outline.moveTo(xx,zz);}outline.closePath();
-  const geometry=new THREE.ShapeGeometry(outline,32),edge=mesh(geometry,coffeeEdge);edge.rotation.x=-Math.PI/2;edge.scale.setScalar(1.045);edge.position.set(x,.015,z);edge.castShadow=false;
-  const puddle=mesh(geometry,wetCoffee);puddle.rotation.x=-Math.PI/2;puddle.position.set(x,.019,z);puddle.castShadow=false;return puddle;
+  const geometry=new THREE.ShapeGeometry(outline,32),edge=mesh(geometry,coffeeEdge);edge.rotation.x=-Math.PI/2;edge.scale.setScalar(1.045);edge.position.set(x,floorSupport(x,z)+.0005,z);edge.castShadow=false;
+  const puddle=mesh(geometry,wetCoffee);puddle.rotation.x=-Math.PI/2;puddle.position.set(x,floorSupport(x,z)+.001,z);puddle.castShadow=false;return puddle;
  }
  coffeePuddle(poolCenter.x,poolCenter.z,.23,.145,.4);
- const lipFloor=rimPoint.clone();lipFloor.y=.021;
+ const lipFloor=rimPoint.clone();lipFloor.y=floorSupport(lipFloor.x,lipFloor.z)+.008;
  cable([rimPoint.toArray(),lipFloor.toArray(),lipFloor.clone().addScaledVector(spillDirection,.09).toArray(),poolCenter.toArray()],.008,wetCoffee);
  for(const[distance,side,radius]of[[.45,.10,.018],[.51,-.07,.012],[.37,-.18,.022],[.29,.21,.009]]){
   const drop=rimPoint.clone().addScaledVector(spillDirection,distance).add(new THREE.Vector3(-spillDirection.z*side,0,spillDirection.x*side));coffeePuddle(drop.x,drop.z,radius,radius*.65,distance*3);
@@ -711,7 +716,17 @@ export function createOffice(renderer,viewerPosition){
  const fadedRed=material(0x7e3629,.78,metalMap,.23);cylinder(.095,.42,[0,.25,0],fadedRed,extinguisher,24);sphere([.095,.065,.095],[0,.47,0],fadedRed,extinguisher);sphere([.093,.045,.093],[0,.04,0],fadedRed,extinguisher);
  box([.11,.025,.055],[.015,.56,0],black,extinguisher);rod([0,.51,0],[0,.57,0],.018,silver,extinguisher);cable([[.035,.52,0],[.12,.47,.02],[.13,.19,.06]],.012,black,extinguisher);
  wallLabel('FIRE',.12,.14,extinguisher,[0,.27,.097],'#b4ac8c','#33382d');
- office.add(createFallenMobile(viewerPosition));
+ // Ground complete rigid objects after their final rotations and all carpet are known.
+ floorProps.push(backDesk,sideDesk,coffee,game,fallenLeg,brokenPlank,laptop,countdown.group,partition,library,filing,extinguisher);
+ for(const prop of floorProps)settleOnFloor(prop,floorSupport);
+ for(const monitor of[fallen,tipped]){
+  const old=monitor.getObjectByName('Monitor power cable');monitor.remove(old);old.geometry.dispose();
+  const start=monitor.localToWorld(new THREE.Vector3(.10,.23,-.05)),x=start.x,z=start.z;
+  const wire=cable([start.toArray(),[x+.09,Math.max(floorSupport(x+.09,z+.10)+.008,start.y*.45),z+.10],[x+.20,floorSupport(x+.20,z+.20)+.007,z+.20],[x+.38,floorSupport(x+.38,z+.11)+.007,z+.11]],.006,black);
+  wire.userData.ignoreFloorContact=true;wire.userData.anchorStart=true;
+ }
+ for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
+ office.add(createFallenMobile(viewerPosition,floorSupport));
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
  function setEnvironment(map){displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}

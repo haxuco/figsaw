@@ -58,19 +58,23 @@ export function createJaw(){
  return object;
 }
 export function createSkull(){
- const object=new THREE.Group();object.name='Weathered skull with hollow eye sockets';
- // The face is perforated geometry, with its dark inner cavity recessed behind it.
- const face=new THREE.Shape();face.moveTo(-.077,-.065);face.quadraticCurveTo(-.121,-.025,-.106,.058);face.bezierCurveTo(-.103,.150,.105,.150,.106,.058);face.quadraticCurveTo(.121,-.025,.077,-.065);face.lineTo(.047,-.086);face.lineTo(-.047,-.086);face.closePath();
- for(const side of[-1,1]){const hole=new THREE.Path();hole.absellipse(side*.043,.013,.027,.031,0,Math.PI*2,true,side*.10);face.holes.push(hole);}
- const nose=new THREE.Path();nose.moveTo(0,-.018);nose.lineTo(-.013,-.049);nose.quadraticCurveTo(0,-.044,.013,-.049);nose.closePath();face.holes.push(nose);
+ const object=new THREE.Group();object.name='Goofy buck-toothed skull with wonky eye sockets';
+ // A broad domed forehead and unequal hollow sockets give these a comic expression.
+ const face=new THREE.Shape();face.moveTo(-.076,-.061);face.quadraticCurveTo(-.133,-.035,-.121,.067);face.bezierCurveTo(-.119,.171,.123,.165,.120,.060);face.quadraticCurveTo(.136,-.029,.077,-.061);face.lineTo(.047,-.071);face.lineTo(-.047,-.073);face.closePath();
+ for(const [x,y,rx,ry,tilt]of[[-.052,.019,.039,.043,-.20],[.052,.011,.033,.035,.18]]){const hole=new THREE.Path();hole.absellipse(x,y,rx,ry,0,Math.PI*2,true,tilt);face.holes.push(hole);}
+ const nose=new THREE.Path();nose.moveTo(.001,-.026);nose.lineTo(-.012,-.050);nose.quadraticCurveTo(.001,-.045,.013,-.050);nose.closePath();face.holes.push(nose);
  const plate=mesh(new THREE.ExtrudeGeometry(face,{depth:.022,bevelEnabled:true,bevelSize:.004,bevelThickness:.004,bevelSegments:2,steps:1,curveSegments:20}),object);plate.position.z=.043;
- ball(object,[0,.025,-.055],[.107,.113,.075]);
- ball(object,[0,.012,.027],[.090,.080,.010],cavityMaterial);
- for(const side of[-1,1])tube(object,[[side*.093,-.027,.041],[side*.090,-.053,.051],[side*.058,-.066,.059]],.012);
- for(let i=0;i<7;i++){const tooth=mesh(new THREE.BoxGeometry(.012,.019+(i%2)*.003,.015),object);tooth.position.set((i-3)*.015,-.089,.064);}
- const jaw=createJaw();jaw.position.set(0,-.071,-.005);object.add(jaw);
- // A faint sutural seam follows the crown; cavities remain deep and matte.
- tube(object,[[-.009,.135,-.016],[.003,.134,.003],[-.004,.126,.025],[.005,.115,.042]],.0016).material=cavityMaterial;
+ ball(object,[0,.040,-.055],[.120,.121,.077]);
+ ball(object,[0,.012,.027],[.109,.093,.010],cavityMaterial);
+ for(const side of[-1,1])ball(object,[side*.093,-.042,.047],[.028,.022,.025]);
+ // Two oversized crooked front teeth, gaps, and tiny side teeth replace the neat dental row.
+ for(const [x,y,w,h,tilt]of[[-.019,-.084,.028,.042,-.11],[.017,-.080,.027,.036,.17],[-.060,-.073,.014,.018,-.28],[.060,-.071,.012,.015,.23]]){
+  const tooth=mesh(new THREE.BoxGeometry(w,h,.018),object);tooth.position.set(x,y,.064);tooth.rotation.z=tilt;
+ }
+ const jaw=new THREE.Group();jaw.name='Lopsided cartoon jaw';jaw.position.set(.004,-.071,-.003);jaw.rotation.z=-.12;object.add(jaw);
+ tube(jaw,[[-.087,.040,-.025],[-.083,-.025,.037],[-.047,-.053,.071],[0,-.056,.079],[.051,-.048,.068],[.085,-.022,.033],[.087,.040,-.025]],.014);
+ for(const [x,y]of[[-.052,-.040],[.038,-.041],[.057,-.036]]){const tooth=mesh(new THREE.BoxGeometry(.015,.016,.015),jaw);tooth.position.set(x,y,.071);tooth.rotation.z=x*3;}
+ tube(object,[[-.009,.154,-.016],[.003,.150,.003],[-.004,.141,.025],[.005,.126,.042]],.0016).material=cavityMaterial;
  return object;
 }
 export function createSpine(){

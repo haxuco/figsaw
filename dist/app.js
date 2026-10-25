@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=timer-pose';
+import { createOffice } from './office.js?v=ground-contact';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -26,8 +26,8 @@ const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDir
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
 const fluorescentPower=17.5;
 const fluorescent=new THREE.SpotLight(0xc4d2b0,fluorescentPower,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
-fluorescent.shadow.mapSize.set(2048,2048);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.015;fluorescent.shadow.bias=-.00015;scene.add(fluorescent,fluorescent.target);
-const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=true;windowLight.shadow.mapSize.set(2048,2048);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.012;windowLight.shadow.bias=-.0002;scene.add(windowLight,windowLight.target);
+fluorescent.shadow.mapSize.set(2048,2048);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.0025;fluorescent.shadow.bias=-.00005;scene.add(fluorescent,fluorescent.target);
+const windowLight=new THREE.DirectionalLight(0x9cb4b5,.85);windowLight.position.set(6.2,4.1,-1.6);windowLight.target.position.set(-1,.35,-.3);windowLight.castShadow=true;windowLight.shadow.mapSize.set(2048,2048);windowLight.shadow.camera.left=-6;windowLight.shadow.camera.right=6;windowLight.shadow.camera.top=5;windowLight.shadow.camera.bottom=-5;windowLight.shadow.normalBias=.003;windowLight.shadow.bias=-.00006;scene.add(windowLight,windowLight.target);
 const doorwayLight=new THREE.PointLight(0x8ea6a4,2.2,10,2);doorwayLight.position.set(-1,2.6,4.0);scene.add(doorwayLight);
 
 const mix=THREE.MathUtils.lerp;
@@ -313,7 +313,7 @@ for(const side of[-1,1]){
 const knot=mesh(new THREE.SphereGeometry(1,24,16),ribbonMaterial,bowTie);knot.position.set(0,0,.07);knot.scale.set(.105,.12,.075);
 
 // Half-size Figsaw rides from the shadowed coffee corner into the ceiling light's central pool.
-const modelScale=.26,groundOffset=-.53*modelScale+.012;
+const modelScale=.26,groundOffset=-.53*modelScale+.0036;
 model.scale.setScalar(modelScale);
 const entrancePath=new THREE.CatmullRomCurve3([
  [2.45,groundOffset,-2.40],[2.05,groundOffset,-1.70],[1.05,groundOffset,-1.28],

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createLongBone, createRib, createSkull, createJaw, createSpine, createRibCage } from './bone-models.js';
+import { createLongBone, createRib, createSkull, createJaw, createSpine, createRibCage } from './bone-models.js?v=comical-skulls';
 
 // Deliberately different remains in each vessel; every path stays in the liquid.
 const layouts=[
