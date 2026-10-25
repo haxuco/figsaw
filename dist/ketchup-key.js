@@ -1,14 +1,18 @@
 import * as THREE from './vendor/three.module.js';
 import {createKetchupKeyState} from './ketchup-key-state.js';
+import {createBottleLiquid} from './bottle-liquid.js';
 
 export function createKetchupKey({bottle,contents,cap,floorSupport}){
  const group=new THREE.Group();group.name='Ketchup spill and hidden shackle key';
  const state=createKetchupKeyState(),home=bottle.position.clone(),homeRotation=bottle.quaternion.clone();
  bottle.userData.keyAction='pour';
  const direction=new THREE.Vector3(0,1,0).applyQuaternion(homeRotation);
- const pourRotation=new THREE.Quaternion().setFromUnitVectors(direction,new THREE.Vector3(-.25,-.94,.23).normalize()).multiply(homeRotation);
- const raised=home.clone().add(new THREE.Vector3(.72,.32,.38));
- const landing=raised.clone().add(new THREE.Vector3(-.045,0,.045));landing.y=floorSupport(landing.x,landing.z)+.009;
+ const pourRotation=new THREE.Quaternion().setFromUnitVectors(direction,new THREE.Vector3(-.12,-.99,.06).normalize()).multiply(homeRotation);
+ const raised=home.clone().add(new THREE.Vector3(-.32,.42,-.04));
+ const liquid=createBottleLiquid(contents);
+ // The pool is directly below the actual mouth in the fully tipped pose.
+ const landing=new THREE.Vector3(0,.469,0).applyMatrix4(bottle.children[0].matrix).multiply(bottle.scale).applyQuaternion(pourRotation).add(raised);
+ landing.y=floorSupport(landing.x,landing.z)+.009;
  const capHome=cap.position.clone(),capRotation=cap.quaternion.clone();cap.updateWorldMatrix(true,false);
  const capStart=cap.getWorldPosition(new THREE.Vector3()),capWorldRotation=cap.getWorldQuaternion(new THREE.Quaternion());
  const capEnd=capStart.clone().add(new THREE.Vector3(-.13,0,.10));capEnd.y=floorSupport(capEnd.x,capEnd.z)+.016;
@@ -26,12 +30,12 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
  const puddle=mesh(new THREE.ShapeGeometry(outline,32),sauce,spill);puddle.rotation.x=-Math.PI/2;puddle.castShadow=false;
  const globs=[];
  for(let i=0;i<7;i++){const a=i*2.4,r=.05+i*.016,m=mesh(new THREE.SphereGeometry(1,12,8),sauce,spill);m.position.set(Math.cos(a)*r,.003,Math.sin(a)*r*.6);m.scale.set(.015+i%3*.005,.004,.012);globs.push(m);}
- const stream=mesh(new THREE.CylinderGeometry(1,1,1,10),sauce,group);stream.visible=false;stream.castShadow=false;
+ const stream=mesh(new THREE.CylinderGeometry(.70,1,1,10),sauce,group);stream.name='Downward ketchup stream';stream.visible=false;stream.castShadow=false;
  const spout=new THREE.Vector3(),mid=new THREE.Vector3(),flowDirection=new THREE.Vector3(),up=new THREE.Vector3(0,1,0);
  const smooth=(v)=>{const x=THREE.MathUtils.clamp(v,0,1);return x*x*(3-2*x);};
  let capDetached=false;
  function reset(){
-  state.reset();bottle.position.copy(home);bottle.quaternion.copy(homeRotation);contents.scale.y=1;
+  state.reset();bottle.position.copy(home);bottle.quaternion.copy(homeRotation);liquid.reset();
   bottle.children[0].add(cap);cap.position.copy(capHome);cap.quaternion.copy(capRotation);cap.scale.setScalar(1);capDetached=false;
   key.visible=false;spill.visible=false;stream.visible=false;
  }
@@ -42,7 +46,7 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
   if(!capDetached){group.attach(cap);capDetached=true;}
   cap.position.copy(capStart).lerp(capEnd,smooth(t/.55));cap.position.y+=Math.sin(Math.min(1,t/.55)*Math.PI)*.08;
   cap.quaternion.copy(capWorldRotation).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),smooth(t/.55)*2));
-  const drain=smooth((t-.75)/2.5);contents.scale.y=Math.max(.025,1-drain);
+  const drain=smooth((t-.8)/2.5);liquid.update(drain);
   spill.visible=t>.75;spill.scale.setScalar(Math.max(.01,drain));
   bottle.updateWorldMatrix(true,true);bottle.children[0].localToWorld(spout.set(0,.469,0));
   stream.visible=t>.8&&t<3.3;
