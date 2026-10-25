@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import { createOffice } from './office.js?v=silent-skeletons';
 import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
-import { createPlayerRestraint } from './player-restraint.js';
+import { createPlayerRestraint } from './player-restraint.js?v=camera-hand';
 import { createRestraintMenu } from './restraint-menu.js';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
@@ -357,7 +357,7 @@ function updateEntrance(time){
 }
 updateEntrance(0);
 const {group:office,laptop,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
-const restraint=createPlayerRestraint(homePosition,homeView.yaw);scene.add(restraint.group);
+const restraint=createPlayerRestraint(camera);scene.add(restraint.group);
 const restraintStatus=document.querySelector('#restraint-status');
 const chainMenu=createRestraintMenu(()=>{
  if(restraint.detach(state.time)){restraintStatus.textContent='Instance detached. Your wrist is free. You can reach the laptop now.';canvas.classList.remove('over-chain');canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('Your wrist is chained to the rear pipes. Right-click the wrist chain and choose Detach instance to free your hand, then click the laptop to open it.','Your wrist is free. Click the laptop to open it.'));}
@@ -399,7 +399,10 @@ function interactionAt(event){
  interactionPointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
  interactionRay.setFromCamera(interactionPointer,camera);
  // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
- const hit=interactionRay.intersectObjects([office,model,restraint.group],true)[0];
+ const hit=interactionRay.intersectObjects([office,model,restraint.group],true).find(hit=>{
+  for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
+  return true;
+ });
  for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===puppet||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
@@ -562,7 +565,7 @@ function render(){
  const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
- if(restraint.update(t,reducedMotion))finishOpeningLaptop();
+ if(restraint.update(t,reducedMotion,chainMenu.active))finishOpeningLaptop();
  laptop.update(dt,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion);
  model.updateMatrixWorld(true);
