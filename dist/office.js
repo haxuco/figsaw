@@ -258,19 +258,26 @@ export function createOffice(renderer){
   for(let j=0;j<3;j++)rod([-.58+j*.18,-.546,.057],[-.46+j*.18,-.546,.057],.013,j?black:material(0x394e6a,.7),g);
  }
 
- // Shattered glass meeting-room partition, with an actual opening and curled sticky notes.
- const partition=new THREE.Group();partition.name='Shattered glass wall covered in sticky notes';partition.position.set(-2.26,0,-1.20);partition.rotation.y=.08;office.add(partition);
- for(const x of[-1.32,1.32])box([.045,2.86,.055],[x,1.43,0],steel,partition);
- for(const y of[.06,2.84])box([2.68,.045,.055],[0,y,0],steel,partition);
- const holePoints=[[-.69,.32],[-.84,.75],[-.62,.96],[-.87,1.26],[-.51,1.38],[-.58,1.72],[-.20,1.62],[.02,1.93],[.21,1.61],[.61,1.74],[.52,1.33],[.83,1.16],[.58,.94],[.72,.53],[.35,.64],[.16,.29],[-.17,.51]];
- const glassShape=new THREE.Shape();glassShape.moveTo(-1.29,.085);glassShape.lineTo(1.29,.085);glassShape.lineTo(1.29,2.81);glassShape.lineTo(-1.29,2.81);glassShape.closePath();
- const hole=new THREE.Path();holePoints.forEach(([x,y],i)=>i?hole.lineTo(x,y):hole.moveTo(x,y));hole.closePath();glassShape.holes.push(hole);
- const partitionGlass=new THREE.MeshPhysicalMaterial({color:0x719594,metalness:.24,roughness:.18,transparent:true,opacity:.19,side:THREE.DoubleSide,depthWrite:false});
- const pane=mesh(new THREE.ShapeGeometry(glassShape),partitionGlass,partition);pane.castShadow=false;
- const edgeMaterial=new THREE.LineBasicMaterial({color:0x799e9e,transparent:true,opacity:.65});
- const rim=new THREE.LineLoop(new THREE.BufferGeometry().setFromPoints(holePoints.map(([x,y])=>new THREE.Vector3(x,y,.006))),edgeMaterial);partition.add(rim);
- const fractures=[[-.84,.75,-1.29,.44],[-.87,1.26,-1.29,1.47],[-.58,1.72,-1.07,2.11],[-.20,1.62,-.34,2.81],[.02,1.93,.28,2.45],[.61,1.74,1.29,2.39],[.83,1.16,1.29,1.55],[.72,.53,1.29,.21],[.16,.29,.39,.085]];
- for(const[a,b,c,d]of fractures){const points=[new THREE.Vector3(a,b,.009),new THREE.Vector3((a+c)/2+.035,(b+d)/2,.009),new THREE.Vector3(c,d,.009)];partition.add(new THREE.Line(new THREE.BufferGeometry().setFromPoints(points),edgeMaterial));}
+ // Freestanding planning whiteboard with curled sticky notes and old interface sketches.
+ const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(-2.26,0,-1.20);partition.rotation.y=.08;office.add(partition);
+ for(const x of[-1.12,1.12]){
+  box([.045,.98,.055],[x,.49,0],steel,partition);box([.11,.06,.65],[x,.06,0],steel,partition);
+  for(const z of[-.25,.25])sphere([.047,.045,.032],[x,.035,z],black,partition);
+ }
+ box([2.68,1.94,.05],[0,1.85,0],silver,partition);
+ const[cPlanning,planning]=canvas(1024);planning.fillStyle='#c2c7ba';planning.fillRect(0,0,1024,1024);
+ for(let i=0;i<65;i++)cloud(planning,random()*1024,random()*1024,range(15,110),'60,69,55',.065);
+ planning.strokeStyle='rgba(38,62,63,.65)';planning.fillStyle='rgba(38,62,63,.65)';planning.lineWidth=3;
+ for(let i=0;i<3;i++){
+  const x=170+i*245;planning.strokeRect(x,560,190,335);planning.strokeRect(x+12,579,166,28);
+  planning.strokeRect(x+12,625,166,102);planning.beginPath();planning.moveTo(x+12,625);planning.lineTo(x+178,727);planning.moveTo(x+178,625);planning.lineTo(x+12,727);planning.stroke();
+  for(let j=0;j<4;j++)planning.fillRect(x+15,753+j*19,137-j%2*39,3);planning.strokeRect(x+15,843,160,28);
+  if(i<2){planning.beginPath();planning.moveTo(x+198,727);planning.lineTo(x+235,727);planning.lineTo(x+222,717);planning.moveTo(x+235,727);planning.lineTo(x+222,737);planning.stroke();}
+ }
+ const planningMap=texture(cPlanning),planningSurface=mesh(new THREE.PlaneGeometry(2.60,1.86),new THREE.MeshStandardMaterial({map:planningMap,roughness:.75,emissive:0xffffff,emissiveMap:planningMap,emissiveIntensity:.025}),partition);planningSurface.position.set(0,1.85,.027);
+ box([2.58,.025,.13],[0,.87,.045],silver,partition);
+ for(let i=0;i<3;i++)rod([-.63+i*.23,.899,.09],[-.48+i*.23,.899,.09],.017,i===0?material(0x344f65,.75):black,partition);
+ box([.18,.045,.07],[.62,.906,.075],black,partition);
  const noteColors=['#c3b25e','#b38488','#7faaa9','#a4b081'];
  function sticky(parent,x,y,z,index){
   const[c,ctx]=canvas(128);ctx.fillStyle=noteColors[index%4];ctx.fillRect(0,0,128,128);ctx.fillStyle='rgba(42,49,37,.16)';ctx.fillRect(0,0,128,14);ctx.strokeStyle='rgba(39,52,47,.68)';ctx.lineWidth=2.6;
@@ -280,13 +287,8 @@ export function createOffice(renderer){
   for(let i=0;i<pos.count;i++){const yy=pos.getY(i);pos.setZ(i,Math.max(0,-yy-.015)**2*3.3);}geo.computeVertexNormals();
   const map=texture(c),m=mesh(geo,new THREE.MeshStandardMaterial({map,roughness:.96,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),parent);m.position.set(x,y,z);m.rotation.z=range(-.13,.13);return m;
  }
- for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(row===2&&col===4)continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.023,row*9+col);}
- for(let i=0;i<5;i++)sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.023,28+i);
- for(let i=0;i<24;i++){
-  const shard=new THREE.Shape();shard.moveTo(0,0);shard.lineTo(range(.06,.22),.025);shard.lineTo(range(.015,.12),range(.08,.29));shard.closePath();
-  const g=new THREE.ShapeGeometry(shard),m=mesh(g,partitionGlass);m.position.set(range(-3.45,-1.05),.015,range(-1.1,.65));m.rotation.set(-Math.PI/2+range(0,.09),0,random()*Math.PI*2);m.castShadow=false;
-  const edge=new THREE.LineSegments(new THREE.EdgesGeometry(g),edgeMaterial);m.add(edge);
- }
+ for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(row===2&&col===4)continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.040,row*9+col);}
+ for(let i=0;i<5;i++)sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.040,28+i);
  const fallenNote=sticky(office,-1.65,.024,.54,33);fallenNote.rotation.set(-Math.PI/2,0,.6);
 
  // One crooked overhead light and a small desk lamp provide practical light sources.
