@@ -14,8 +14,8 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
 const camera=new THREE.PerspectiveCamera(58,1,.06,35);
-const floorEye=new THREE.Vector3(.72,.26,4.15);
-const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3();
+const homePosition=new THREE.Vector3(.72,.26,4.15),cameraPosition=homePosition.clone();
+const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDirection=new THREE.Vector3();
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
 const fluorescent=new THREE.SpotLight(0xc4d2b0,14,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=true;
 fluorescent.shadow.mapSize.set(2048,2048);fluorescent.shadow.camera.near=.1;fluorescent.shadow.camera.far=11;fluorescent.shadow.normalBias=.015;fluorescent.shadow.bias=-.00015;scene.add(fluorescent,fluorescent.target);
@@ -319,21 +319,28 @@ function updateEntrance(time){
 updateEntrance(0);
 const office=createOffice(renderer);scene.add(office);
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
-function resetView(){resetting=true;entranceStartedAt=clock.elapsedTime;}
+const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
+const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
+function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;}
+function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
+ if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
+ if(movementKeys.has(event.code)){event.preventDefault();pressedKeys.add(event.code);resetting=false;return;}
+ if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
  if(event.code.startsWith('Arrow')){
   event.preventDefault();resetting=false;
-  if(event.code==='ArrowLeft')state.yaw=THREE.MathUtils.clamp(state.yaw+.08,-.46,.46);
-  if(event.code==='ArrowRight')state.yaw=THREE.MathUtils.clamp(state.yaw-.08,-.46,.46);
-  if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-.15,.50);
-  if(event.code==='ArrowDown')state.pitch=THREE.MathUtils.clamp(state.pitch-.05,-.15,.50);
+  if(event.code==='ArrowLeft')state.yaw=wrapAngle(state.yaw+.08);
+  if(event.code==='ArrowRight')state.yaw=wrapAngle(state.yaw-.08);
+  if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-1.40,1.40);
+  if(event.code==='ArrowDown')state.pitch=THREE.MathUtils.clamp(state.pitch-.05,-1.40,1.40);
  }
 });
-document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
-window.addEventListener('blur',()=>{state.space=false;dragPointer=null;});
+document.addEventListener('keyup',event=>{pressedKeys.delete(event.code);if(event.code==='Space')state.space=false;});
+window.addEventListener('blur',releaseControls);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
 canvas.addEventListener('pointerdown',event=>{
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
@@ -342,7 +349,7 @@ canvas.addEventListener('pointerdown',event=>{
 canvas.addEventListener('pointermove',event=>{
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
- state.yaw=THREE.MathUtils.clamp(state.yaw-dx*.004,-.46,.46);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-.15,.50);lastPointer={x:event.clientX,y:event.clientY};
+ state.yaw=wrapAngle(state.yaw-dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
 });
 canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
@@ -357,6 +364,39 @@ canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
+// Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
+const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
+const copyStatus=document.querySelector('#copy-status'),copyFallback=document.querySelector('#copy-fallback'),viewText=document.querySelector('#view-text');
+let copyFeedbackTimer;
+function currentViewPrompt(){
+ const roundedVector=vector=>vector.toArray().map(value=>Number(value.toFixed(6)));
+ const direction=camera.getWorldDirection(new THREE.Vector3());
+ const view={position:roundedVector(camera.position),lookAt:roundedVector(camera.position.clone().add(direction)),fov:Number(camera.fov.toFixed(4))};
+ return `Set this as the default camera view for Figsaw:\n${JSON.stringify(view,null,2)}`;
+}
+function copySelectedText(text){
+ const selection=document.createElement('textarea');selection.value=text;selection.readOnly=true;
+ selection.style.cssText='position:fixed;left:-9999px;top:0;font-size:16px';document.body.append(selection);
+ selection.focus();selection.select();selection.setSelectionRange(0,text.length);
+ let copied=false;
+ try{copied=document.execCommand('copy');}catch{}
+ selection.remove();copyViewButton.focus({preventScroll:true});return copied;
+}
+copyViewButton.addEventListener('click',async()=>{
+ const text=currentViewPrompt();viewText.value=text;clearTimeout(copyFeedbackTimer);
+ let copied=false;
+ try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);copied=true;}}catch{}
+ if(!copied)copied=copySelectedText(text);
+ if(copied){
+  copyFallback.hidden=true;copyViewLabel.textContent='Copied';copyStatus.textContent='View copied. Paste it into the chat to set the default view.';
+ }else{
+  copyFallback.hidden=false;viewText.focus();viewText.select();
+  copyStatus.textContent='Select and copy the view below, then paste it into the chat.';
+ }
+ copyFeedbackTimer=setTimeout(()=>{copyViewLabel.textContent='Copy view';},2200);
+});
+document.querySelector('#close-copy').addEventListener('click',()=>{copyFallback.hidden=true;copyViewButton.focus();});
+
 function resize(){
  const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
  renderer.setSize(width,height,false);camera.aspect=width/height;camera.fov=(camera.aspect<.85?82:62)*state.zoom;camera.updateProjectionMatrix();
@@ -366,14 +406,27 @@ const clock=new THREE.Clock();
 function render(){
  const dt=Math.min(clock.getDelta(),.04),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(resetting){
-  state.yaw=mix(state.yaw,homeView.yaw,eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
-  if(Math.abs(state.yaw-homeView.yaw)+Math.abs(state.pitch-homeView.pitch)+Math.abs(state.zoom-1)<.005)resetting=false;
+  state.yaw=wrapAngle(state.yaw+wrapAngle(homeView.yaw-state.yaw)*eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
+  cameraPosition.lerp(homePosition,eased*.5);
+  if(Math.abs(wrapAngle(state.yaw-homeView.yaw))+Math.abs(state.pitch-homeView.pitch)+Math.abs(state.zoom-1)+cameraPosition.distanceTo(homePosition)<.005){
+   state.yaw=homeView.yaw;state.pitch=homeView.pitch;state.zoom=1;cameraPosition.copy(homePosition);resetting=false;
+  }
  }
- // Look around from a prone eye position; zoom changes the lens, never the eye height.
- camera.position.copy(floorEye);
  const viewYaw=state.yaw+(camera.aspect<.85?.13:0);
+ // Walk along the floor plane relative to the view; E/Q independently change eye height.
+ const forward=Number(pressedKeys.has('KeyW'))-Number(pressedKeys.has('KeyS'));
+ const strafe=Number(pressedKeys.has('KeyD'))-Number(pressedKeys.has('KeyA'));
+ const vertical=Number(pressedKeys.has('KeyE'))-Number(pressedKeys.has('KeyQ'));
+ moveDirection.set(-Math.sin(viewYaw)*forward+Math.cos(viewYaw)*strafe,vertical,-Math.cos(viewYaw)*forward-Math.sin(viewYaw)*strafe);
+ if(moveDirection.lengthSq()>0){
+  cameraPosition.addScaledVector(moveDirection.normalize(),dt*1.05);
+  cameraPosition.x=THREE.MathUtils.clamp(cameraPosition.x,-3.72,3.72);
+  cameraPosition.y=THREE.MathUtils.clamp(cameraPosition.y,.08,3.0);
+  cameraPosition.z=THREE.MathUtils.clamp(cameraPosition.z,-3.78,4.25);
+ }
+ camera.position.copy(cameraPosition);
  viewDirection.set(-Math.sin(viewYaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(viewYaw)*Math.cos(state.pitch));
- cameraTarget.copy(floorEye).add(viewDirection);camera.lookAt(cameraTarget);
+ cameraTarget.copy(cameraPosition).add(viewDirection);camera.lookAt(cameraTarget);
  const fov=(camera.aspect<.85?82:62)*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
  const mouthTarget=state.space?1:t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
