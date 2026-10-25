@@ -1,6 +1,6 @@
 # Figsaw
 
-A full-window Three.js scene of Figsaw on his red tricycle inside an abandoned technology office. Damaged modern widescreen monitors, open computer cases, overturned chairs, loose circuit boards, paper, cables, and damaged ceiling panels fill the room. A freestanding planning whiteboard holds more than 30 curled sticky notes and interface sketches, with markers and an eraser on its tray. Two whiteboards show mobile wireframes and dashboard layouts. A detailed space-gray MacBook Pro sits open on a desk directly in front of the viewer. A neglected coffee station includes an espresso machine, cups, spills, refrigerator and water cooler. The foosball table sags sideways on a snapped support, with a splintered rail, bent rods, missing players, and the detached leg on the floor. The room is very dim, with weak fluorescent light, cool light through bent blinds, and a faint laptop-screen glow.
+A full-window Three.js scene of Figsaw on his red tricycle inside an abandoned technology office. Damaged modern widescreen monitors, open computer cases, overturned chairs, loose circuit boards, paper, cables, and damaged ceiling panels fill the room. A freestanding planning whiteboard holds more than 30 curled sticky notes and interface sketches, with markers and an eraser on its tray. Two whiteboards show mobile wireframes and dashboard layouts. A detailed space-gray MacBook Pro sits open directly on the floor in front of the viewer; its charging cable lies along the floor. A neglected coffee station includes an espresso machine, cups, spills, refrigerator and water cooler. The foosball table sags sideways on a snapped support, with a splintered rail, bent rods, missing players, and the detached leg on the floor. The room is very dim, with weak fluorescent light, cool light through bent blinds, and a faint laptop-screen glow.
 
 All models and wear textures are generated locally, with no remote asset dependencies. There are no interface overlays. The visual references are [dasy444’s abandoned office](https://sketchfab.com/3d-models/office-is-old-abandoned-free-3977a108b2304b85a698f3dda1777015) and the [Neo apartment recreation](https://www.reddit.com/r/ClaudeAI/comments/1x6x6x7/3d_recreation_of_neo_apartment_from_the_matrix/); their model and texture files are not bundled.
 
@@ -8,7 +8,7 @@ Figsaw retains his thick black outline, shallow marionette jaw, narrow rough lip
 
 The tricycle wheels rotate at a shared rolling speed. Its front-wheel cranks carry pedal platforms that remain level. Automatic cycling respects reduced-motion preferences.
 
-Drag or use arrow keys to look around, scroll to move closer, hold Space to open the mouth, tap Figsaw for a short mouth animation, and press R to reset. Camera movement stays within the office. Portrait framing uses a wider field of view.
+Drag or use arrow keys to look around, scroll to zoom, hold Space to open the mouth, tap Figsaw for a short mouth animation, and press R to reset. The eye stays 0.26 units above the floor, as if the viewer is lying down behind the MacBook. Looking around changes only the head direction; zoom changes the field of view without raising or moving the camera. Portrait framing uses a wider field of view.
 
 Serve `dist` with any static HTTP server:
 

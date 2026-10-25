@@ -173,9 +173,8 @@ export function createOffice(renderer){
  const loosePlayer=box([.055,.13,.04],[.38,1.09,.51],players[0],game);loosePlayer.rotation.z=Math.PI/2;
  for(const z of[-1.07,1.07]){rod([-.32,1.27,z],[.32,1.27,z],.008,silver,game);for(let i=0;i<5;i++)sphere([.025,.03,.025],[-.25+i*.07,1.27,z],players[z>0?1:0],game);}
 
- // A space-gray MacBook Pro on the desk directly in front of the viewer.
- const viewerDesk=desk(.72,2.32,2.05);viewerDesk.scale.y=.76;
- const laptop=new THREE.Group();laptop.name='MacBook Pro on the foreground desk';laptop.position.set(.72,.663,2.18);laptop.rotation.y=.10;office.add(laptop);
+ // The MacBook rests directly on the floor in front of the viewer's prone eye position.
+ const laptop=new THREE.Group();laptop.name='MacBook Pro on the floor';laptop.position.set(.45,.027,2.18);laptop.rotation.y=.10;office.add(laptop);
  const aluminum=material(0x879194,.35,null,.72),keyBlack=material(0x101517,.70);
  rounded([.88,.026,.59],[0,0,0],aluminum,laptop);
  rounded([.66,.006,.275],[0,.016,-.065],keyBlack,laptop);
@@ -210,8 +209,8 @@ export function createOffice(renderer){
  const speakerDots=new THREE.InstancedMesh(new THREE.CircleGeometry(.0012,5),black,480);
  for(let i=0;i<480;i++){const o=new THREE.Object3D(),side=i<240?-1:1,j=i%240;o.position.set(side*(.355+(j%8)*.006),.017,-.196+Math.floor(j/8)*.0085);o.rotation.x=-Math.PI/2;o.updateMatrix();speakerDots.setMatrixAt(i,o.matrix);}laptop.add(speakerDots);
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
- cable([[-.445,.002,-.19],[-.56,.004,-.20],[-.72,-.02,-.06],[-.83,-.29,.21],[-.81,-.62,.40]],.006,black,laptop);
- const screenSpill=new THREE.PointLight(0x8daebe,.60,1.4,2);screenSpill.position.set(.72,1.02,2.13);office.add(screenSpill);
+ cable([[-.445,.002,-.19],[-.56,-.010,-.20],[-.72,-.016,-.06],[-.83,-.016,.21],[-1.12,-.016,.48]],.006,black,laptop);
+ const screenSpill=new THREE.PointLight(0x8daebe,.60,1.4,2);screenSpill.position.set(.45,.38,2.13);office.add(screenSpill);
 
  // Paperwork, circuit boards, cables and broken casing fragments cover the floor.
  function paperMap(){const[c,ctx]=canvas();ctx.fillStyle='#b2af94';ctx.fillRect(0,0,512,512);ctx.fillStyle='#4f584c';for(let i=0;i<35;i++){const y=35+i*12;ctx.fillRect(30,y,range(100,430),range(1,3));}ctx.strokeStyle='rgba(64,54,28,.4)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(345,130,61,0,Math.PI*2);ctx.stroke();speckle(ctx,512,8000,'49,45,27',.16);return texture(c);}
