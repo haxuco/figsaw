@@ -333,6 +333,7 @@ export function createOffice(renderer,viewerPosition){
   object:laptop,
   get isOpen(){return laptopOpened;},
   open(){if(laptopOpened)return false;laptopOpened=true;return true;},
+  close(){laptopOpened=false;laptopProgress=0;laptopLid.rotation.x=Math.PI/2;displayMat.color.setScalar(0);screenSpill.intensity=0;},
   update(dt,instant=false){
    if(!laptopOpened||laptopProgress===1)return;
    laptopProgress=instant?1:Math.min(1,laptopProgress+dt/.95);
