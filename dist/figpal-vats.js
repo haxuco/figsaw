@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
 import { figpalSwayPose } from './character-motion.js';
+import { createFloatingBones } from './floating-bones.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // All shapes, markings, glass, liquid and wear are local procedural assets.
@@ -131,6 +132,7 @@ export function createFigpalVats(){
   const shell=cylinder(.485,1.02,[0,.72,0],glass,vat,true);shell.castShadow=false;shell.renderOrder=6;
   const deposits=cylinder(.487,1.02,[0,.72,0],haze,vat,true);deposits.name='Condensation, mineral streaks and algae tide marks';deposits.castShadow=false;deposits.renderOrder=7;
   const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.castShadow=false;liquid.renderOrder=2;
+  const floatingBones=createFloatingBones(i);vat.add(floatingBones.group);
   cylinder(.444,.018,[0,.215,0],liquidTop,vat);
   for(const y of[.225,1.235]){ring(.484,.036,y,steel,vat);ring(.454,.010,y-.018,darkMetal,vat);}
   for(const a of[.15,2.24,4.34]){const px=Math.cos(a)*.485,pz=Math.sin(a)*.485;rod([px,.22,pz],[px,1.23,pz],.021,steel,vat);}
@@ -154,7 +156,7 @@ export function createFigpalVats(){
   const drain=cylinder(.038,.17,[.37,.25,.37],steel,vat);drain.rotation.x=Math.PI/2;
   const valve=mesh(new THREE.TorusGeometry(.068,.008,6,24),ribOrange,vat);valve.position.set(.37,.25,.47);rod([.31,.25,.47],[.43,.25,.47],.006,ribOrange,vat);
   const glow=new THREE.PointLight(0x6b9c25,.58,1.7,2);glow.position.set(0,.85,0);vat.add(glow);
-  vats.push({surface,bubbles,bubbleData,foam,ripples,phase:i*1.7});
+  vats.push({surface,bubbles,bubbleData,foam,ripples,floatingBones,phase:i*1.7});
 
   const facing=Math.atan2(1.85221-x,3.1149-tankZ);
   vat.rotation.y=facing;
@@ -219,6 +221,7 @@ export function createFigpalVats(){
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
   for(const vat of vats){
+   vat.floatingBones.update(time,reducedMotion);
    const positions=vat.surface.geometry.attributes.position;
    const normals=vat.surface.geometry.attributes.normal;
    for(let j=0;j<positions.count;j++){
