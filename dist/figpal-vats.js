@@ -251,6 +251,7 @@ export function createFigpalVats(){
  }
  update(0);
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
- function isHanging(index){const rig=rigs[index];return !!rig&&!rig.lowered&&!rig.transformation.transformed&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,toggleHoist,isLowered:index=>rigs[index]?.lowered??false,isHanging,lowerAll,reset,speechAnchors,setEnvironment};
+ function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.transformation.transformed;}
+ function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
+ return {group,update,toggleHoist,isLowered:index=>rigs[index]?.lowered??false,canSpeak,isHanging,lowerAll,reset,speechAnchors,setEnvironment};
 }

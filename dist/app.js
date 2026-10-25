@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=wrist-chain';
-import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=wrist-chain';
+import { createOffice } from './office.js?v=silent-skeletons';
+import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js';
 import { createRestraintMenu } from './restraint-menu.js';
 import { formatCountdown } from './countdown-clock.js';
@@ -363,7 +363,7 @@ const chainMenu=createRestraintMenu(()=>{
  if(restraint.detach(state.time)){restraintStatus.textContent='Instance detached. Your wrist is free. You can reach the laptop now.';canvas.classList.remove('over-chain');canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('Your wrist is chained to the rear pipes. Right-click the wrist chain and choose Detach instance to free your hand, then click the laptop to open it.','Your wrist is free. Click the laptop to open it.'));}
 });
 const finale=createFinaleCue(figpalHoists);
-const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas);
+const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 // Capture the actual furnished room once for subtle reflections in the display covers.
 // Static environment capture keeps the glass reflective without six extra renders per frame.
@@ -419,7 +419,7 @@ function operateHoist(index){
  const message=toggleHoist(index);if(!message)return;
  const lowering=figpalHoists.isLowered(index);
  if(lowering)figpalBubbles.show(index,state.time);else figpalBubbles.hide(index);
- document.querySelector('#hoist-status').textContent=lowering?`${message} ${FIGPAL_PLEAS[index]}`:message;
+ document.querySelector('#hoist-status').textContent=lowering&&figpalHoists.canSpeak(index)?`${message} ${FIGPAL_PLEAS[index]}`:message;
 }
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
@@ -555,7 +555,7 @@ function render(){
  }
  if(finale.update(countdown.status,t)){
   figpalBubbles.showAll(t);
-  countdownAnnouncement.textContent=`Time is up. All three Figpals are lowering into the green liquid. ${FIGPAL_PLEAS.join(' ')}`;
+  countdownAnnouncement.textContent=`Time is up. All three Figpals are lowering into the green liquid. ${FIGPAL_PLEAS.filter((_,index)=>figpalHoists.canSpeak(index)).join(' ')}`;
  }
  const dialogueMouth=dialogueMouthAmount(dialogueSpeech,t);
  const tapMouth=t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
