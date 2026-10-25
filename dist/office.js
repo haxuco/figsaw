@@ -272,10 +272,14 @@ export function createOffice(renderer){
  const aluminum=material(0x879194,.35,null,.72),keyBlack=material(0x101517,.70);
  rounded([.88,.026,.59],[0,0,0],aluminum,laptop);
  rounded([.66,.006,.275],[0,.016,-.065],keyBlack,laptop);
- const hinge=cylinder(.018,.77,[0,.014,-.272],black,laptop,20);hinge.rotation.z=Math.PI/2;
- const laptopLid=new THREE.Group();laptopLid.position.set(0,.012,-.274);laptopLid.rotation.x=-.20;laptop.add(laptopLid);
+ const hinge=cylinder(.018,.77,[0,.025,-.272],black,laptop,20);hinge.rotation.z=Math.PI/2;
+ const laptopLid=new THREE.Group();laptopLid.position.set(0,.045,-.274);laptopLid.rotation.x=Math.PI/2;laptop.add(laptopLid);
  rounded([.88,.565,.018],[0,.283,0],aluminum,laptopLid);
  rounded([.856,.542,.007],[0,.286,.013],keyBlack,laptopLid);
+ // The dark inset emblem faces outward on the closed aluminum lid.
+ const emblem=new THREE.Shape();emblem.moveTo(0,.027);emblem.bezierCurveTo(-.019,.043,-.045,.022,-.042,-.004);emblem.bezierCurveTo(-.04,-.025,-.022,-.052,-.010,-.044);emblem.bezierCurveTo(0,-.037,.005,-.037,.018,-.044);emblem.bezierCurveTo(.030,-.049,.043,-.024,.046,-.016);emblem.bezierCurveTo(.023,-.009,.024,.015,.043,.021);emblem.bezierCurveTo(.029,.040,.014,.032,0,.027);
+ const lidEmblem=mesh(new THREE.ShapeGeometry(emblem),keyBlack,laptopLid);lidEmblem.position.set(0,.30,-.010);lidEmblem.rotation.y=Math.PI;lidEmblem.castShadow=false;
+ const emblemLeaf=sphere([.010,.022,.0015],[.008,.352,-.010],keyBlack,laptopLid);emblemLeaf.rotation.z=-.45;emblemLeaf.castShadow=false;
  const[cDisplay,display]=canvas(1024);cDisplay.height=640;
  display.fillStyle='#111b22';display.fillRect(0,0,1024,640);
  display.fillStyle='#222e36';display.fillRect(0,0,1024,38);display.fillRect(0,38,140,602);display.fillRect(894,38,130,602);
@@ -304,7 +308,22 @@ export function createOffice(renderer){
  for(let i=0;i<480;i++){const o=new THREE.Object3D(),side=i<240?-1:1,j=i%240;o.position.set(side*(.355+(j%8)*.006),.017,-.196+Math.floor(j/8)*.0085);o.rotation.x=-Math.PI/2;o.updateMatrix();speakerDots.setMatrixAt(i,o.matrix);}laptop.add(speakerDots);
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
  cable([[-.445,.002,-.19],[-.56,-.010,-.20],[-.72,-.016,-.06],[-.83,-.016,.21],[-1.12,-.016,.48]],.006,black,laptop);
- const screenSpill=new THREE.PointLight(0x8daebe,.60,1.4,2);screenSpill.position.set(.45,.38,2.13);office.add(screenSpill);
+ const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
+ const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
+ let laptopOpened=false,laptopProgress=0;
+ const laptopControl={
+  object:laptop,
+  get isOpen(){return laptopOpened;},
+  open(){if(laptopOpened)return false;laptopOpened=true;return true;},
+  update(dt,instant=false){
+   if(!laptopOpened||laptopProgress===1)return;
+   laptopProgress=instant?1:Math.min(1,laptopProgress+dt/.95);
+   const eased=THREE.MathUtils.smootherstep(laptopProgress,0,1);
+   laptopLid.rotation.x=THREE.MathUtils.lerp(Math.PI/2,-.20,eased);
+   const wake=THREE.MathUtils.smoothstep(eased,.22,.72);
+   displayMat.color.copy(screenColor).multiplyScalar(wake);screenSpill.intensity=.60*wake;
+  }
+ };
 
  // Paperwork, circuit boards, cables and broken casing fragments cover the floor.
  function paperMap(){const[c,ctx]=canvas();ctx.fillStyle='#b2af94';ctx.fillRect(0,0,512,512);ctx.fillStyle='#4f584c';for(let i=0;i<35;i++){const y=35+i*12;ctx.fillRect(30,y,range(100,430),range(1,3));}ctx.strokeStyle='rgba(64,54,28,.4)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(345,130,61,0,Math.PI*2);ctx.stroke();speckle(ctx,512,8000,'49,45,27',.16);return texture(c);}
@@ -423,5 +442,5 @@ export function createOffice(renderer){
  cable([[.85,3.30,-.6],[1.03,2.8,-.65],[1.26,2.86,-.7],[1.30,3.30,-.7]],.007,black);
  const deskLamp=new THREE.Group();deskLamp.position.set(-2.1,.88,-3.20);backDesk.parent.add(deskLamp);cylinder(.11,.035,[0,0,0],black,deskLamp);rod([0,0,0],[.05,.31,0],.016,steel,deskLamp);rod([.05,.31,0],[.22,.40,.02],.013,steel,deskLamp);const shade=mesh(new THREE.ConeGeometry(.12,.13,20,1,true),steel,deskLamp);shade.position.set(.23,.37,.02);sphere([.04,.025,.04],[.23,.32,.02],new THREE.MeshBasicMaterial({color:0xe6c184}),deskLamp);
  const taskLight=new THREE.PointLight(0xe6bd7e,1.2,2.5,2);taskLight.position.set(-1.87,1.19,-3.18);office.add(taskLight);
- return office;
+ return {group:office,laptop:laptopControl};
 }

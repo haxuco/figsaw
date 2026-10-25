@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=aeron-chairs';
+import { createOffice } from './office.js?v=closed-laptop';
 
 const canvas=document.querySelector('#scene');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -317,7 +317,23 @@ function updateEntrance(time){
  setRollingDistance(progress*entranceLength/modelScale);
 }
 updateEntrance(0);
-const office=createOffice(renderer);scene.add(office);
+const {group:office,laptop}=createOffice(renderer);scene.add(office);
+const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
+function interactionAt(event,laptopOnly=false){
+ const rect=canvas.getBoundingClientRect();
+ interactionPointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
+ interactionRay.setFromCamera(interactionPointer,camera);
+ if(laptopOnly&&!interactionRay.intersectObject(laptop.object,true).length)return null;
+ // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
+ const hit=interactionRay.intersectObjects([office,model],true)[0];
+ for(let object=hit?.object;object;object=object.parent){if(object===laptop.object||object===puppet)return object;}
+ return null;
+}
+function openLaptop(){
+ if(!laptop.open())return;
+ canvas.classList.remove('over-laptop');
+ canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro').replace(' Click the laptop or press Enter to open it.',''));
+}
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
@@ -328,6 +344,7 @@ document.addEventListener('keydown',event=>{
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
  if(movementKeys.has(event.code)){event.preventDefault();pressedKeys.add(event.code);resetting=false;return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
+ if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
  if(event.code.startsWith('Arrow')){
@@ -347,6 +364,7 @@ canvas.addEventListener('pointerdown',event=>{
  lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
 });
 canvas.addEventListener('pointermove',event=>{
+ if(dragPointer===null){canvas.classList.toggle('over-laptop',!laptop.isOpen&&interactionAt(event,true)===laptop.object);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
  state.yaw=wrapAngle(state.yaw-dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
@@ -355,11 +373,12 @@ canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
  dragPointer=null;
  if(pointerDistance<6){
-  const rect=canvas.getBoundingClientRect(),pointer=new THREE.Vector2((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
-  const ray=new THREE.Raycaster();ray.setFromCamera(pointer,camera);
-  if(ray.intersectObject(puppet,true).length)state.talkUntil=state.time+1.8;
+  const hit=interactionAt(event);
+  if(hit===laptop.object)openLaptop();
+  else if(hit===puppet)state.talkUntil=state.time+1.8;
  }
 });
+canvas.addEventListener('pointerleave',()=>canvas.classList.remove('over-laptop'));
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
@@ -433,6 +452,7 @@ function render(){
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
  updateEntrance(clock.elapsedTime);
+ laptop.update(dt,reducedMotion);
  model.updateMatrixWorld(true);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
  renderer.render(scene,camera);requestAnimationFrame(render);

@@ -1,6 +1,7 @@
 html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene{display:block;width:100%;height:100%;outline:none;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent}
 #scene:active{cursor:grabbing}
+#scene.over-laptop:not(:active){cursor:pointer}
 .view-tools{position:fixed;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:5;font-family:system-ui,-apple-system,sans-serif}
 #copy-view{display:flex;align-items:center;justify-content:center;gap:5px;min-width:80px;height:27px;padding:0 8px;border:1px solid #c7d0c32b;border-radius:5px;background:#131b17b3;color:#c7d0c3;font:500 10px/1 system-ui,-apple-system,sans-serif;cursor:pointer;opacity:.72;transition:opacity .15s,background .15s}
 #copy-view:hover,#copy-view:focus-visible{opacity:1;background:#25302aeb}
