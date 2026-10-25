@@ -3,11 +3,11 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene{display:block;width:100%;height:100%;outline:none;cursor:grab;touch-action:none;-webkit-tap-highlight-color:transparent}
 #scene:active{cursor:grabbing}
 #scene.over-laptop:not(:active),#scene.over-hoist:not(:active){cursor:pointer}
-#figsaw-dialogue{position:fixed;top:0;left:0;z-index:3;width:max-content;max-width:calc(100vw - 28px);pointer-events:none;will-change:transform}
+#figsaw-dialogue{position:fixed;top:0;left:0;z-index:3;width:max-content;pointer-events:none;will-change:transform}
 #figsaw-dialogue[hidden]{display:none}
 .dialogue-bubble{position:relative;box-sizing:border-box;max-width:430px;padding:13px 18px;border:1px solid #ffffff29;border-radius:7px;background:#000;color:#fff;box-shadow:0 7px 24px #000b;font:500 28px/1.18 "Grenze Gotisch",Georgia,serif;letter-spacing:.012em;overflow-wrap:break-word;animation:dialogue-arrive .28s ease-out both}
 .dialogue-bubble strong{display:block;margin-bottom:6px;color:#ff2424;font:700 25px/1.15 Georgia,"Times New Roman",serif;letter-spacing:.035em}
-.dialogue-bubble::after{content:"";position:absolute;bottom:-6px;left:calc(50% + var(--tail-offset,0px));width:10px;height:10px;background:#000;border-right:1px solid #ffffff29;border-bottom:1px solid #ffffff29;transform:translateX(-50%) rotate(45deg)}
+.dialogue-bubble::after{content:"";position:absolute;bottom:-6px;left:50%;width:10px;height:10px;background:#000;border-right:1px solid #ffffff29;border-bottom:1px solid #ffffff29;transform:translateX(-50%) rotate(45deg)}
 @keyframes dialogue-arrive{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(prefers-reduced-motion:reduce){.dialogue-bubble{animation:none}}
 .view-tools{position:fixed;top:max(10px,env(safe-area-inset-top));right:max(10px,env(safe-area-inset-right));z-index:5;font-family:system-ui,-apple-system,sans-serif}
@@ -23,10 +23,9 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 
 #figpal-dialogues{position:fixed;inset:0;z-index:4;pointer-events:none}
 #figpal-dialogues[hidden],.figpal-speech[hidden]{display:none}
-.figpal-speech{position:absolute;left:0;top:0;box-sizing:border-box;width:max-content;max-width:min(132px,calc((100vw - 44px)/3));padding:5px 7px;border:0;border-radius:7px 6px 8px 3px;background:#000;color:#fff;filter:drop-shadow(0 3px 5px #0008);font:650 italic 12px/1.2 system-ui,-apple-system,sans-serif;text-align:center;will-change:transform}
+.figpal-speech{position:absolute;left:0;top:0;box-sizing:border-box;width:max-content;max-width:132px;padding:5px 7px;border:0;border-radius:7px 6px 8px 3px;background:#000;color:#fff;filter:drop-shadow(0 3px 5px #0008);font:650 italic 12px/1.2 system-ui,-apple-system,sans-serif;text-align:center;will-change:transform}
 .figpal-speech-tail{position:absolute;top:calc(100% - 1px);left:0;width:1px;height:1px;overflow:visible;fill:#000;stroke:none}
 .figpal-speech-text{display:block;animation:figpal-panic .19s steps(2,end) infinite}
 @keyframes figpal-panic{0%,100%{transform:rotate(-1.4deg) translateY(0)}50%{transform:rotate(1.2deg) translateY(-1px)}}
-@media(max-width:600px){.figpal-speech{max-width:min(118px,calc((100vw - 44px)/3));padding:5px 6px;font-size:11px}}
 @media(prefers-reduced-motion:reduce){.figpal-speech-text{animation:none}}
 .entering-laptop #figpal-dialogues{visibility:hidden}

@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=figpal-identity';
-import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=figpal-identity';
+import { createOffice } from './office.js?v=fixed-bubbles';
+import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=fixed-bubbles';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -383,11 +383,7 @@ function updateArrivalDialogue(time){
  arrivalDialogue.hidden=false;
  const rect=canvas.getBoundingClientRect(),anchorX=rect.left+(dialogueProjection.x*.5+.5)*rect.width;
  const anchorY=rect.top+(-dialogueProjection.y*.5+.5)*rect.height;
- const halfWidth=arrivalDialogue.offsetWidth/2;
- const x=THREE.MathUtils.clamp(anchorX,halfWidth+12,innerWidth-halfWidth-12);
- const y=Math.max(arrivalDialogue.offsetHeight+14,anchorY-8);
- arrivalDialogue.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-100%)`;
- arrivalDialogue.style.setProperty('--tail-offset',`${THREE.MathUtils.clamp(anchorX-x,-halfWidth+24,halfWidth-24)}px`);
+ arrivalDialogue.style.transform=`translate3d(${anchorX}px,${anchorY-8}px,0) translate(-50%,-100%)`;
 }
 const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
 function interactionAt(event){

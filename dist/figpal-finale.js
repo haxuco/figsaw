@@ -37,17 +37,7 @@ export function createFinaleCue(hoists){
  };
 }
 
-// Pack horizontally in camera order, including when all vats project near an edge.
-export function layoutFigpalBubbles(items,rect){
- items.sort((a,b)=>a.anchorX-b.anchorX);
- let edge=rect.left+10;
- for(const item of items){item.x=Math.max(item.x,edge);edge=item.x+item.width+8;}
- edge=rect.right-10;
- for(let i=items.length-1;i>=0;i--){const item=items[i];item.x=Math.min(item.x,edge-item.width);edge=item.x-8;}
- return items;
-}
-
-// Compact screen-space bubbles stay legible while their anchors descend in 3D.
+// Fixed-size bubbles stay centered on their own 3D anchors without reflowing.
 export function createFigpalBubbles(anchors,canvas){
  const container=document.querySelector('#figpal-dialogues');
  const bubbles=FIGPAL_PLEAS.map((line,index)=>{
@@ -71,7 +61,7 @@ export function createFigpalBubbles(anchors,canvas){
  }
  function update(camera,time){
   container.hidden=false;
-  const rect=canvas.getBoundingClientRect(),visible=[];
+  const rect=canvas.getBoundingClientRect();let visible=0;
   for(let i=0;i<anchors.length;i++){
    const bubble=bubbles[i],elapsed=startedAt[i]===null?-1:time-startedAt[i];
    const duration=durations[i];
@@ -82,18 +72,13 @@ export function createFigpalBubbles(anchors,canvas){
    point.y=Math.max(point.y,1.32);point.project(camera);
    if(point.z<-1||point.z>1||Math.abs(point.x)>1.04||Math.abs(point.y)>1.1){bubble.hidden=true;continue;}
    bubble.hidden=false;
-   const width=bubble.offsetWidth,height=bubble.offsetHeight;
    const anchorX=rect.left+(point.x*.5+.5)*rect.width,anchorY=rect.top+(-point.y*.5+.5)*rect.height;
-   visible.push({bubble,width,height,anchorX,anchorY,x:THREE.MathUtils.clamp(anchorX-width/2,rect.left+10,rect.right-width-10),y:Math.max(rect.top+10,anchorY-height-14)});
+   bubble.style.transform=`translate3d(${anchorX}px,${anchorY-14}px,0) translate(-50%,-100%)`;
+   const center=bubble.offsetWidth/2;
+   bubble.querySelector('path').setAttribute('d',`M ${center-5} 0 L ${center+6} 0 L ${center} 15 Z`);
+   visible++;
   }
-  container.hidden=visible.length===0;
-  for(const item of layoutFigpalBubbles(visible,rect)){
-   const tailX=THREE.MathUtils.clamp(item.anchorX-item.x,12,item.width-12);
-   const length=Math.max(10,Math.min(85,item.anchorY-item.y-item.height));
-   item.bubble.style.transform=`translate3d(${item.x}px,${item.y}px,0)`;
-   // The leader still points to its own Figpal after the boxes are spread apart.
-   item.bubble.querySelector('path').setAttribute('d',`M ${tailX-5} 0 L ${tailX+6} 0 L ${item.anchorX-item.x} ${length} Z`);
-  }
+  container.hidden=visible===0;
  }
  hide();return {update,hide,show,showAll,isActive};
 }
