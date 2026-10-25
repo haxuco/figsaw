@@ -112,13 +112,107 @@ export function createOffice(renderer){
  const looseTower=tower(office,[-2.22,.13,-.72],.35,true);looseTower.rotation.z=Math.PI/2;
  for(let i=0;i<3;i++)tower(office,[-3.32,0,-2.45+i*.31],-.18,true).scale.setScalar(.90);
 
- function chair(x,z,angle=0,tipped=false){const g=new THREE.Group();g.position.set(x,tipped?.32:0,z);g.rotation.set(tipped?1.03:0,angle,tipped?.34:0);office.add(g);
-  cylinder(.04,.43,[0,.24,0],steel,g);rounded([.46,.08,.43],[0,.49,0],fabric,g);const back=rounded([.44,.39,.075],[0,.81,-.18],fabric,g);back.rotation.x=.12;
-  for(const xx of[-.19,.19])rod([xx,.48,-.17],[xx,.9,-.20],.014,steel,g);
-  for(let i=0;i<5;i++){const a=i/5*Math.PI*2;rod([0,.12,0],[Math.cos(a)*.30,.075,Math.sin(a)*.30],.023,steel,g);sphere([.04,.047,.03],[Math.cos(a)*.30,.05,Math.sin(a)*.30],black,g);}
-  for(const side of[-1,1]){rod([side*.24,.49,.10],[side*.24,.69,.10],.013,steel,g);box([.055,.04,.29],[side*.24,.7,-.015],black,g);}return g;
+ // Aeron-inspired chairs: curved open mesh, broad back shells, lumbar supports and cast bases.
+ // Keep their wear generation independent of the established room's random layout.
+ const roomSeed=seed;
+ const chairFrame=material(0xffffff,.78,weathered('#afb4a9','metal'),.22);
+ const chairEdge=material(0x626a62,.70,null,.25),chairArm=material(0x313934,.86,fabricMap);
+ const fracture=material(0xadb1a5,.82),chairMetal=material(0x68746c,.46,null,.73);
+ function meshWeave(damage=0){
+  const[c,ctx]=canvas(512);ctx.lineWidth=1.8;
+  for(let x=0;x<512;x+=7){ctx.strokeStyle=x%21?'#a0a59a':'#686f65';ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,512);ctx.stroke();}
+  for(let y=0;y<512;y+=6){ctx.strokeStyle=y%18?'#7f897e':'#b0b4a5';ctx.lineWidth=y%18?1.6:2.1;ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(512,y);ctx.stroke();}
+  if(damage){
+   ctx.globalCompositeOperation='destination-out';ctx.fillStyle='#000';ctx.beginPath();
+   const tear=damage===1?[[126,180],[187,210],[203,182],[229,265],[204,288],[236,339],[183,360],[154,302],[113,321],[137,257],[102,232]]:[[275,256],[315,209],[333,270],[377,253],[353,315],[386,375],[328,354],[300,399],[287,332],[248,309]];
+   tear.forEach(([x,y],i)=>i?ctx.lineTo(x,y):ctx.moveTo(x,y));ctx.closePath();ctx.fill();
+   ctx.lineWidth=3;for(let i=0;i<16;i++){const[x,y]=tear[i%tear.length];ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+range(-24,24),y+range(-18,18));ctx.stroke();}
+  }
+  return new THREE.MeshStandardMaterial({map:texture(c),color:0xe1e3d9,roughness:.93,side:THREE.DoubleSide,alphaTest:.30,alphaToCoverage:true});
  }
- chair(-2.25,-2.30,.35);chair(-.30,-2.18,-.18);chair(-2.82,.29,-.80,true);chair(.58,-2.94,.65,true);
+ const chairMesh=[meshWeave(),meshWeave(1),meshWeave(2)];
+ function meshPanel(points,center,surface,parent,damage=0){
+  const outline=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(p[0],p[1],0)),true,'centripetal');
+  const edge=outline.getSpacedPoints(96).slice(0,-1),positions=[],uvs=[],indices=[],rings=12,n=edge.length;
+  const minX=Math.min(...edge.map(p=>p.x)),maxX=Math.max(...edge.map(p=>p.x)),minY=Math.min(...edge.map(p=>p.y)),maxY=Math.max(...edge.map(p=>p.y));
+  for(let r=0;r<=rings;r++)for(let j=0;j<n;j++){
+   const t=r/rings,x=center[0]+(edge[j].x-center[0])*t,y=center[1]+(edge[j].y-center[1])*t;
+   positions.push(...surface(x,y,t));uvs.push((x-minX)/(maxX-minX),(y-minY)/(maxY-minY));
+   if(r<rings){const a=r*n+j,b=r*n+(j+1)%n;indices.push(a,b,a+n,b,b+n,a+n);}
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(positions,3));geometry.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geometry.setIndex(indices);geometry.computeVertexNormals();
+  const panel=mesh(geometry,chairMesh[damage],parent);
+  panel.customDepthMaterial=new THREE.MeshDepthMaterial({depthPacking:THREE.RGBADepthPacking,map:chairMesh[damage].map,alphaTest:.30,side:THREE.DoubleSide});
+  for(const [inset,radius,mat]of[[1,.025,chairFrame],[.925,.007,chairEdge]]){
+   const path=edge.map(p=>new THREE.Vector3(...surface(center[0]+(p.x-center[0])*inset,center[1]+(p.y-center[1])*inset,inset)));
+   mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(path,true),96,radius,8,true),mat,parent);
+  }
+ }
+ function chairBack(parent,damage=1){
+  const back=new THREE.Group();back.name='Torn mesh back and lumbar support';parent.add(back);
+  const outline=[[-.18,0],[-.224,.08],[-.235,.26],[-.28,.46],[-.264,.55],[-.17,.60],[0,.615],[.17,.60],[.264,.55],[.28,.46],[.235,.26],[.224,.08],[.18,0],[0,-.014]];
+  meshPanel(outline,[0,.30],(x,y,t)=>[x,y,-.11*y/.615+.035*(1-t*t)],back,damage);
+  // The rear fork and adjustable lumbar pad remain visible through the open weave.
+  cable([[0,-.09,-.07],[0,.13,-.08],[-.17,.30,-.09],[-.23,.37,-.09]],.018,chairFrame,back);
+  cable([[0,.08,-.08],[.08,.22,-.085],[.23,.37,-.09]],.018,chairFrame,back);
+  for(const y of[.12,.235])sphere([.048,.073,.024],[0,y,-.055],chairArm,back);
+  cable([[-.21,.175,-.06],[0,.19,-.035],[.21,.175,-.06]],.014,chairEdge,back);
+  if(damage){for(let j=0;j<5;j++)cable([[-.13+j*.012,.20,-.015],[-.12+j*.012,.15,.001],[-.14+j*.012,.10,-.02]],.0016,chairMesh[0],back);}
+  return back;
+ }
+ function chairArmrest(parent,side,broken=false){
+  const arm=new THREE.Group();parent.add(arm);
+  const x=side*.295;
+  cable([[side*.22,.46,-.17],[x,.53,-.20],[x,.67,-.17],[x,.72,-.07]],.023,chairFrame,arm);
+  if(broken){sphere([.025,.011,.026],[x,.72,-.07],fracture,arm);return arm;}
+  const pad=sphere([.058,.034,.15],[x,.745,.01],chairArm,arm);pad.rotation.z=side*.06;
+  rod([x,.68,-.085],[x,.734,.045],.019,chairEdge,arm);return arm;
+ }
+ function chairCaster(parent,x,y,z,angle=0){
+  const wheel=new THREE.Group();wheel.position.set(x,y,z);wheel.rotation.y=angle;parent.add(wheel);
+  rod([0,.028,0],[0,.078,.015],.012,chairMetal,wheel);
+  for(const side of[-1,1]){const tire=cylinder(.039,.022,[side*.021,0,0],rubber,wheel,16);tire.rotation.z=Math.PI/2;sphere([.002,.018,.018],[side*.033,0,0],chairEdge,wheel);}
+ }
+ function chairBase(parent,missing=-1){
+  const base=new THREE.Group();base.name='Five-spoke caster base';parent.add(base);
+  cylinder(.057,.09,[0,.16,0],chairFrame,base,16);cylinder(.031,.20,[0,.28,0],chairMetal,base,16);
+  for(let i=0;i<5;i++){
+   const a=i/5*Math.PI*2+.25,dx=Math.cos(a),dz=Math.sin(a);
+   if(i===missing){rod([0,.16,0],[dx*.13,.135,dz*.13],.025,chairFrame,base);sphere([.024,.014,.018],[dx*.13,.135,dz*.13],fracture,base);continue;}
+   cable([[0,.18,0],[dx*.14,.145,dz*.14],[dx*.31,.092,dz*.31]],.022,chairFrame,base);
+   chairCaster(base,dx*.31,.04,dz*.31,a);
+  }
+  return base;
+ }
+ function settleChairPart(group,x,z,rotation){
+  group.position.set(x,0,z);group.rotation.set(...rotation);group.updateMatrixWorld(true);
+  group.position.y=.012-new THREE.Box3().setFromObject(group).min.y;return group;
+ }
+ function aeronChair(x,z,rotation,damage={}){
+  const g=new THREE.Group();g.name='Broken Aeron-style mesh chair';office.add(g);
+  if(!damage.noBase)chairBase(g,damage.missingSpoke??-1);
+  // Tilt mechanism, adjustment paddles and a suspended waterfall seat.
+  rounded([.24,.095,.27],[0,.405,-.035],chairEdge,g);
+  cylinder(.045,.13,[0,.405,0],chairFrame,g,16);
+  rod([-.14,.41,.015],[-.245,.405,.05],.012,chairMetal,g);sphere([.035,.016,.055],[-.25,.405,.055],chairArm,g);
+  sphere([.055,.025,.04],[.18,.407,-.04],chairArm,g);
+  const seatOutline=[[-.20,-.23],[-.26,-.16],[-.283,.08],[-.25,.22],[0,.25],[.25,.22],[.283,.08],[.26,-.16],[.20,-.23],[0,-.25]];
+  meshPanel(seatOutline,[0,0],(x,z,t)=>[x,.51-.035*(1-t*t)-.025*Math.max(0,z/.25),z],g,damage.seatTear??1);
+  for(const side of[-1,1]){cable([[side*.12,.41,-.14],[side*.22,.46,-.20],[side*.24,.49,-.15]],.023,chairFrame,g);chairArmrest(g,side,side===damage.brokenArm);}
+  if(!damage.noBack){const back=chairBack(g,damage.backTear??1);back.position.set(0,.55,-.22);back.rotation.set(damage.backLean??0,0,damage.backTwist??0);}
+  return settleChairPart(g,x,z,rotation);
+ }
+ aeronChair(-2.25,-2.30,[0,.35,-.035],{brokenArm:1,backTear:2});
+ aeronChair(-.30,-2.18,[-.08,-.28,.08],{brokenArm:-1,missingSpoke:3,backLean:-.16});
+ aeronChair(-2.63,.32,[-.55,-.80,1.39],{brokenArm:-1,missingSpoke:2,backTwist:.20});
+ aeronChair(.70,-3.02,[1.65,.65,.32],{brokenArm:1,noBack:true});
+ // A tipped chair and its detached base frame the right-hand aisle without covering the laptop.
+ aeronChair(1.35,1.42,[-.30,-.50,-1.28],{noBase:true,brokenArm:-1,backTwist:-.14,backTear:2});
+ const looseBase=chairBase(office,1);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
+ const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-1.85,2.12,[-1.60,.22,-.40]);
+ const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
+ chairCaster(office,2.37,.045,2.84,.7);chairCaster(office,-2.15,.045,.95,-.4);
+ seed=roomSeed;
  for(let i=0;i<11;i++){const x=range(-3.3,.9),z=range(-3,-1);cable([[x,.83,z],[x+.15,.52,z+.2],[x-.12,.04,z+.45],[x+.31,.022,z+.83],[x+.62,.02,z+.47]],.009,black);}
  // Loose network cables snake across the clear central aisle.
  cable([[-3.25,.026,.8],[-2,.023,1.45],[-1.25,.022,1.78],[-.85,.022,1.47],[-.67,.022,2.5],[.45,.022,2.83],[1.25,.022,2.44]],.012,black);
