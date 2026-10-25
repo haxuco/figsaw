@@ -3,7 +3,8 @@ import { createCountdownClock, formatCountdown } from './countdown-clock.js';
 
 export function createFloorTimer(viewerPosition,position){
  const group=new THREE.Group();group.name='Five-minute red LED countdown timer';group.position.copy(position);group.position.y=.006;
- group.rotation.y=Math.atan2(viewerPosition.x-position.x,viewerPosition.z-position.z);
+ group.rotation.y=Math.atan2(viewerPosition.x-position.x,viewerPosition.z-position.z)-THREE.MathUtils.degToRad(16);
+ group.scale.setScalar(.72);
  const clock=createCountdownClock();
  const caseGroup=new THREE.Group();caseGroup.position.y=.13;caseGroup.rotation.x=-.24;group.add(caseGroup);
  const c=document.createElement('canvas');c.width=512;c.height=256;const ctx=c.getContext('2d');

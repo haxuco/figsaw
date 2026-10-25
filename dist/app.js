@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=auto-laptop';
+import { createOffice } from './office.js?v=timer-pose';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
