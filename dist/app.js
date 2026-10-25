@@ -99,10 +99,10 @@ const model=new THREE.Group();model.name='Figsaw and tricycle';scene.add(model);
 
 // A vintage tricycle supports the rock directly on its saddle.
 const tricycle=new THREE.Group();tricycle.name='Figsaw’s red tricycle';model.add(tricycle);
-const enamel=new THREE.MeshStandardMaterial({color:0x982d32,roughness:.48,metalness:.42});
+const enamel=new THREE.MeshStandardMaterial({color:0xc93338,roughness:.44,metalness:.28});
 const chrome=new THREE.MeshStandardMaterial({color:0xaeb5b3,roughness:.34,metalness:.72});
 const spokeMaterial=new THREE.MeshStandardMaterial({color:0x535a59,roughness:.46,metalness:.65});
-const gripMaterial=mat(0x641c22,.86);
+const gripMaterial=mat(0x87242b,.86);
 const rubber=mat(0x171c1b,.93),saddleMaterial=mat(0x242725,.85);
 function rod(parent,start,end,radius,material){
  const a=new THREE.Vector3(...start),b=new THREE.Vector3(...end),delta=b.clone().sub(a);
