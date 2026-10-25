@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {weatheredMetal} from './industrial-materials.js?v=brighter-liquid';
-import {createRestraintState} from './restraint-state.js?v=hinged-cuff';
+import {createRestraintState} from './restraint-state.js?v=hand-opens-laptop';
 
 const UP=new THREE.Vector3(0,1,0);
 export function createPlayerRestraint(camera){
@@ -48,7 +48,9 @@ export function createPlayerRestraint(camera){
   const finger=new THREE.Group();finger.position.set(x,-.002,-.137+(i===3?.013:0));finger.rotation.y=spread;hand.add(finger);fingers.push(finger);
   const r=i===3?.0175:.020;
   skinForm(finger,[[.014,0,0,r*.92,r*.90],[0,0,0,r,r],[-length*.22,0,-.002,r,r*.98],[-length*.48,0,-.005,r*.96,r*.94],[-length*.70,0,-.009,r*.92,r*.90],[-length*.84,0,-.012,r*.86,r*.84],[-length*.94,0,-.014,r*.64,r*.64],[-length*.985,0,-.014,r*.30,r*.30],[-length,0,-.014,.0003,.0003]]);
+  finger.userData.spread=spread;
  }
+ const fingertip=new THREE.Object3D();fingertip.name='Lid contact fingertip';fingertip.position.set(0,-.014,-.136);fingers[1].add(fingertip);
  const thumb=new THREE.Group();thumb.position.set(-.049,-.008,-.041);thumb.rotation.y=.88;thumb.rotation.z=-.26;hand.add(thumb);
  skinForm(thumb,[[.018,0,0,.033,.030],[0,0,0,.032,.030],[-.027,-.003,0,.029,.027],[-.051,-.005,.002,.026,.025],[-.072,-.006,.002,.025,.024],[-.089,-.006,.001,.021,.020],[-.101,-.006,0,.012,.012],[-.107,-.006,0,.0003,.0003]]);
  const restraint=new THREE.Group();restraint.name='Wrist cuff and chain — right-click to detach';restraint.userData.playerChain=true;space.add(restraint);
@@ -95,6 +97,8 @@ export function createPlayerRestraint(camera){
  const reachElbow=new THREE.Vector3(.43,-.66,-.54),freeElbow=new THREE.Vector3(.22,-.68,-.58),shoulderOffset=new THREE.Vector3(.12,-.34,-.05),boneAxis=new THREE.Vector3(0,0,-1);
  const releasedWrist=new THREE.Vector3(),releasedElbow=new THREE.Vector3(),releasedRotation=new THREE.Quaternion(),releasedCuffRotation=new THREE.Quaternion();
  let hasReleasePose=false;
+ const gripPosition=new THREE.Vector3(),gripOffset=new THREE.Vector3(),gripWrist=new THREE.Vector3(),gripElbow=new THREE.Vector3();
+ const gripRotation=new THREE.Quaternion(),cameraInverse=new THREE.Quaternion();
  let chainLength=3;
  const sideways=new THREE.Vector3(1,0,0),samples=Array.from({length:49},()=>new THREE.Vector3());
  function chainPoint(t,amplitude,out){out.copy(start).lerp(pipeHook,t);out.addScaledVector(sideways,Math.sin(Math.PI*t)*amplitude);out.y-=Math.sin(Math.PI*t)*amplitude*.9;worldPoint.copy(out);space.localToWorld(worldPoint);worldPoint.y=Math.max(.032,worldPoint.y);space.worldToLocal(worldPoint);out.copy(worldPoint);return out;}
@@ -107,7 +111,7 @@ export function createPlayerRestraint(camera){
   }
   links.instanceMatrix.needsUpdate=true;pickLinks.instanceMatrix.needsUpdate=true;
  }
- function update(time,reducedMotion=false,keepVisible=false){
+ function update(time,reducedMotion=false,keepVisible=false,lidHand=null){
   const pose=state.sample(time,keepVisible),reach=pose.reach;
   // The entire arm follows translation, yaw AND pitch; the far chain end remains
   // physically attached to the room's pipe. FOV changes preserve the framing.
@@ -117,7 +121,7 @@ export function createPlayerRestraint(camera){
   space.visible=pose.visible;
   if(!pose.visible)return pose.openLaptop;
   pipeHook.copy(pipeAnchor);space.worldToLocal(pipeHook);
-  const reveal=reducedMotion?1:pose.reveal,withdraw=(1-reveal)*.55;
+  const reveal=reducedMotion?1:lidHand?lidHand.reveal:pose.reveal,withdraw=(1-reveal)*.55;
   wrist.copy(restWrist).lerp(pose.locked?chainedReach:freeReach,reach);
   if(pose.locked)wrist.y+=reducedMotion?0:pose.strain;
   // Two fixed-length limb segments articulate at the elbow instead of stretching
@@ -140,6 +144,30 @@ export function createPlayerRestraint(camera){
   hand.position.copy(wrist);hand.quaternion.copy(forearm.quaternion);hand.rotateX(-.12+reach*.08);hand.rotateY(.13-reach*.06);hand.rotateZ(-.04);
   if(releaseActive)hand.quaternion.slerp(releasedRotation,1-pose.handFree);
   fingers.forEach((f,i)=>{f.rotation.x=-.06+(1-reach)*(.11+i*.015);});
+  thumb.rotation.x=0;thumb.rotation.y=.88;
+  if(lidHand){
+   const blend=lidHand.blend,grip=lidHand.grip;
+   fingers.forEach((finger,i)=>{
+    finger.rotation.x=THREE.MathUtils.lerp(finger.rotation.x,-.46+(i===0?.08:0),grip);
+    finger.rotation.y=THREE.MathUtils.lerp(finger.userData.spread,finger.userData.spread*.30,grip);
+   });
+   thumb.rotation.x=.28*grip;thumb.rotation.y=.88-.28*grip;
+   // Solve wrist position from the actual fingertip, so the hand cannot slide
+   // through the lid or trail behind its independently animated hinge.
+   fingers[1].updateMatrix();gripOffset.copy(fingertip.position).applyMatrix4(fingers[1].matrix);
+   cameraInverse.copy(camera.quaternion).invert();gripRotation.copy(cameraInverse).multiply(lidHand.quaternion);
+   gripPosition.copy(lidHand.position);space.worldToLocal(gripPosition);
+   gripWrist.copy(gripPosition).sub(gripOffset.applyQuaternion(gripRotation));
+   hand.position.lerp(gripWrist,blend);hand.quaternion.slerp(gripRotation,blend);
+   // The arm enters from below the frame during the lift, keeping the elbow out
+   // of sight as the wrist rises with the laptop edge.
+   const depth=Math.min(.62,Math.max(.38,-hand.position.z*.72));
+   gripElbow.set(hand.position.x+.18,-depth*Math.tan(THREE.MathUtils.degToRad(31))-.15,-depth);
+   elbow.lerp(gripElbow,blend);wrist.copy(hand.position);shoulder.copy(elbow).add(shoulderOffset);
+   upperarm.position.copy(shoulder);delta.copy(elbow).sub(shoulder);upperarm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());upperarm.scale.z=delta.length();
+   forearm.position.copy(elbow);delta.copy(wrist).sub(elbow);forearm.quaternion.setFromUnitVectors(boneAxis,delta.clone().normalize());forearm.scale.z=delta.length();
+   elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearm.quaternion);
+  }else fingers.forEach(finger=>{finger.rotation.y=finger.userData.spread;});
   if(pose.locked){
    cuff.position.copy(wrist);cuff.quaternion.copy(hand.quaternion);gate.rotation.z=0;latch.rotation.z=0;
   }else{
@@ -160,5 +188,5 @@ export function createPlayerRestraint(camera){
  }
  function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);
- return {group,target:restraint,state,update,reset,setEnvironment(map){for(const mat of[iron,edge]){mat.envMap=map;mat.envMapIntensity=1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
+ return {group,target:restraint,state,update,reset,endReach:()=>state.endReach(),setEnvironment(map){for(const mat of[iron,edge]){mat.envMap=map;mat.envMapIntensity=1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
 }

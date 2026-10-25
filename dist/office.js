@@ -328,19 +328,25 @@ export function createOffice(renderer,viewerPosition){
  const charger=cable([[-.445,.002,-.19],[-.56,-.010,-.20],[-.72,-.016,-.06],[-.83,-.016,.21],[-1.12,-.016,.48]],.006,black,laptop);charger.userData.ignoreFloorContact=true;charger.userData.anchorStart=true;floorCables.push(charger);
  const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
  const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
- let laptopOpened=false,laptopProgress=0;
+ let laptopOpened=false,laptopProgress=0,manualOpening=false;
+ function applyLidProgress(progress){
+  laptopLid.rotation.x=THREE.MathUtils.lerp(Math.PI/2,-.20,progress);
+  const wake=THREE.MathUtils.smoothstep(progress,.22,.72);
+  displayMat.color.copy(screenColor).multiplyScalar(wake);screenSpill.intensity=.60*wake;
+ }
  const laptopControl={
-  object:laptop,
+  object:laptop,screen:laptopScreen,
+  get isReady(){return laptopProgress===1;},
   get isOpen(){return laptopOpened;},
-  open(){if(laptopOpened)return false;laptopOpened=true;return true;},
-  close(){laptopOpened=false;laptopProgress=0;laptopLid.rotation.x=Math.PI/2;displayMat.color.setScalar(0);screenSpill.intensity=0;},
+  get openProgress(){return laptopProgress;},
+  getLidGrip(out){laptopLid.updateWorldMatrix(true,false);return laptopLid.localToWorld(out.set(.12,.600,-.004));},
+  setOpenProgress(progress){manualOpening=true;laptopProgress=THREE.MathUtils.clamp(progress,0,1);laptopOpened=laptopProgress>0;applyLidProgress(laptopProgress);},
+  open(){if(laptopOpened)return false;manualOpening=false;laptopOpened=true;return true;},
+  close(){manualOpening=false;laptopOpened=false;laptopProgress=0;applyLidProgress(0);},
   update(dt,instant=false){
-   if(!laptopOpened||laptopProgress===1)return;
+   if(manualOpening||!laptopOpened||laptopProgress===1)return;
    laptopProgress=instant?1:Math.min(1,laptopProgress+dt/.95);
-   const eased=THREE.MathUtils.smootherstep(laptopProgress,0,1);
-   laptopLid.rotation.x=THREE.MathUtils.lerp(Math.PI/2,-.20,eased);
-   const wake=THREE.MathUtils.smoothstep(eased,.22,.72);
-   displayMat.color.copy(screenColor).multiplyScalar(wake);screenSpill.intensity=.60*wake;
+   applyLidProgress(THREE.MathUtils.smootherstep(laptopProgress,0,1));
   }
  };
 

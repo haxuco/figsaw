@@ -10,6 +10,7 @@ export function createRestraintState(){
    reachStart=time;visibleUntil=time+5.2;openPending=!locked;return true;
   },
   detach(time){if(!locked)return false;locked=false;releasedAt=time;visibleUntil=time+2.4;openPending=false;return true;},
+  endReach(){visibleUntil=-Infinity;openPending=false;},
   sample(time,keepVisible=false){
    if(keepVisible&&Number.isFinite(reachStart))visibleUntil=Math.max(visibleUntil,time+.8);
    const elapsed=time-reachStart;

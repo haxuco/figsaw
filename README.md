@@ -49,3 +49,5 @@ Each glass canister carries the supplied #OPENTOWORK decal, wrapped to the curve
 The fallen mobile rests low on the floor: its animals lie on gently compressed bodies instead of balancing on projecting paws, the bent support lies flat, and the loose crossbar ends and cords touch the surface. Contact shadows conform to the concrete and carpet beneath each plush.
 
 The reaching hand has a slightly larger palm and fingers with a relaxed spread. Its shorter camera-relative reach keeps the elbow below the frame, including the unlocked reach; the wrist size and hinged cuff remain fitted.
+
+Once freed, the hand opens the laptop with a single coordinated gesture: the view leans toward it, the fingers catch the actual front lip, and the hand follows the lid as it lifts before releasing and withdrawing. The screen wakes as the lid opens. The view then returns, repeated clicks cannot interrupt the gesture, and R resets it; reduced-motion mode opens immediately.
