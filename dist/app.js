@@ -6,6 +6,7 @@ import { createRestraintMenu } from './restraint-menu.js?v=detach-icon';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
+import { createArrivalCameraMove } from './arrival-camera.js';
 
 const canvas=document.querySelector('#scene');
 const initialCanvasDescription=canvas.getAttribute('aria-label');
@@ -26,6 +27,7 @@ renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
 const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
+const arrivalCameraMove=createArrivalCameraMove(homeCamera.fov);
 const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDirection=new THREE.Vector3();
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);scene.add(hemi);
 const fluorescentPower=17.5;
@@ -351,7 +353,7 @@ function updateEntrance(time){
  const viewerYaw=Math.atan2(homePosition.x-ridePoint.x,homePosition.z-ridePoint.z);
  const relativeYaw=THREE.MathUtils.euclideanModulo(viewerYaw-model.rotation.y+Math.PI,Math.PI*2)-Math.PI;
  setRollingDistance(progress*entranceLength/modelScale);
- if(progress===1&&!entranceArrived){entranceArrived=true;entranceArrivedAt=time;showFigsawDialogue(dialogueText);}
+ if(progress===1&&!entranceArrived){entranceArrived=true;entranceArrivedAt=time;arrivalCameraMove.start(state.time,cameraPosition,state);showFigsawDialogue(dialogueText);}
  figsawIdlePose(entranceArrived?time-entranceArrivedAt:-1,reducedMotion,idlePose);
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
@@ -427,20 +429,20 @@ function operateHoist(index){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView(){arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
  if(chainMenu.active)return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
- if(movementKeys.has(event.code)){event.preventDefault();pressedKeys.add(event.code);resetting=false;return;}
+ if(movementKeys.has(event.code)){event.preventDefault();arrivalCameraMove.cancel();pressedKeys.add(event.code);resetting=false;return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
  if(/^Digit[1-3]$/.test(event.code)&&event.target===canvas&&!event.repeat){event.preventDefault();operateHoist(Number(event.code.slice(-1))-1);}
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
  if(event.code.startsWith('Arrow')){
-  event.preventDefault();resetting=false;
+  event.preventDefault();arrivalCameraMove.cancel();resetting=false;
   if(event.code==='ArrowLeft')state.yaw=wrapAngle(state.yaw+.08);
   if(event.code==='ArrowRight')state.yaw=wrapAngle(state.yaw-.08);
   if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-1.40,1.40);
@@ -464,6 +466,7 @@ canvas.addEventListener('pointermove',event=>{
  if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
+ if(pointerDistance>=6)arrivalCameraMove.cancel();
  state.yaw=wrapAngle(state.yaw-dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
 });
 canvas.addEventListener('pointerup',event=>{
@@ -479,7 +482,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>canvas.classList.remove('over-laptop','over-hoist','over-chain'));
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();arrivalCameraMove.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -529,6 +532,10 @@ function render(){
    state.yaw=homeView.yaw;state.pitch=homeView.pitch;state.zoom=1;cameraPosition.copy(homePosition);resetting=false;
   }
  }
+ updateEntrance(clock.elapsedTime);
+ if(arrivalCameraMove.active)resetting=false;
+ if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
+ arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
  const viewYaw=state.yaw;
  // Walk along the floor plane relative to the view; E/Q independently change eye height.
  const forward=Number(pressedKeys.has('KeyW'))-Number(pressedKeys.has('KeyS'));
@@ -546,7 +553,6 @@ function render(){
  cameraTarget.copy(cameraPosition).add(viewDirection);camera.lookAt(cameraTarget);
  const fov=homeCamera.fov*state.zoom;
  if(Math.abs(camera.fov-fov)>.001){camera.fov=fov;camera.updateProjectionMatrix();}
- updateEntrance(clock.elapsedTime);
  if(countdownStartTime!==null&&t>=countdownStartTime){
   countdown.start();countdownStartTime=null;
   countdownAnnouncement.textContent='The five-minute countdown has started.';
