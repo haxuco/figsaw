@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createFigpalSkeleton } from './bone-models.js?v=comical-skulls';
+import { createFigpalSkeleton } from './bone-models.js?v=figpal-identity';
 
 export function createFigpalTransformation(captive,index){
  const skeleton=createFigpalSkeleton(index);skeleton.position.copy(captive.position);skeleton.quaternion.copy(captive.quaternion);skeleton.scale.copy(captive.scale);captive.parent.add(skeleton);

@@ -1,10 +1,10 @@
 import * as THREE from './vendor/three.module.js';
-import { createLongBone, createRib, createSkull, createJaw, createSpine, createRibCage } from './bone-models.js?v=comical-skulls';
+import { createLongBone, createRib, createFigpalSkull, createJaw, createSpine, createRibCage } from './bone-models.js?v=figpal-identity';
 
 // Deliberately different remains in each vessel; every path stays in the liquid.
 const layouts=[
  [
-  {kind:'skull',x:-.12,y:.85,z:.17,tilt:-.24,yaw:.30,scale:1.18},
+  {kind:'pudding-skull',x:-.12,y:.81,z:.17,tilt:-.24,yaw:.30,scale:.34},
   {kind:'femur',x:.14,y:.46,z:.15,tilt:1.1,yaw:-.3,scale:.90}
  ],
  [
@@ -13,12 +13,12 @@ const layouts=[
   {kind:'rib',x:.16,y:.36,z:.17,tilt:.9,yaw:-.4,scale:.72}
  ],
  [
-  {kind:'skull',x:.08,y:.86,z:.17,tilt:.51,yaw:-.45,scale:.91},
+  {kind:'sushi-skull',x:.08,y:.86,z:.17,tilt:.51,yaw:-.45,scale:.29},
   {kind:'forearm',x:-.13,y:.58,z:.16,tilt:-.68,yaw:.20,scale:.95},
   {kind:'jaw',x:.09,y:.32,z:.16,tilt:-.18,yaw:.6,scale:1.04}
  ]
 ];
-const makers={skull:createSkull,femur:createLongBone,forearm:()=>createLongBone(true),rib:createRib,ribs:createRibCage,spine:createSpine,jaw:createJaw};
+const makers={'pudding-skull':()=>createFigpalSkull(0),'sushi-skull':()=>createFigpalSkull(1),femur:createLongBone,forearm:()=>createLongBone(true),rib:createRib,ribs:createRibCage,spine:createSpine,jaw:createJaw};
 export function createFloatingBones(index){
  const group=new THREE.Group();group.name=`Bones floating in canister ${index+1}`;
  const bones=layouts[index].map((pose,i)=>{

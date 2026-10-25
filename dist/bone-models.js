@@ -97,6 +97,52 @@ export function createRibCage(){
  rod(object,[0,.060,.081],[0,-.120,.079],.010);return object;
 }
 
+// Their skulls follow the original food silhouettes, rather than human anatomy.
+export function createFigpalSkull(index){
+ const pudding=index===0,object=new THREE.Group();
+ object.name=pudding?'Pudding-shaped skull with bony party hat':'Sushi-shaped skull with bony beanie';
+ const face=new THREE.Shape();
+ if(pudding){
+  face.moveTo(-.30,-.27);face.bezierCurveTo(-.42,-.19,-.38,.12,-.29,.24);
+  face.quadraticCurveTo(0,.34,.29,.24);face.bezierCurveTo(.38,.12,.42,-.19,.30,-.27);face.quadraticCurveTo(0,-.34,-.30,-.27);
+ }else{
+  face.moveTo(-.31,-.225);face.quadraticCurveTo(-.39,-.16,-.34,-.025);face.lineTo(-.41,.17);
+  face.quadraticCurveTo(-.40,.22,-.21,.29);face.quadraticCurveTo(0,.33,.21,.29);face.quadraticCurveTo(.40,.22,.41,.17);face.lineTo(.34,-.025);face.quadraticCurveTo(.39,-.16,.31,-.225);
+  for(let i=7;i>=0;i--){const x=-.31+i*.0775;face.quadraticCurveTo(x+.038,-.285,x,-.225);}
+ }
+ face.closePath();
+ const eyeY=pudding?.015:-.055,spacing=pudding?.13:.14;
+ for(const side of[-1,1]){const hole=new THREE.Path();hole.absellipse(side*spacing,eyeY,.070,side<0?.065:.057,0,Math.PI*2,true,side*.18);face.holes.push(hole);}
+ const nose=new THREE.Path();nose.moveTo(0,eyeY-.037);nose.lineTo(-.023,eyeY-.083);nose.quadraticCurveTo(0,eyeY-.075,.023,eyeY-.083);nose.closePath();face.holes.push(nose);
+ const mouth=new THREE.Path();mouth.absellipse(0,pudding?-.190:-.192,pudding?.208:.227,pudding?.064:.042,0,Math.PI*2,true);face.holes.push(mouth);
+ const shell=mesh(new THREE.ExtrudeGeometry(face,{depth:.055,bevelEnabled:true,bevelSize:.008,bevelThickness:.008,bevelSegments:3,curveSegments:24}),object);shell.position.z=.135;
+ ball(object,[0,.012,-.035],[pudding?.355:.37,.235,.16]);
+ ball(object,[0,-.025,.126],[.325,.265,.008],cavityMaterial);
+ // Wide, uneven little teeth sit within the original character's scalloped chin.
+ for(let i=0;i<7;i++){
+  if(i===1||i===5)continue;
+  const tooth=mesh(new THREE.BoxGeometry(.039,i%2?.037:.050,.035),object);tooth.position.set((i-3)*.053,pudding?-.147:-.169,.175);tooth.rotation.z=(i%3-1)*.12;
+ }
+ if(pudding){
+  tube(object,[[-.30,.19,.19],[-.24,.13,.20],[-.18,.195,.21],[-.11,.095,.21],[-.045,.17,.21],[.025,.085,.21],[.09,.17,.21],[.16,.105,.21],[.23,.19,.20],[.30,.15,.19]],.015);
+  const hat=new THREE.Group();hat.name='Ivory party-hat crest';hat.position.set(.02,.285,0);hat.rotation.z=-.12;object.add(hat);
+  const cone=mesh(new THREE.ConeGeometry(.123,.30,32),hat);cone.position.y=.15;
+  const brim=mesh(new THREE.TorusGeometry(.12,.012,8,32),hat);brim.rotation.x=Math.PI/2;
+  for(let i=0;i<5;i++){const a=i/5*Math.PI*2;tube(hat,[[Math.cos(a)*.12,.005,Math.sin(a)*.12],[Math.cos(a)*.065,.15,Math.sin(a)*.065],[0,.30,0]],.004);}
+  ball(hat,[0,.314,0],[.028,.03,.028]);
+  tube(object,[[-.20,.27,.15],[-.18,.23,.195],[-.205,.20,.20],[-.18,.17,.20]],.0025).material=cavityMaterial;
+ }else{
+  // The nori wrap survives as scored seams across a broad tamago-shaped crown.
+  for(const side of[-1,1])tube(object,[[side*.115,.027,.197],[side*.12,.16,.198],[side*.13,.292,.16]],.0035).material=cavityMaterial;
+  tube(object,[[-.37,.01,.17],[-.20,.036,.199],[0,.048,.20],[.20,.036,.199],[.37,.01,.17]],.012);
+  const cap=new THREE.Group();cap.name='Ribbed ivory beanie crest';cap.position.y=.30;object.add(cap);
+  const dome=mesh(new THREE.SphereGeometry(1,32,16,0,Math.PI*2,0,Math.PI/2),cap);dome.scale.set(.235,.235,.20);
+  const cuff=mesh(new THREE.TorusGeometry(.238,.020,10,40),cap);cuff.rotation.x=Math.PI/2;cuff.scale.y=.86;
+  for(let i=0;i<10;i++){const a=i/10*Math.PI*2,points=[];for(let j=0;j<=8;j++){const t=j/8*Math.PI/2;points.push([Math.cos(a)*.238*Math.cos(t),.237*Math.sin(t),Math.sin(a)*.203*Math.cos(t)]);}tube(cap,points,.006);}
+ }
+ return object;
+}
+
 // Different skeletal silhouettes retain each captive's proportions and chain sling.
 export function createFigpalSkeleton(index){
  const object=new THREE.Group();object.name=['Pudding Figpal skeleton','Sushi Figpal skeleton','Pufferfish skeleton'][index];
@@ -105,9 +151,7 @@ export function createFigpalSkeleton(index){
   for(let i=0;i<7;i++){const x=-.05+i*.055;ball(object,[x,0,0],[.028,.021,.020]);if(i<5)for(const side of[-1,1])tube(object,[[x,0,0],[x+.026,side*.09,-.010],[x+.014,side*(.22-i*.023),.015]],.010);}
   for(const y of[-.16,-.08,0,.08,.16])rod(object,[.29,0,0],[.47,y,0],.009);
  }else{
-  const skull=createSkull();skull.position.set(0,.14,.035);skull.scale.set(index===0?1.65:1.9,1.40,1.35);object.add(skull);
-  const ribs=createRibCage();ribs.position.y=-.15;ribs.scale.set(index===0?1.7:2.1,1,1.45);object.add(ribs);
-  for(const side of[-1,1]){const bone=createLongBone(true);bone.scale.multiplyScalar(.48);bone.position.set(side*(index===0?.255:.29),-.14,0);bone.rotation.z=side*.22;object.add(bone);}
+  object.add(createFigpalSkull(index));
  }
  return object;
 }
