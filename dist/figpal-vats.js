@@ -251,5 +251,5 @@ export function createFigpalVats(){
  }
  update(0);
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
- return {group,update,toggleHoist,lowerAll,reset,speechAnchors,setEnvironment};
+ return {group,update,toggleHoist,isLowered:index=>rigs[index]?.lowered??false,lowerAll,reset,speechAnchors,setEnvironment};
 }

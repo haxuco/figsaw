@@ -37,14 +37,21 @@ export function createFigpalBubbles(anchors,canvas){
   const path=document.createElementNS('http://www.w3.org/2000/svg','path');tail.append(path);
   wrapper.append(text,tail);container.append(wrapper);return wrapper;
  });
- const point=new THREE.Vector3();
- function hide(){container.hidden=true;for(const bubble of bubbles)bubble.hidden=true;}
- function update(camera,elapsed){
-  if(elapsed<0||elapsed>=15){hide();return;}
-  container.hidden=false;container.style.opacity=String(1-THREE.MathUtils.smoothstep(elapsed,13,15));
+ const point=new THREE.Vector3(),startedAt=bubbles.map(()=>null);
+ function show(index,time){if(!bubbles[index])return;startedAt[index]=time;}
+ function showAll(time){for(let i=0;i<bubbles.length;i++)show(i,time);}
+ function hide(index){
+  if(Number.isInteger(index)){if(bubbles[index]){startedAt[index]=null;bubbles[index].hidden=true;}return;}
+  container.hidden=true;for(let i=0;i<bubbles.length;i++){startedAt[i]=null;bubbles[i].hidden=true;}
+ }
+ function update(camera,time){
+  container.hidden=false;
   const rect=canvas.getBoundingClientRect(),visible=[];
   for(let i=0;i<anchors.length;i++){
-   const bubble=bubbles[i];anchors[i].getWorldPosition(point);
+   const bubble=bubbles[i],elapsed=startedAt[i]===null?-1:time-startedAt[i];
+   if(elapsed<0||elapsed>=15){bubble.hidden=true;if(elapsed>=15)startedAt[i]=null;continue;}
+   bubble.style.opacity=String(1-THREE.MathUtils.smoothstep(elapsed,13,15));
+   anchors[i].getWorldPosition(point);
    // Last words remain just above the water rather than vanishing behind the vat.
    point.y=Math.max(point.y,1.32);point.project(camera);
    if(point.z<-1||point.z>1||Math.abs(point.x)>1.04||Math.abs(point.y)>1.1){bubble.hidden=true;continue;}
@@ -53,6 +60,7 @@ export function createFigpalBubbles(anchors,canvas){
    const anchorX=rect.left+(point.x*.5+.5)*rect.width,anchorY=rect.top+(-point.y*.5+.5)*rect.height;
    visible.push({bubble,width,height,anchorX,anchorY,x:THREE.MathUtils.clamp(anchorX-width/2,rect.left+10,rect.right-width-10),y:Math.max(rect.top+10,anchorY-height-14)});
   }
+  container.hidden=visible.length===0;
   for(const item of layoutFigpalBubbles(visible,rect)){
    const tailX=THREE.MathUtils.clamp(item.anchorX-item.x,12,item.width-12);
    const length=Math.max(10,Math.min(85,item.anchorY-item.y-item.height));
@@ -61,5 +69,5 @@ export function createFigpalBubbles(anchors,canvas){
    item.bubble.querySelector('path').setAttribute('d',`M ${tailX-5} 0 L ${tailX+6} 0 L ${item.anchorX-item.x} ${length} Z`);
   }
  }
- hide();return {update,hide};
+ hide();return {update,hide,show,showAll};
 }

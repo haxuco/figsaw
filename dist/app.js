@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=countdown-finale';
-import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles } from './figpal-finale.js';
+import { createOffice } from './office.js?v=manual-pleas';
+import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles } from './figpal-finale.js?v=manual-pleas';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -403,7 +403,12 @@ function openLaptop(){
  canvas.classList.remove('over-laptop');
  canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro').replace(' Click the laptop or press Enter to open it.',''));
 }
-function operateHoist(index){const message=toggleHoist(index);if(message)document.querySelector('#hoist-status').textContent=message;}
+function operateHoist(index){
+ const message=toggleHoist(index);if(!message)return;
+ const lowering=figpalHoists.isLowered(index);
+ if(lowering)figpalBubbles.show(index,state.time);else figpalBubbles.hide(index);
+ document.querySelector('#hoist-status').textContent=lowering?`${message} ${FIGPAL_PLEAS[index]}`:message;
+}
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
@@ -533,6 +538,7 @@ function render(){
   if(countdownSeconds===0)countdownAnnouncement.textContent='The countdown has reached zero.';
  }
  if(finale.update(countdown.status,t)){
+  figpalBubbles.showAll(t);
   countdownAnnouncement.textContent=`Time is up. All three Figpals are lowering into the green liquid. ${FIGPAL_PLEAS.join(' ')}`;
  }
  const dialogueMouth=dialogueMouthAmount(dialogueSpeech,t);
@@ -555,7 +561,7 @@ function render(){
   previousEyeRotation.copy(eye.quaternion);eye.lookAt(gazeTarget);
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
- renderer.render(scene,camera);updateArrivalDialogue(t);figpalBubbles.update(camera,finale.elapsed(t));requestAnimationFrame(render);
+ renderer.render(scene,camera);updateArrivalDialogue(t);figpalBubbles.update(camera,t);requestAnimationFrame(render);
 }
 render();
 canvas.addEventListener('webglcontextlost',event=>event.preventDefault());
