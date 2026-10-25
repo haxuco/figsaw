@@ -7,28 +7,24 @@ export function createPlayerRestraint(camera){
  const group=new THREE.Group();group.name='Player forearm chained to the rear pipes';
  const space=new THREE.Group();space.name='Camera-relative reaching hand';group.add(space);
  const state=createRestraintState(),sphere=new THREE.SphereGeometry(1,24,16);
- // Muted skin, fine mottling and shallow pores avoid the smooth plastic appearance.
- const skin=new THREE.MeshPhysicalMaterial({color:0xb29b8c,roughness:.72,metalness:0,clearcoat:.025,clearcoatRoughness:.85});
- const pores=new Uint8Array(128*128*4),tones=new Uint8Array(128*128*4);let seed=381;
- for(let y=0;y<128;y++)for(let x=0;x<128;x++){
-  const i=(y*128+x)*4;seed=(1664525*seed+1013904223)>>>0;
-  const noise=(seed>>>24)/255,v=140+noise*55,flush=Math.sin(x*.11)*Math.sin(y*.08)*3;
-  pores[i]=pores[i+1]=pores[i+2]=v;pores[i+3]=255;
-  tones[i]=231+noise*15+flush;tones[i+1]=224+noise*13;tones[i+2]=219+noise*12;tones[i+3]=255;
- }
- function skinMap(data){const map=new THREE.DataTexture(data,128,128);map.wrapS=map.wrapT=THREE.RepeatWrapping;map.repeat.set(2,3);map.needsUpdate=true;return map;}
- skin.map=skinMap(tones);skin.map.colorSpace=THREE.SRGBColorSpace;skin.bumpMap=skinMap(pores);skin.bumpScale=.00018;
- const nails=new THREE.MeshPhysicalMaterial({color:0xb9a89b,roughness:.56,clearcoat:.10});
- const creases=new THREE.MeshStandardMaterial({color:0x786e65,roughness:1,transparent:true,opacity:.17});
+ // Broad cel-shaded forms and an ink silhouette match Figsaw's drawn features.
+ const bands=new THREE.DataTexture(new Uint8Array([75,145,205,255]),4,1,THREE.RedFormat);
+ bands.minFilter=bands.magFilter=THREE.NearestFilter;bands.generateMipmaps=false;bands.needsUpdate=true;
+ const skin=new THREE.MeshToonMaterial({color:0xd3aa87,gradientMap:bands,emissive:0x684333,emissiveIntensity:.025});
+ const ink=new THREE.MeshBasicMaterial({color:0x201c19,side:THREE.BackSide});
  const iron=weatheredMetal(0xa5aaa2),edge=weatheredMetal(0xbfc5c0),black=new THREE.MeshStandardMaterial({color:0x151716,roughness:.9});
  const invisible=new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false});
  function mesh(geo,mat,parent=space){const m=new THREE.Mesh(geo,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  function ball(parent,pos,size,mat=skin){const m=mesh(sphere,mat,parent);m.position.set(...pos);m.scale.set(...size);return m;}
  function rod(parent,a,b,r,mat){a=new THREE.Vector3(...a);b=new THREE.Vector3(...b);const d=b.clone().sub(a),m=mesh(new THREE.CylinderGeometry(r,r,d.length(),20),mat,parent);m.position.copy(a).add(b).multiplyScalar(.5);m.quaternion.setFromUnitVectors(UP,d.normalize());return m;}
  function tube(parent,points,r,mat){return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),24,r,7,false),mat,parent);}
- const arm=new THREE.Group();arm.name='Anatomical forearm and right hand';space.add(arm);
- // A single smooth skin surface per digit, with tapered tips and knuckles built into
- // the profile, replaces the old stack of spheres at every finger joint.
+ const arm=new THREE.Group();arm.name='Cartoon forearm and right hand';space.add(arm);
+ // Each digit is one rounded form; an expanded back face draws just its silhouette.
+ function outline(m,width=.002){
+  const geo=m.geometry.clone(),p=geo.attributes.position,n=geo.attributes.normal;
+  for(let i=0;i<p.count;i++)p.setXYZ(i,p.getX(i)+n.getX(i)*width,p.getY(i)+n.getY(i)*width,p.getZ(i)+n.getZ(i)*width);
+  p.needsUpdate=true;geo.computeBoundingSphere();const shell=new THREE.Mesh(geo,ink);shell.name='Ink silhouette';shell.raycast=()=>{};m.add(shell);
+ }
  function skinForm(parent,sections,segments=28){
   const points=sections.map(([z,x,y,rx,ry])=>({z,x,y,rx,ry})),verts=[],uvs=[],indices=[];
   for(let j=0;j<points.length;j++){
@@ -38,26 +34,23 @@ export function createPlayerRestraint(camera){
     if(j&&i){const b=j*(segments+1)+i;indices.push(b,b-segments-2,b-1,b,b-segments-1,b-segments-2);}
    }
   }
-  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();return mesh(geo,skin,parent);
+  const geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));geo.setAttribute('uv',new THREE.Float32BufferAttribute(uvs,2));geo.setIndex(indices);geo.computeVertexNormals();const m=mesh(geo,skin,parent);outline(m);return m;
  }
  const upperarm=skinForm(arm,[[0,0,0,.074,.058],[-.18,.004,0,.073,.056],[-.42,.008,.003,.069,.052],[-.70,.006,.002,.061,.047],[-1,0,0,.054,.042]],40);upperarm.name='Upper arm';
  const elbowJoint=ball(arm,[0,0,0],[.056,.046,.052]);elbowJoint.name='Bent elbow';
  const forearm=skinForm(arm,[[0,0,0,.054,.042],[-.12,.004,.002,.058,.043],[-.30,.010,.004,.057,.041],[-.52,.012,.004,.051,.036],[-.73,.008,.002,.044,.030],[-.90,.003,0,.039,.027],[-1,0,0,.038,.026]],40);forearm.name='Tapered forearm';
- const hand=new THREE.Group();hand.name='Right hand with tapered fingers and fine knuckle creases';arm.add(hand);
- skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.028,-.006,0,.049,.029],[-.060,-.006,-.001,.057,.029],[-.098,-.002,-.003,.057,.026],[-.128,.002,-.004,.052,.022],[-.146,.004,-.005,.043,.015],[-.152,.004,-.005,.006,.004]],40);
+ const hand=new THREE.Group();hand.name='Cartoon right hand';arm.add(hand);
+ // Keep the wrist narrow enough for the existing fitted cuff; exaggerate only
+ // the palm and fingers so the same hinged release still clears the hand.
+ skinForm(hand,[[.025,0,0,.037,.025],[0,0,0,.040,.026],[-.028,-.005,0,.055,.034],[-.060,-.005,0,.064,.037],[-.098,-.002,-.002,.064,.034],[-.128,.002,-.003,.059,.028],[-.146,.004,-.004,.046,.020],[-.155,.004,-.004,.006,.004]],40);
  const fingers=[];
- for(const [i,x,length]of[[0,-.044,.126],[1,-.013,.143],[2,.019,.134],[3,.047,.104]]){
+ for(const [i,x,length]of[[0,-.049,.109],[1,-.015,.124],[2,.021,.116],[3,.053,.091]]){
   const finger=new THREE.Group();finger.position.set(x,-.002,-.125+(i===3?.012:0));finger.rotation.y=(i-1.4)*-.035;hand.add(finger);fingers.push(finger);
-  const r=i===3?.0114:.0138;
-  skinForm(finger,[[.012,0,0,r*1.02,r*.90],[0,0,0,r*1.05,r*.94],[-length*.20,0,-.003,r*.94,r*.87],[-length*.39,0,-.005,r*1.01,r*.91],[-length*.49,0,-.007,r*.88,r*.78],[-length*.66,0,-.010,r*.88,r*.81],[-length*.78,0,-.014,r*.76,r*.72],[-length*.92,0,-.018,r*.70,r*.65],[-length*.98,0,-.019,r*.44,r*.46],[-length,0,-.019,.0003,.0003]]);
-  for(const [z,h]of[[-length*.39,-.005+r*.91],[-length*.67,-.010+r*.80]])for(let k=0;k<2;k++)tube(finger,[[-r*.55,h-.001,z+k*.002],[0,h+.0003,z-.001+k*.002],[r*.55,h-.001,z+k*.002]],.00028,creases);
-  const nail=ball(finger,[0,-.016+r*.67,-length*.87],[r*.60,.0011,length*.075],nails);nail.rotation.x=.10;
+  const r=i===3?.016:.0185;
+  skinForm(finger,[[.014,0,0,r*.92,r*.90],[0,0,0,r,r],[-length*.22,0,-.002,r,r*.98],[-length*.48,0,-.005,r*.96,r*.94],[-length*.70,0,-.009,r*.92,r*.90],[-length*.84,0,-.012,r*.86,r*.84],[-length*.94,0,-.014,r*.64,r*.64],[-length*.985,0,-.014,r*.30,r*.30],[-length,0,-.014,.0003,.0003]]);
  }
  const thumb=new THREE.Group();thumb.position.set(-.043,-.008,-.037);thumb.rotation.y=.71;thumb.rotation.z=-.26;hand.add(thumb);
- skinForm(thumb,[[.018,0,0,.027,.025],[0,0,0,.026,.024],[-.026,-.003,0,.022,.021],[-.046,-.005,.002,.019,.018],[-.061,-.006,.002,.018,.017],[-.080,-.006,.001,.015,.014],[-.093,-.006,0,.012,.012],[-.101,-.006,0,.0003,.0003]]);
- ball(thumb,[-.006,.014,-.084],[.010,.0011,.010],nails);
- // Tendon relief stays shallow and skin-colored instead of dark cartoon outlines.
- for(const x of[-.036,-.010,.020,.043])tube(hand,[[x*.45,.025,-.008],[x*.78,.028,-.060],[x,.022,-.122]],.00065,skin);
+ skinForm(thumb,[[.018,0,0,.031,.028],[0,0,0,.030,.028],[-.024,-.003,0,.027,.025],[-.046,-.005,.002,.024,.023],[-.065,-.006,.002,.023,.022],[-.081,-.006,.001,.019,.018],[-.092,-.006,0,.011,.011],[-.097,-.006,0,.0003,.0003]]);
  const restraint=new THREE.Group();restraint.name='Wrist cuff and chain — right-click to detach';restraint.userData.playerChain=true;space.add(restraint);
  const cuff=new THREE.Group();cuff.name='Close-fitting oval wrist cuff';restraint.add(cuff);
  const hingeX=-.044;
@@ -166,5 +159,5 @@ export function createPlayerRestraint(camera){
  }
  function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);
- return {group,target:restraint,state,update,reset,setEnvironment(map){for(const mat of[iron,edge,skin,nails]){mat.envMap=map;mat.envMapIntensity=mat===skin?.35:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
+ return {group,target:restraint,state,update,reset,setEnvironment(map){for(const mat of[iron,edge]){mat.envMap=map;mat.envMapIntensity=1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
 }
