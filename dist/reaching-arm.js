@@ -19,16 +19,20 @@ export function createReachingForearm(skin,ink){
  geometry.setAttribute('position',new THREE.BufferAttribute(vertices,3).setUsage(THREE.DynamicDrawUsage));geometry.setIndex(indices);
  const mesh=new THREE.Mesh(geometry,skin);mesh.name='Full curved forearm';mesh.castShadow=mesh.receiveShadow=true;mesh.frustumCulled=false;
  const shellGeometry=geometry.clone(),shell=new THREE.Mesh(shellGeometry,ink);shell.name='Forearm ink silhouette';shell.raycast=()=>{};shell.frustumCulled=false;mesh.add(shell);
- const curve=new THREE.CubicBezierCurve3(),back=new THREE.Vector3(),toward=new THREE.Vector3(),center=new THREE.Vector3(),tangent=new THREE.Vector3(),xAxis=new THREE.Vector3(),yAxis=new THREE.Vector3(),handX=new THREE.Vector3(),point=new THREE.Vector3();
- const profile=[[0,.076,.061],[.18,.081,.063],[.4,.073,.055],[.65,.059,.043],[.84,.046,.032],[1,.038,.026]];
+ const curve=new THREE.CubicBezierCurve3(),back=new THREE.Vector3(),center=new THREE.Vector3(),tangent=new THREE.Vector3(),xAxis=new THREE.Vector3(),yAxis=new THREE.Vector3(),handX=new THREE.Vector3(),point=new THREE.Vector3();
+ const profile=[[0,.076,.061],[.18,.081,.063],[.4,.073,.055],[.65,.059,.043],[.8,.047,.033],[1,.038,.026]];
  function update(elbow,wrist,rotation){
-  toward.subVectors(elbow,wrist).normalize();back.set(0,0,1).applyQuaternion(rotation);
-  if(back.dot(toward)<.25)back.lerp(toward,.65).normalize();
+  back.set(0,0,1).applyQuaternion(rotation);
   curve.v0.copy(elbow);curve.v1.lerpVectors(elbow,wrist,.31);curve.v1.x+=.018;
-  curve.v2.copy(wrist).addScaledVector(back,Math.min(.12,elbow.distanceTo(wrist)*.24));curve.v3.copy(wrist);
+  // The last 7.5 cm follow the hand's axis, giving the cuff a stable wrist
+  // section. Bend behind the band, rather than sweeping flesh through it.
+  curve.v3.copy(wrist).addScaledVector(back,.075);
+  curve.v2.copy(curve.v3).addScaledVector(back,.065);
   handX.set(1,0,0).applyQuaternion(rotation);
   for(let j=0;j<=rings;j++){
-   const t=j/rings;curve.getPoint(t,center);curve.getTangent(t,tangent);
+   const t=j/rings;
+   if(t<.8){curve.getPoint(t/.8,center);curve.getTangent(t/.8,tangent);}
+   else{center.copy(wrist).addScaledVector(back,.075*(1-t)/.2);tangent.copy(back).negate();}
    xAxis.copy(handX).addScaledVector(tangent,-handX.dot(tangent)).normalize();yAxis.crossVectors(xAxis,tangent).normalize();
    const end=profile.findIndex(p=>p[0]>=t),a=profile[Math.max(0,end-1)],b=profile[end],blend=a===b?0:THREE.MathUtils.smoothstep(t,a[0],b[0]);
    const rx=THREE.MathUtils.lerp(a[1],b[1],blend),ry=THREE.MathUtils.lerp(a[2],b[2],blend);
