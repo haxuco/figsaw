@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
-import { createFigpalVats } from './figpal-vats.js?v=comical-skulls';
+import { createFigpalVats } from './figpal-vats.js?v=countdown-finale';
 
 import { createFallenMobile } from './fallen-mobile.js?v=ground-contact';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
@@ -730,5 +730,5 @@ export function createOffice(renderer,viewerPosition){
  const figpalVats=createFigpalVats();office.add(figpalVats.group);
  function setEnvironment(map){displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  function update(time,reducedMotion){figpalVats.update(time,reducedMotion);return ceilingFixture.update(time,reducedMotion);}
- return {group:office,laptop:laptopControl,countdown,setDisplayEnvironment:setEnvironment,update,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

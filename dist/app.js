@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=ground-contact';
+import { createOffice } from './office.js?v=countdown-finale';
+import { FIGPAL_PLEAS, createFinaleCue, createFigpalBubbles } from './figpal-finale.js';
 import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -352,7 +353,9 @@ function updateEntrance(time){
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
 updateEntrance(0);
-const {group:office,laptop,countdown,setDisplayEnvironment,update:updateOffice,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
+const {group:office,laptop,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=createOffice(renderer,homePosition);scene.add(office);
+const finale=createFinaleCue(figpalHoists);
+const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas);
 // Capture the actual furnished room once for subtle reflections in the display covers.
 // Static environment capture keeps the glass reflective without six extra renders per frame.
 const reflectionTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
@@ -362,7 +365,7 @@ const reflectionFilter=new THREE.PMREMGenerator(renderer);
 const displayEnvironment=reflectionFilter.fromCubemap(reflectionTarget.texture);
 setDisplayEnvironment(displayEnvironment.texture);reflectionTarget.dispose();reflectionFilter.dispose();
 function updateArrivalDialogue(time){
- if(!entranceArrived){arrivalDialogue.hidden=true;return;}
+ if(!entranceArrived||finale.active){arrivalDialogue.hidden=true;return;}
  // Keep the bubble attached to the crown as the viewer walks or turns around.
  puppet.localToWorld(dialogueAnchor.set(-.28,bodyHeight+.24,0));
  dialogueProjection.copy(dialogueAnchor).project(camera);
@@ -404,7 +407,7 @@ function operateHoist(index){const message=toggleHoist(index);if(message)documen
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView(){finale.reset();figpalBubbles.hide();pressedKeys.clear();resetting=true;entranceStartedAt=clock.elapsedTime;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -529,6 +532,9 @@ function render(){
   countdownReadout.textContent=formatCountdown(countdownSeconds);lastCountdownSeconds=countdownSeconds;
   if(countdownSeconds===0)countdownAnnouncement.textContent='The countdown has reached zero.';
  }
+ if(finale.update(countdown.status,t)){
+  countdownAnnouncement.textContent=`Time is up. All three Figpals are lowering into the green liquid. ${FIGPAL_PLEAS.join(' ')}`;
+ }
  const dialogueMouth=dialogueMouthAmount(dialogueSpeech,t);
  const tapMouth=t<state.talkUntil?.16+.7*Math.sin(t*10)**2:0;
  const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);
@@ -549,7 +555,7 @@ function render(){
   previousEyeRotation.copy(eye.quaternion);eye.lookAt(gazeTarget);
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
- renderer.render(scene,camera);updateArrivalDialogue(t);requestAnimationFrame(render);
+ renderer.render(scene,camera);updateArrivalDialogue(t);figpalBubbles.update(camera,finale.elapsed(t));requestAnimationFrame(render);
 }
 render();
 canvas.addEventListener('webglcontextlost',event=>event.preventDefault());

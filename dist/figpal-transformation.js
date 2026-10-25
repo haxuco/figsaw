@@ -33,5 +33,6 @@ export function createFigpalTransformation(captive,index){
   captive.visible=!transformed;skeleton.visible=cut>bounds.min.y;
  }
  update(-100);
- return {skeleton,update,get transformed(){return transformed;},get cutHeight(){return cut;}};
+ function reset(){cut=bounds.min.y-.04;transformed=false;update(-100);}
+ return {skeleton,update,reset,get transformed(){return transformed;},get cutHeight(){return cut;}};
 }
