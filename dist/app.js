@@ -381,7 +381,7 @@ const restraint=createPlayerRestraint(camera,{canDetach:()=>ketchupKey.hasKey});
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
-const restartGame=document.querySelector('#restart-game');
+const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 let gameEnded=false;
 restartGame.addEventListener('click',()=>{resetView();canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
@@ -510,7 +510,7 @@ function operateHoist(index){
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
-function resetView(){scheduleFrame();ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;gameEnded=false;acidLeaks.reset();mugTrap.reset();gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;document.body.classList.remove('game-over','mug-impact');canvas.inert=false;laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=state.time;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
+function resetView(){scheduleFrame();ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;gameEnded=false;acidLeaks.reset();mugTrap.reset();mugEyeImpact.hidden=true;mugEyeImpact.style.opacity='0';gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;document.body.classList.remove('game-over','mug-impact');canvas.inert=false;laptopOpening.cancel();arrivalCameraMove.cancel();restraint.reset();laptop.close();chainMenu.hide();restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);finale.reset();figpalBubbles.hide();hangingPleas.reset(state.time);pressedKeys.clear();resetting=true;entranceStartedAt=state.time;entranceArrived=false;arrivalDialogue.hidden=true;dialogueAnnouncement.textContent='';dialogueSpeech=null;dialogueLineIndex=-1;nextDialogueAt=Infinity;state.talkUntil=0;nextDialogueVisibilityCheck=0;countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';}
 function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
@@ -683,6 +683,8 @@ function render(){
  const acidFinished=acidLeaks.update(t,dt,cameraPosition,camera,reducedMotion);
  if(acidLeaks.dying)releaseControls();
  const mugFinished=mugTrap.update(t,reducedMotion),blackout=Math.max(mugTrap.blackout,acidLeaks.blackout(t));
+ mugEyeImpact.hidden=mugTrap.eyeImpact<=0||blackout>=1;
+ if(mugTrap.eyeImpact>0){mugEyeImpact.style.opacity=String(mugTrap.eyeImpact);document.body.classList.add('mug-impact');}
  if(blackout>0){gameOver.hidden=false;gameOver.style.opacity=String(blackout);document.body.classList.add('mug-impact');}
  if(acidFinished)endGame('The corrosive green liquid reaches you. Game over.');
  else if(mugFinished)endGame("The mug's pointed ears hit your eyes. Everything goes dark. Game over.");

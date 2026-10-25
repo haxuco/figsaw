@@ -553,8 +553,10 @@ export function createOffice(renderer,viewerPosition){
  }
  const[cHandle,handlePaint]=canvas(256);handlePaint.fillStyle='#e8dfc6';handlePaint.fillRect(0,0,256,256);handlePaint.fillStyle='#84adb0';for(const x of[0,95,200])handlePaint.fillRect(x,0,47,256);
  const handleGlaze=new THREE.MeshPhysicalMaterial({map:texture(cHandle),roughness:.28,clearcoat:1});
- cable([[.129,.211,0],[.195,.222,0],[.249,.188,0],[.257,.130,0],[.229,.075,0],[.178,.057,0],[.125,.076,0]],.014,handleGlaze,earMug);
- const mugGrip=new THREE.Object3D();mugGrip.name='Mug handle grip';mugGrip.position.set(.249,.141,0);earMug.add(mugGrip);
+ // With the cat face turned away for drinking, this side puts the handle in
+ // the viewer's right hand. Keep the grip anchor on the actual ceramic loop.
+ cable([[-.129,.211,0],[-.195,.222,0],[-.249,.188,0],[-.257,.130,0],[-.229,.075,0],[-.178,.057,0],[-.125,.076,0]],.014,handleGlaze,earMug);
+ const mugGrip=new THREE.Object3D();mugGrip.name='Mug handle grip';mugGrip.position.set(-.249,.141,0);earMug.add(mugGrip);
  const noseShape=new THREE.Shape();noseShape.moveTo(-.021,.010);noseShape.quadraticCurveTo(0,.021,.021,.010);noseShape.quadraticCurveTo(.021,-.003,0,-.019);noseShape.quadraticCurveTo(-.022,-.004,-.021,.010);
  const nose=mesh(new THREE.ExtrudeGeometry(noseShape,{depth:.012,bevelEnabled:true,bevelSize:.003,bevelThickness:.003,bevelSegments:2,curveSegments:8}),new THREE.MeshPhysicalMaterial({color:0x292823,roughness:.30,clearcoat:1}),earMug);nose.position.set(0,.129,.142);
  const mugPose=new THREE.Group();mugPose.name='Spilled animal mug in the left foreground';mugPose.add(earMug);earMug.position.y=-.135;office.add(mugPose);
