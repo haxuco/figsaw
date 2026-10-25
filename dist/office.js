@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
+import { createFigpalVats } from './figpal-vats.js';
 
 export function createOffice(renderer,viewerPosition){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -199,10 +200,10 @@ export function createOffice(renderer,viewerPosition){
   if(!damage.noBack){const back=chairBack(g,damage.backTear??1);back.position.set(0,.55,-.22);back.rotation.set(damage.backLean??0,0,damage.backTwist??0);}
   return settleChairPart(g,x,z,rotation);
  }
- aeronChair(-2.25,-2.30,[0,.35,-.035],{brokenArm:1,backTear:2});
- aeronChair(-.30,-2.18,[-.08,-.28,.08],{brokenArm:-1,missingSpoke:3,backLean:-.16});
+ aeronChair(-2.85,-2.48,[0,.35,-.035],{brokenArm:1,backTear:2});
+ aeronChair(-.30,3.35,[-.08,-.28,.08],{brokenArm:-1,missingSpoke:3,backLean:-.16});
  aeronChair(-2.63,.32,[-.55,-.80,1.39],{brokenArm:-1,missingSpoke:2,backTwist:.20});
- aeronChair(.70,-3.02,[1.65,.65,.32],{brokenArm:1,noBack:true});
+ aeronChair(-.55,-3.42,[1.65,.65,.32],{brokenArm:1,noBack:true});
  // A tipped chair and its detached base frame the right-hand aisle without covering the laptop.
  aeronChair(1.35,1.42,[-.30,-.50,-1.28],{noBase:true,brokenArm:-1,backTwist:-.14,backTear:2});
  const looseBase=chairBase(office,1);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
@@ -397,7 +398,7 @@ export function createOffice(renderer,viewerPosition){
  }
 
  // Freestanding planning whiteboard with curled sticky notes and old interface sketches.
- const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(-2.26,0,-1.20);partition.rotation.y=.08;office.add(partition);
+ const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(-2.82,0,-.70);partition.rotation.y=Math.PI/2;office.add(partition);
  for(const x of[-1.12,1.12]){
   box([.045,.98,.055],[x,.49,0],steel,partition);box([.11,.06,.65],[x,.06,0],steel,partition);
   for(const z of[-.25,.25])sphere([.047,.045,.032],[x,.035,z],black,partition);
@@ -710,5 +711,6 @@ export function createOffice(renderer,viewerPosition){
  const fadedRed=material(0x7e3629,.78,metalMap,.23);cylinder(.095,.42,[0,.25,0],fadedRed,extinguisher,24);sphere([.095,.065,.095],[0,.47,0],fadedRed,extinguisher);sphere([.093,.045,.093],[0,.04,0],fadedRed,extinguisher);
  box([.11,.025,.055],[.015,.56,0],black,extinguisher);rod([0,.51,0],[0,.57,0],.018,silver,extinguisher);cable([[.035,.52,0],[.12,.47,.02],[.13,.19,.06]],.012,black,extinguisher);
  wallLabel('FIRE',.12,.14,extinguisher,[0,.27,.097],'#b4ac8c','#33382d');
- return {group:office,laptop:laptopControl,setDisplayEnvironment:displays.setEnvironment};
+ const figpalVats=createFigpalVats();office.add(figpalVats.group);
+ return {group:office,laptop:laptopControl,setDisplayEnvironment:displays.setEnvironment,update:figpalVats.update};
 }

@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import { createOffice } from './office.js?v=monitor-glass-rear-wall';
+import { createOffice } from './office.js?v=suspended-figpals';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 
 const canvas=document.querySelector('#scene');
@@ -307,7 +307,7 @@ const knot=mesh(new THREE.SphereGeometry(1,24,16),ribbonMaterial,bowTie);knot.po
 const modelScale=.26,groundOffset=-.53*modelScale+.012;
 model.scale.setScalar(modelScale);
 const entrancePath=new THREE.CatmullRomCurve3([
- [2.45,groundOffset,-2.40],[1.70,groundOffset,-2.20],[.90,groundOffset,-1.65],
+ [2.45,groundOffset,-2.40],[2.05,groundOffset,-1.70],[1.05,groundOffset,-1.28],
  [.35,groundOffset,-1.10],[.24,groundOffset,-.66],[.12,groundOffset,.10]
 ].map(point=>new THREE.Vector3(...point)),false,'centripetal');
 entrancePath.arcLengthDivisions=240;
@@ -336,7 +336,7 @@ function updateEntrance(time){
  if(progress===1&&!entranceArrived){entranceArrived=true;showFigsawDialogue(dialogueText);}
 }
 updateEntrance(0);
-const {group:office,laptop,setDisplayEnvironment}=createOffice(renderer,homePosition);scene.add(office);
+const {group:office,laptop,setDisplayEnvironment,update:updateOffice}=createOffice(renderer,homePosition);scene.add(office);
 // Capture the actual furnished room once for subtle reflections in the display covers.
 // Static environment capture keeps the glass reflective without six extra renders per frame.
 const reflectionTarget=new THREE.WebGLCubeRenderTarget(128,{type:THREE.HalfFloatType});
@@ -506,6 +506,7 @@ function render(){
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
  laptop.update(dt,reducedMotion);
+ updateOffice(t,reducedMotion);
  model.updateMatrixWorld(true);
  for(const eye of trackingEyes)eye.lookAt(camera.position);
  renderer.render(scene,camera);updateArrivalDialogue(t);requestAnimationFrame(render);
