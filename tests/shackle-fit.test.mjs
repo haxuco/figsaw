@@ -49,3 +49,27 @@ test('hinged cuff keeps its offset on release and opens clear of the wrist',()=>
   if(t>1.54)assert.ok(gate.rotation.z>1.94);
  }
 });
+
+test('raised pipe anchor keeps the chain clear of the arm throughout reaching',()=>{
+ const camera=new THREE.PerspectiveCamera(62,1,.06,35),r=createPlayerRestraint(camera);
+ const arm=r.group.getObjectByName('Cartoon forearm and right hand'),chain=r.group.getObjectByName('Heavy interlocking wrist chain');
+ const anchor=r.group.getObjectByName('Raised wrist-chain pipe anchor');
+ const matrix=new THREE.Matrix4(),a=new THREE.Vector3(),b=new THREE.Vector3(),direction=new THREE.Vector3(),ray=new THREE.Raycaster();
+ camera.position.set(1.85221,.821615,3.1149);
+ assert.ok(anchor.position.y>camera.position.y+1,'the chain attaches above the viewer on the rear pipe');
+ for(const fov of[62,48.36])for(const turn of[-.6,0,.6]){
+  camera.fov=fov;camera.lookAt(1.155084,.748275,2.401713);camera.rotateY(turn);camera.updateMatrixWorld();r.reset();r.requestReach(0);
+  for(const time of[.08,.3,.55,.8,1.25,2,4.9]){
+   r.update(time);r.group.updateMatrixWorld(true);
+   arm.traverse(object=>{if(object.isMesh){object.geometry.computeBoundingSphere();object.geometry.computeBoundingBox();}});
+   chain.getMatrixAt(chain.count-1,matrix);b.setFromMatrixPosition(matrix).applyMatrix4(chain.matrixWorld);
+   assert.ok(b.distanceTo(anchor.getWorldPosition(a))<1e-6,'the far link must remain attached to the pipe');
+   for(let i=0;i<chain.count-1;i++){
+    chain.getMatrixAt(i,matrix);a.setFromMatrixPosition(matrix).applyMatrix4(chain.matrixWorld);
+    chain.getMatrixAt(i+1,matrix);b.setFromMatrixPosition(matrix).applyMatrix4(chain.matrixWorld);
+    direction.subVectors(b,a);ray.far=direction.length();ray.set(a,direction.normalize());
+    assert.equal(ray.intersectObject(arm,true).length,0,`chain crosses the arm at ${time}s, turn ${turn}, FOV ${fov}`);
+   }
+  }
+ }
+});

@@ -96,8 +96,8 @@ export function createPlayerRestraint(camera,options={}){
   for(const x of[3.23,3.37]){rod(pipes,[x,y,4.35],[x,y,4.14],.008,edge);const bolt=mesh(new THREE.CylinderGeometry(.017,.017,.018,6),edge,pipes);bolt.rotation.x=Math.PI/2;bolt.position.set(x,y,4.12);}
   const clamp=mesh(new THREE.TorusGeometry(.058,.010,8,32),edge,pipes);clamp.rotation.x=Math.PI/2;clamp.position.set(3.30,y,4.16);
  }
- const pipeAnchor=new THREE.Vector3(3.30,.28,4.10),pipeHook=new THREE.Vector3();
- const anchorRing=mesh(new THREE.TorusGeometry(.055,.009,8,24),edge,pipes);anchorRing.position.set(3.30,.28,4.10);anchorRing.rotation.y=Math.PI/2;
+ const pipeAnchor=new THREE.Vector3(3.30,2.08,4.10),pipeHook=new THREE.Vector3();
+ const anchorRing=mesh(new THREE.TorusGeometry(.055,.009,8,24),edge,pipes);anchorRing.name='Raised wrist-chain pipe anchor';anchorRing.position.copy(pipeAnchor);anchorRing.rotation.y=Math.PI/2;
  const linkPoints=[];for(let i=0;i<48;i++){const a=i/48*Math.PI*2;linkPoints.push(new THREE.Vector3(Math.cos(a)*.017,Math.sin(a)*.028,0));}
  const linkGeo=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkPoints,true),32,.0055,6,true);
  const links=new THREE.InstancedMesh(linkGeo,polished,360);links.name='Heavy interlocking wrist chain';links.castShadow=true;links.receiveShadow=true;links.frustumCulled=false;restraint.add(links);
