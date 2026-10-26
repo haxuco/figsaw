@@ -19,6 +19,7 @@ import { createKetchupKey } from './ketchup-key.js';
 import { createKetchupClosure } from './ketchup-closure.js';
 import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
+import { createFireAxe } from './fire-axe.js';
 import { createFireAlarm } from './fire-alarm.js';
 
 export async function createOffice(renderer,viewerPosition,onProgress=async()=>{}){
@@ -766,20 +767,21 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const stuffedAnimals=fallenMobile.animals,plushCut=createPlushCut({saw:handsaw.group,animals:stuffedAnimals,floorSupport});office.add(plushCut.group);
  office.add(createDesignCap(viewerPosition,floorSupport));
  await onProgress('Preparing the tanks…');
- const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
+ const figpalVats=createFigpalVats({floorSupport});figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
  const fireAlarm=createFireAlarm({fireHazard,acidLeaks,laptop:laptopControl,floorSupport});
  fireAlarm.station.position.set(.40,1.22,.065);rear.add(fireAlarm.station);office.add(fireAlarm.effects);
+ const fireAxe=createFireAxe();fireAxe.mount.position.set(.40,2.06,.05);rear.add(fireAxe.mount);
  const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
  const rodents=createFloorRodents({room:office,floorSupport,viewerPosition});office.add(rodents.group);
- function setEnvironment(map){glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
+ function setEnvironment(map){fireAxe.setEnvironment(map);glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
   ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

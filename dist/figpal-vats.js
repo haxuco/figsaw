@@ -1,3 +1,4 @@
+import {createTankBreakage} from './tank-breakage.js';
 import {batchStaticScenery} from './static-batching.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality} from './render-quality.js';
@@ -9,7 +10,7 @@ import { createTankDecalFactory } from './tank-decal.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // Shapes, glass, liquid and wear are procedural; the supplied tank decal is bundled.
-export function createFigpalVats(){
+export function createFigpalVats({floorSupport}={}){
  const group=new THREE.Group();group.name='Three suspended Figpals over bubbling green canisters';
  const TAU=Math.PI*2;
  let seed=193108;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -131,12 +132,13 @@ export function createFigpalVats(){
  const makers=[pudding,sushi,pufferfish];
  for(let i=0;i<3;i++){
   const {x,z:tankZ,height,winchY}=stations[i];
-  const vat=new THREE.Group();vat.position.set(x,.012,tankZ);vat.name=`Green bubbling canister ${i+1}`;group.add(vat);
+  const vat=new THREE.Group();vat.position.set(x,.012,tankZ);vat.name=`Green bubbling canister ${i+1}`;vat.userData.tankIndex=i;group.add(vat);
   cylinder(.515,.16,[0,.10,0],steel,vat);cylinder(.46,.035,[0,.025,0],darkMetal,vat);
   for(let j=0;j<8;j++){const a=j/8*TAU;ball([Math.cos(a)*.49,.15,Math.sin(a)*.49],[.022,.022,.022],fastener,vat);}
   const shell=cylinder(.485,1.02,[0,.72,0],glass,vat,true);shell.castShadow=false;shell.renderOrder=6;
   const deposits=cylinder(.487,1.02,[0,.72,0],haze,vat,true);deposits.name='Condensation, mineral streaks and algae tide marks';deposits.castShadow=false;deposits.renderOrder=7;
   vat.add(createTankDecal());
+  const breakage=createTankBreakage({vat,shell,deposits,index:i,floorSupport});
   const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.castShadow=false;liquid.renderOrder=2;
   const floatingBones=createFloatingBones(i);vat.add(floatingBones.group);
   for(const bone of floatingBones.group.children)batchStaticScenery(bone,{minObjects:2,dispose:false});
@@ -174,7 +176,7 @@ export function createFigpalVats(){
   const pick=mesh(new THREE.SphereGeometry(.102,12,8),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false}),wheel);pick.castShadow=false;
   valves.push({object:drain,outlet,setOpen(progress){wheel.rotation.z=-progress*Math.PI*4;wheel.position.z=.12+progress*.018;}});
   const glow=new THREE.PointLight(0x6b9c25,.58,1.7,2);glow.position.set(0,.85,0);glow.userData.mobileEssential=i===1;vat.add(glow);if(quality.mobile)glow.visible=i===1;
-  vats.push({surface,bubbles,bubbleData,foam,ripples,floatingBones,phase:i*1.7});
+  vats.push({breakage,surface,bubbles,bubbleData,foam,ripples,floatingBones,phase:i*1.7});
 
   const facing=Math.atan2(1.85221-x,3.1149-tankZ);
   vat.rotation.y=facing;
@@ -230,7 +232,7 @@ export function createFigpalVats(){
   for(const rigid of[drum,crank,control,wheel])batchStaticScenery(rigid,{minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchStaticScenery(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchStaticScenery(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
-  batchStaticScenery(vat,{exclude:[surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
+  batchStaticScenery(vat,{exclude:[shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
   rigs.push({rig,hanger,transformation,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
@@ -250,6 +252,7 @@ export function createFigpalVats(){
   rig.rig.localToWorld(target.set(0,Math.max(1.03,rig.height*.55+.59),0));
  }
  function reset(){
+  for(const vat of vats)vat.breakage.reset();
   for(const rig of rigs){
    rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
    rig.hanger.position.set(0,rig.homeHeight,0);rig.hanger.rotation.z=0;
@@ -271,6 +274,7 @@ export function createFigpalVats(){
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
   for(const vat of vats){
+   vat.breakage.update(time,reducedMotion);
    vat.floatingBones.update(time,reducedMotion);
    const positions=vat.surface.geometry.attributes.position;
    const normals=vat.surface.geometry.attributes.normal;
@@ -290,7 +294,7 @@ export function createFigpalVats(){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
+ return {group,update,tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
   canSpeak,isHanging,reset,speechAnchors,setEnvironment};

@@ -5,7 +5,7 @@ import {createAcidSurface,createDrainJet} from './acid-surface.js';
 export function createTankLeaks({valves,floorSupport}){
  const group=new THREE.Group();group.name='Corrosive green liquid, bubbles and contact smoke';group.userData.ignoreAcid=true;group.visible=false;
  const flow=createAcidFlow(),dummy=new THREE.Object3D(),cameraRotation=new THREE.Quaternion();
- const timeUniform={value:0},streams=new Map(),materialCopies=new Map(),contactBounds=[];let lastPaint=-Infinity;
+ const timeUniform={value:0},streams=new Map(),openedValves=new Set(),materialCopies=new Map(),contactBounds=[];let lastPaint=-Infinity;
  const burnCanvas=document.createElement('canvas');burnCanvas.width=burnCanvas.height=512;
  const burn=burnCanvas.getContext('2d');burn.fillStyle='#000';burn.fillRect(0,0,512,512);
  const burnMap=new THREE.CanvasTexture(burnCanvas);burnMap.generateMipmaps=false;burnMap.minFilter=THREE.LinearFilter;burnMap.flipY=false;
@@ -86,8 +86,19 @@ export function createTankLeaks({valves,floorSupport}){
   if(flow.dying||flow.leaks.some(leak=>leak.index===index))return false;
   const stream=createDrainJet(valve.outlet,floorSupport,surface.jetMaterial);
   if(!flow.open(index,stream.origin,time,locked)){stream.mesh.geometry.dispose();return false;}
-  stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);
+  stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);openedValves.add(index);
   group.visible=true;return true;
+ }
+ function breach(index,time,outlet,locked=false){
+  if(locked||!valves[index]||!outlet||flow.dying||streams.get(index)?.breached)return false;
+  const stream=createDrainJet(outlet,floorSupport,surface.jetMaterial,{width:3.4});stream.breached=true;
+  const leak=flow.leaks.find(item=>item.index===index);
+  if(leak){
+   // Keep the existing corrosive trail and fire while moving its source to the hole.
+   leak.origin={...stream.origin};leak.head={x:stream.origin.x,z:stream.origin.z};
+  }else if(!flow.open(index,stream.origin,time)){stream.mesh.geometry.dispose();return false;}
+  const previous=streams.get(index);if(previous){group.remove(previous.mesh);previous.mesh.geometry.dispose();}
+  stream.mesh.name='Acid pouring through shattered tank glass';stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);group.visible=true;return true;
  }
  function paintBurn(time){
   if(time-lastPaint<.10)return;lastPaint=time;
@@ -102,7 +113,7 @@ export function createTankLeaks({valves,floorSupport}){
   const finished=flow.update(time,dt,viewer,options),t=reducedMotion?0:time;timeUniform.value=t;camera.getWorldQuaternion(cameraRotation);
   let bubbleCount=0,smokeCount=0,dropCount=0,rippleCount=0;
   for(const leak of flow.leaks){
-   valves[leak.index].setOpen(reducedMotion?1:THREE.MathUtils.smootherstep(leak.progress,0,1));
+   if(openedValves.has(leak.index))valves[leak.index].setOpen(reducedMotion?1:THREE.MathUtils.smootherstep(leak.progress,0,1));
    const stream=streams.get(leak.index);stream.mesh.visible=leak.points.length>0;stream.update(t,leak.progress);
    if(!leak.points.length)continue;
    for(let i=0;i<18;i++){
@@ -133,9 +144,9 @@ export function createTankLeaks({valves,floorSupport}){
  }
  function reset(){
   flow.reset();surface.reset();group.visible=false;bubbles.count=smoke.count=droplets.count=ripples.count=0;
-  for(const stream of streams.values()){group.remove(stream.mesh);stream.mesh.geometry.dispose();}streams.clear();
+  for(const stream of streams.values()){group.remove(stream.mesh);stream.mesh.geometry.dispose();}streams.clear();openedValves.clear();
   for(const valve of valves)valve.setOpen(0);
   burn.clearRect(0,0,512,512);burn.fillStyle='#000';burn.fillRect(0,0,512,512);burnMap.needsUpdate=true;lastPaint=-Infinity;
  }
- return {group,open,update,reset,bindTargets,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
+ return {group,open,breach,update,reset,bindTargets,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
 }

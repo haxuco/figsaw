@@ -116,5 +116,8 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 @media(max-height:500px){#saw-menu{padding:8px;font-size:30px}#saw-menu h2{margin-bottom:14px;font-size:42px}#saw-menu button{padding:4px 10px}#saw-menu .saw-object{width:clamp(120px,38vh,190px)}#saw-menu [data-saw="cancel"]{margin-top:10px;font-size:22px}}
 #scene.over-plush:not(:active){cursor:crosshair}
 
-#cancel-saw-selection{position:fixed;z-index:16;right:14px;bottom:68px;min-height:44px;padding:10px 14px;border:1px solid #575247;border-radius:6px;background:#171715;color:#e8e4dc;font:13px system-ui;cursor:pointer}
-#cancel-saw-selection[hidden]{display:none}
+#cancel-axe-selection,#cancel-saw-selection{position:fixed;z-index:16;right:14px;bottom:68px;min-height:44px;padding:10px 14px;border:1px solid #575247;border-radius:6px;background:#171715;color:#e8e4dc;font:13px system-ui;cursor:pointer}
+#cancel-axe-selection[hidden],#cancel-saw-selection[hidden]{display:none}
+
+#scene.over-axe:not(:active),#scene.over-tank:not(:active){cursor:pointer}
+#cancel-axe-selection:disabled{opacity:.5;cursor:wait}

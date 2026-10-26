@@ -56,7 +56,7 @@ export function createAcidSurface(floorSupport,burnMap,timeUniform){
  return {pool,scorch,jetMaterial,update,reset(){lastPaint=-Infinity;paint.globalCompositeOperation='source-over';paint.fillStyle='#000';paint.fillRect(0,0,size,size);wetMap.needsUpdate=true;},setEnvironment(map){for(const mat of[material,jetMaterial]){mat.envMap=map;mat.needsUpdate=true;}}};
 }
 
-export function createDrainJet(outlet,floorSupport,material){
+export function createDrainJet(outlet,floorSupport,material,{width=1}={}){
  const source=new THREE.Vector3(),rotation=new THREE.Quaternion();outlet.getWorldPosition(source);outlet.getWorldQuaternion(rotation);
  const velocity=new THREE.Vector3(0,-.25,.6).applyQuaternion(rotation),gravity=9.81;
  const floor=floorSupport(source.x,source.z)+.009,height=Math.max(.01,source.y-floor);
@@ -73,7 +73,7 @@ export function createDrainJet(outlet,floorSupport,material){
    const u=j/rings,t=u*duration;center.copy(source).addScaledVector(velocity,t);center.y-=.5*gravity*t*t;
    center.x+=Math.sin(time*19-u*13)*.002*u;center.z+=Math.sin(time*16-u*11)*.0015*u;
    axis.copy(velocity);axis.y-=gravity*t;axis.normalize();x.set(1,0,0).addScaledVector(axis,-axis.x).normalize();y.crossVectors(x,axis);
-   const radius=(.021-.010*u)*(1+.12*Math.sin(u*25-time*23))*fill;
+   const radius=width*(.021-.010*u)*(1+.12*Math.sin(u*25-time*23))*fill;
    for(let i=0;i<=sides;i++){const a=i/sides*Math.PI*2,k=(j*(sides+1)+i)*3;radial.copy(x).multiplyScalar(Math.cos(a)).addScaledVector(y,Math.sin(a));radial.toArray(normals,k);positions[k]=center.x+radial.x*radius;positions[k+1]=center.y+radial.y*radius;positions[k+2]=center.z+radial.z*radius;}
   }
   geo.attributes.position.needsUpdate=geo.attributes.normal.needsUpdate=true;
