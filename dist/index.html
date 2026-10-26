@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=saw-object-choices">
-  <link rel="modulepreload" href="./game.bundle.js?v=f2368017c74f">
+  <link rel="stylesheet" href="./style.css?v=mobile-perspective">
+  <link rel="modulepreload" href="./game.bundle.js?v=660cb98010fd">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -18,7 +18,7 @@
       <progress id="loading-progress" max="100" aria-label="Loading Figsaw"></progress>
     </div>
   </div>
-  <canvas id="scene" tabindex="0" aria-label="An abandoned technology office with three worried Figpals hanging from chain winches above green vats on the left, a closed MacBook Pro and a red LED countdown timer on the floor and a smaller Figsaw riding out of a dark corner. Click a winch or its canister control, or press 1, 2, or 3, to lower and raise the matching Figpal. Click the laptop or press Enter to reach for it. Click the handsaw beside the timer to choose Saw shackle, or unlock your shackle to choose Saw stuffed animal and click a floor toy. Escape cancels animal selection. After detaching the shackle, click the blue cat mug or press M to drink. Click a red tank drain valve or press V for the nearest tank to open it. After freeing your wrist, click the red FIRE pull station beside the rear door to release the ceiling sprinklers. Once unlocked, take the fire axe mounted above the alarm and click a glass tank to smash it. Escape or Put axe back cancels axe selection. Your wrist is chained to the rear pipes. Pour the glass ketchup bottle beside the cat mug, collect the key, then click or right-click the shackle and choose Detach instance to free your hand. Open the rear CHARGERS drawer, collect the charger, plug it into the power strip, then connect the MacBook. Press F to perform the next charging step after detaching your shackle. Your position is fixed. Drag or use arrow keys to look around, and scroll to zoom. Hold Space to open his mouth. Press R to reset the view and replay his entrance."></canvas>
+  <canvas id="scene" tabindex="0" aria-label="An abandoned technology office with three worried Figpals hanging from chain winches above green vats on the left, a closed MacBook Pro and a red LED countdown timer on the floor and a smaller Figsaw riding out of a dark corner. Click a winch or its canister control, or press 1, 2, or 3, to lower and raise the matching Figpal. Click the laptop or press Enter to reach for it. Click the handsaw beside the timer to choose Saw shackle, or unlock your shackle to choose Saw stuffed animal and click a floor toy. Escape cancels animal selection. After detaching the shackle, click the blue cat mug or press M to drink. Click a red tank drain valve or press V for the nearest tank to open it. After freeing your wrist, click the red FIRE pull station beside the rear door to release the ceiling sprinklers. Once unlocked, take the fire axe mounted above the alarm and click a glass tank to smash it. Escape or Put axe back cancels axe selection. Your wrist is chained to the rear pipes. Pour the glass ketchup bottle beside the cat mug, collect the key, then click or right-click the shackle and choose Detach instance to free your hand. Open the rear SUPPLIES drawer, collect scissors and string to repair the animal mobile, or collect the charger, plug it into the power strip, then connect the MacBook. Press F to perform the next charging step after detaching your shackle. Your position is fixed. Drag or use arrow keys to look around, and scroll to zoom. Hold Space to open his mouth. Press R to reset the view and replay his entrance."></canvas>
   <button id="cancel-axe-selection" type="button" hidden>Put axe back</button>
   <button id="cancel-saw-selection" type="button" hidden>Put saw down</button>
   <p id="charging-hint" hidden aria-live="off"></p>
@@ -44,6 +44,21 @@
       </button>
     </div>
     <button type="button" data-saw="cancel"><span class="saw-choice-label">Cancel</span></button>
+  </dialog>
+  <section id="mobile-inspection" aria-label="Inspect the animal mobile" hidden>
+    <div class="inspection-heading"><h2>A change of perspective</h2><p data-mobile-status aria-live="polite"></p><small data-mobile-inventory></small></div>
+    <p class="sr-only" data-mobile-digits aria-live="polite"></p>
+    <div class="inspection-actions">
+      <button data-mobile="above">View from above</button><button data-mobile="under">View from underneath</button>
+      <button data-mobile="cut">Cut tangled strings</button><button data-mobile="restring" hidden>Restring mobile</button>
+      <button data-mobile="close">Put down</button>
+    </div>
+  </section>
+  <dialog id="door-keypad" aria-labelledby="keypad-title">
+    <button class="keypad-close" data-key="close" aria-label="Close keypad">×</button>
+    <h2 id="keypad-title">Door keypad</h2><output aria-label="Entered code">————</output>
+    <div class="keypad-keys"><button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button><button data-key="clear" aria-label="Clear code">C</button><button data-key="0">0</button><button data-key="enter" aria-label="Enter code">↵</button></div>
+    <p data-keypad-status role="status" aria-live="polite"></p>
   </dialog>
   <div id="chain-menu" role="menu" aria-label="Chain instance" hidden>
     <button type="button" role="menuitem" aria-keyshortcuts="Alt+Meta+B">
@@ -74,6 +89,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=f2368017c74f"></script>
+  <script type="module" src="./boot.js?v=660cb98010fd"></script>
 </body>
 </html>

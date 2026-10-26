@@ -1,10 +1,11 @@
+import {ANIMAL_DIGITS} from './mobile-puzzle-state.js';
 import * as THREE from './vendor/three.module.js';
 import { settleOnFloor, drapeFloorCable, floorClearance } from './floor-contact.js';
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
 export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
- const animals=[];
- const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.position.set(-1.05,0,.55);
+ const animals=[],strings=[],shadows=[];
+ const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.userData.mobilePuzzle=true;group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
  for(let i=0;i<7000;i++){const x=random()*512,y=random()*512;ctx.strokeStyle=i%2?'rgba(58,52,36,.12)':'rgba(246,236,212,.28)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2,y+3);ctx.stroke();}
@@ -33,10 +34,10 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  function makeAnimal(kind){
   const g=new THREE.Group();g.name=`${kind} mobile animal`;g.userData.stuffedAnimal=kind;
   const mat=kind==='Pig'?pink:kind==='Elephant'?blue:kind==='Tiger'?tigerMat:ochre;
-  // The rump is rounded in two lobes, with an actual sewn centre seam and a tail.
+  // Rounded plush haunches retain their tails; underside embroidery supplies the clue.
   const body=ball([0,.065,-.025],[.112,.091,.154],mat,g);body.name='Soft body resting on the floor';
   for(const side of[-1,1])ball([side*.047,.073,.080],[.077,.090,.090],mat,g);
-  line([[0,.13,.116],[0,.092,.166],[0,.036,.160],[0,.008,.136]],.0018,thread,g);
+
   for(const side of[-1,1])for(const z of[-.106,.100]){
    const leg=ball([side*.110,.002,z],[.043,.043,.062],mat,g);leg.rotation.z=side*.28;
    ball([side*.134,-.007,z+.015],[.021,.030,.041],kind==='Pig'?brown:kind==='Elephant'?blueDark:pinkPale,g);
@@ -116,12 +117,12 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   {kind:'Fox',x:-.27,z:-.43,rear:true,yaw:1.12,roll:.20,arm:2}
  ];
  for(const p of placements){
-  const {object,tab,body}=makeAnimal(p.kind);animals.push({object,kind:p.kind});object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
+  const {object,tab,body}=makeAnimal(p.kind);animals.push({object,kind:p.kind,tab});object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
   const toward=Math.atan2(viewerPosition.x-(group.position.x+p.x),viewerPosition.z-(group.position.z+p.z));
   object.rotation.set(p.kind==='Pig'?-.06:.03,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
   group.updateMatrixWorld(true);settlePlush(object,body);group.updateMatrixWorld(true);
   const end=group.worldToLocal(tab.getWorldPosition(new THREE.Vector3())),start=ends[p.arm];
-  const string=line([start,[start[0]+.06,.024,start[2]+.08],[(start[0]+end.x)/2-.05,.023,(start[2]+end.z)/2+.08],[end.x-.04,.025,end.z+.035],end.toArray()],.0021,cord);string.userData.anchorStart=string.userData.anchorEnd=true;drapeFloorCable(string,floorSupport);
+  const string=line([start,[start[0]+.06,.024,start[2]+.08],[(start[0]+end.x)/2-.05,.023,(start[2]+end.z)/2+.08],[end.x-.04,.025,end.z+.035],end.toArray()],.0021,cord);string.userData.anchorStart=string.userData.anchorEnd=true;drapeFloorCable(string,floorSupport);strings.push(string);
   // A close contact shadow conforms to carpet edges instead of hovering above them.
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),fade=sc.createRadialGradient(32,32,5,32,32,32);fade.addColorStop(0,'rgba(0,0,0,.65)');fade.addColorStop(.48,'rgba(0,0,0,.32)');fade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=fade;sc.fillRect(0,0,64,64);
   const bounds=new THREE.Box3().setFromObject(object),size=bounds.getSize(new THREE.Vector3()),center=group.worldToLocal(bounds.getCenter(new THREE.Vector3()));
@@ -129,7 +130,22 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   const points=shadowGeometry.attributes.position;
   for(let i=0;i<points.count;i++)points.setY(i,floorSupport(group.position.x+points.getX(i),group.position.z+points.getZ(i))+.0002);
   shadowGeometry.computeVertexNormals();
-  const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;
+  const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;shadows.push(shadow);
  }
- return {group,animals};
+ // Small cloth number patches face down, concealed from the ordinary overhead view.
+ for(const animal of animals){
+  const c=document.createElement('canvas');c.width=c.height=256;const p=c.getContext('2d');
+  p.fillStyle='#777164';p.beginPath();p.ellipse(128,128,109,116,0,0,Math.PI*2);p.fill();
+  p.strokeStyle='#c9bea3';p.lineWidth=3;p.setLineDash([5,5]);p.beginPath();p.ellipse(128,128,99,106,0,0,Math.PI*2);p.stroke();
+  p.font='bold 174px Georgia';p.textAlign='center';p.textBaseline='middle';p.fillStyle='#e7d9b8';p.fillText(ANIMAL_DIGITS[animal.kind],128,139);
+  p.strokeStyle='#aaa08b';p.lineWidth=2;p.setLineDash([2,4]);p.strokeText(ANIMAL_DIGITS[animal.kind],128,139);
+  const material=new THREE.MeshStandardMaterial({map:texture(c),transparent:true,alphaTest:.15,roughness:1});
+  const patch=new THREE.Mesh(new THREE.PlaneGeometry(.127,.139),material);patch.name=`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`;patch.position.set(0,-.032,-.005);patch.rotation.x=Math.PI/2;animal.object.add(patch);
+ }
+ const tangled=new THREE.Group();tangled.name='Knotted and crossed mobile cords';group.add(tangled);
+ for(let j=0;j<7;j++){
+  const points=[];for(let i=0;i<=28;i++){const a=i/28*Math.PI*2.5+j*.77,r=.14+.11*Math.sin(a*2+j);const x=Math.cos(a)*r,z=Math.sin(a)*r;points.push([x,floorSupport(group.position.x+x,group.position.z+z)+.013+j*.0015,z]);}
+  line(points,.0023,cord,tangled);
+ }
+ return {group,animals,strings,shadows,tangled};
 }

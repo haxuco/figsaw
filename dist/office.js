@@ -19,6 +19,8 @@ import { createKetchupKey } from './ketchup-key.js';
 import { createKetchupClosure } from './ketchup-closure.js';
 import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
+import {createMobileSupplies} from './mobile-supplies.js';
+import {createDoorKeypad} from './door-keypad.js';
 import { createFireAxe } from './fire-axe.js';
 import { createFireAlarm } from './fire-alarm.js';
 
@@ -669,7 +671,11 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const wornFloorMap=texture(cWear);concrete.map=wornFloorMap;concrete.bumpMap=wornFloorMap;concrete.bumpScale=.006;concrete.needsUpdate=true;
  // Complete the room behind the prone viewer with an abandoned service entrance.
  const rear=new THREE.Group();rear.name='Weathered entrance wall behind the viewer';rear.position.z=4.48;rear.rotation.y=Math.PI;office.add(rear);
- box([7.8,3.35,.16],[0,1.675,-.08],material(0x99a18f,.99,plasterMap),rear);
+ const rearPlaster=material(0x99a18f,.99,plasterMap);
+ box([4.54,3.35,.16],[-1.63,1.675,-.08],rearPlaster,rear);
+ box([2.14,3.35,.16],[2.83,1.675,-.08],rearPlaster,rear);
+ box([1.12,.99,.16],[1.20,2.855,-.08],rearPlaster,rear);
+ box([1.10,2.35,.018],[1.20,1.175,-.30],black,rear);
  const rearGrime=dirtOverlay(7.8,3.35,rear);rearGrime.position.set(0,1.675,.004);
  box([7.8,.14,.045],[0,.07,.024],black,rear);
  box([7.8,.026,.023],[0,2.87,.03],steel,rear);
@@ -686,26 +692,30 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }
  const rearScars=mesh(new THREE.PlaneGeometry(7.8,3.35),new THREE.MeshStandardMaterial({map:texture(cRear),transparent:true,depthWrite:false,roughness:1}),rear);rearScars.position.set(0,1.675,.007);rearScars.castShadow=false;
  const door=new THREE.Group();door.name='Scuffed service door and failing exit sign';door.position.set(1.20,0,.05);rear.add(door);
+ const doorHinge=new THREE.Group();doorHinge.position.set(-.53,0,.06);door.add(doorHinge);
+ const doorLeaf=new THREE.Group();doorLeaf.position.set(.53,0,-.06);doorHinge.add(doorLeaf);doorLeaf.userData.exitKeypad=true;
  const doorPaint=material(0x697368,.88,metalMap,.22);
- box([1.12,2.34,.042],[0,1.17,0],black,door);
- box([1.035,2.27,.048],[0,1.153,.022],doorPaint,door);
+ box([1.12,2.34,.042],[0,1.17,0],black,doorLeaf);
+ box([1.035,2.27,.048],[0,1.153,.022],doorPaint,doorLeaf);
  for(const x of[-.565,.565])box([.065,2.40,.10],[x,1.20,.035],steel,door);
  box([1.19,.065,.10],[0,2.40,.035],steel,door);
  box([1.10,.025,.13],[0,.016,.045],silver,door);
- box([.85,.28,.009],[0,.25,.052],material(0x6e766c,.7,metalMap,.55),door);
- for(const side of[-1,1])for(const y of[.14,.35])sphere([.008,.008,.003],[side*.39,y,.059],silver,door);
- box([.68,.73,.032],[0,1.69,.055],steel,door);
+ box([.85,.28,.009],[0,.25,.052],material(0x6e766c,.7,metalMap,.55),doorLeaf);
+ for(const side of[-1,1])for(const y of[.14,.35])sphere([.008,.008,.003],[side*.39,y,.059],silver,doorLeaf);
+ box([.68,.73,.032],[0,1.69,.055],steel,doorLeaf);
  const[cDoor,doorGlass]=canvas(512);doorGlass.fillStyle='#293c39';doorGlass.fillRect(0,0,512,512);
  for(let i=0;i<170;i++)cloud(doorGlass,random()*512,random()*512,range(4,45),'7,14,11',range(.08,.3));
  doorGlass.strokeStyle='rgba(100,118,105,.32)';doorGlass.lineWidth=1.4;for(let i=-512;i<1024;i+=36){doorGlass.beginPath();doorGlass.moveTo(i,0);doorGlass.lineTo(i+512,512);doorGlass.moveTo(i,0);doorGlass.lineTo(i-512,512);doorGlass.stroke();}
- const doorWindow=mesh(new THREE.PlaneGeometry(.60,.65),new THREE.MeshPhysicalMaterial({map:texture(cDoor),roughness:.32,clearcoat:.8,metalness:.12}),door);doorWindow.position.set(0,1.69,.074);
- rod([.36,.90,.095],[.36,1.05,.095],.017,silver,door);rod([.36,1.03,.095],[.20,1.03,.12],.015,silver,door);
- for(const y of[.35,1.20,2.07]){box([.07,.10,.034],[-.515,y,.064],steel,door);cylinder(.012,.12,[-.53,y,.08],silver,door);}
+ const doorWindow=mesh(new THREE.PlaneGeometry(.60,.65),new THREE.MeshPhysicalMaterial({map:texture(cDoor),roughness:.32,clearcoat:.8,metalness:.12}),doorLeaf);doorWindow.position.set(0,1.69,.074);
+ rod([.36,.90,.095],[.36,1.05,.095],.017,silver,doorLeaf);rod([.36,1.03,.095],[.20,1.03,.12],.015,silver,doorLeaf);
+ for(const y of[.35,1.20,2.07]){box([.07,.10,.034],[-.515,y,.064],steel,doorLeaf);cylinder(.012,.12,[-.53,y,.08],silver,doorLeaf);}
  function wallLabel(text,w,h,parent,pos,background='#74796b',ink='#d0cdb8'){
   const[c,ctx]=canvas(512,128);ctx.fillStyle=background;ctx.fillRect(0,0,512,128);ctx.fillStyle=ink;ctx.font='600 50px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(text,256,82,470);speckle(ctx,512,1500,'14,20,15',.2);
   const label=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture(c),roughness:.9}),parent);label.position.set(...pos);label.castShadow=false;return label;
  }
- wallLabel('STAFF ONLY',.40,.10,door,[0,1.12,.055]);
+ let doorUnlocked=false,doorAngle=0;
+ const exitDoor={object:doorHinge,unlock(){doorUnlocked=true;},reset(){doorUnlocked=false;doorAngle=0;doorHinge.rotation.y=0;},update(reducedMotion){doorAngle=reducedMotion?(doorUnlocked?-1.3:0):THREE.MathUtils.lerp(doorAngle,doorUnlocked?-1.3:0,.06);doorHinge.rotation.y=doorAngle;}};
+ const doorKeypad=createDoorKeypad();doorKeypad.group.position.set(1.96,1.22,.085);rear.add(doorKeypad.group);
  box([.54,.21,.10],[0,2.66,.08],steel,door);
  const exitLabel=wallLabel('EXIT  →',.48,.15,door,[0,2.66,.133],'#263b30','#a8b593');exitLabel.material.emissive.set(0x5b7657);exitLabel.material.emissiveMap=exitLabel.material.map;exitLabel.material.emissiveIntensity=.25;
  // An old pinboard of discarded design critiques, curling printouts and tape ghosts.
@@ -770,6 +780,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const figpalVats=createFigpalVats({floorSupport});figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
+ const mobileSupplies=createMobileSupplies(chargingKit.drawer);
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
  const fireAlarm=createFireAlarm({fireHazard,acidLeaks,laptop:laptopControl,floorSupport});
  fireAlarm.station.position.set(.40,1.22,.065);rear.add(fireAlarm.station);office.add(fireAlarm.effects);
@@ -779,9 +790,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  function setEnvironment(map){fireAxe.setEnvironment(map);glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
-  ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
+  exitDoor.update(reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

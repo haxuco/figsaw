@@ -16,22 +16,22 @@ export function createChargingState(){
  }
  function use(action,locked=false){
   if(locked)return 'Detach your shackle before using the charger.';
-  if(action==='drawer'){drawerOpen=!drawerOpen;return drawerOpen?'Drawer opened. Take the MacBook charger and cable.':'Drawer closed.';}
+  if(action==='drawer'){drawerOpen=!drawerOpen;return drawerOpen?'Supplies drawer opened. Take the charger, scissors or string.':'Drawer closed.';}
   if(phase==='damaged')return 'The charger cable has burned through. It cannot power the MacBook.';
   if(action==='charger'){
    if(phase!=='drawer')return 'You already collected the charger.';
-   if(!drawerOpen)return 'Open the rear drawer first.';
+   if(!drawerOpen)return 'Open the Supplies drawer first.';
    phase='carrying';return 'Charger collected. Plug it into the power strip behind you.';
   }
   if(action==='strip'){
-   if(phase==='drawer')return 'The power strip is on. Find the charger in the rear drawer.';
+   if(phase==='drawer')return 'The power strip is on. Find the charger in the Supplies drawer.';
    if(phase==='carrying'){phase='powered';return 'Charger plugged in. Connect its cable to the MacBook.';}
    return phase==='charging'?'The MacBook is running on external power. Battery: 0%.':'The charger has power. Connect the MacBook.';
   }
   if(action==='laptop'){
    if(phase==='powered'){phase='charging';battery=0;depleted=true;return 'Cable connected. The MacBook is running on external power. Battery: 0%.';}
    if(phase==='charging')return 'MacBook battery: 0% · External power connected.';
-   return phase==='carrying'?'Plug the charger into the power strip first.':'Find the charger in the rear drawer.';
+   return phase==='carrying'?'Plug the charger into the power strip first.':'Find the charger in the Supplies drawer.';
   }
   return '';
  }

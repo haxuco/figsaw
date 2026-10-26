@@ -121,3 +121,18 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 
 #scene.over-axe:not(:active),#scene.over-tank:not(:active){cursor:pointer}
 #cancel-axe-selection:disabled{opacity:.5;cursor:wait}
+
+#scene.over-puzzle:not(:active){cursor:pointer}
+#mobile-inspection{position:fixed;inset:0;z-index:18;pointer-events:none;display:flex;flex-direction:column;justify-content:space-between;align-items:center;padding:22px 14px 26px;color:#e9e2ce;text-align:center;text-shadow:0 2px 8px #000}
+#mobile-inspection[hidden]{display:none}
+.inspection-heading h2{font:500 clamp(28px,4vw,40px)/1.1 "Grenze Gotisch",Georgia,serif;margin:0 0 8px}
+.inspection-heading p{font:14px/1.4 system-ui;margin:0 auto 8px;max-width:540px}.inspection-heading small{font:12px system-ui;color:#b4ad9a}
+.inspection-actions{display:flex;justify-content:center;flex-wrap:wrap;gap:8px;max-width:720px;pointer-events:auto}
+.inspection-actions button{background:#151914e8;border:1px solid #686b58;border-radius:5px;color:#e9e2ce;padding:10px 15px;min-height:44px;font:14px system-ui;cursor:pointer}
+.inspection-actions button:hover,.inspection-actions button:focus-visible{border-color:#d4ccac;background:#262b22}.inspection-actions button:disabled{opacity:.45;cursor:wait}.inspection-actions [hidden]{display:none}
+#door-keypad{width:252px;padding:24px;border:2px solid #65685e;border-radius:8px;background:#252923;color:#d8daca;box-shadow:0 12px 48px #000b;font:14px system-ui}#door-keypad::backdrop{background:#060a07a6}
+#door-keypad h2{font:600 14px system-ui;letter-spacing:.08em;text-transform:uppercase;margin:0 0 20px;color:#adb39f}
+#door-keypad output{display:block;background:#101b15;border:2px inset #404939;padding:12px;margin-bottom:16px;text-align:center;color:#c19c6a;font:30px monospace;letter-spacing:.18em}
+.keypad-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.keypad-keys button{height:50px;border:1px solid #6c7064;border-radius:4px;background:linear-gradient(#52584d,#3a4036);color:#e3e4d2;font:23px monospace;box-shadow:0 3px 0 #161c15;cursor:pointer}.keypad-keys button:active{transform:translateY(2px);box-shadow:none}.keypad-keys button:hover{background:#626a59}
+.keypad-close{position:absolute;top:9px;right:10px;background:none;border:0;color:#c0c4b3;font:25px system-ui;cursor:pointer}#door-keypad p{min-height:34px;font:12px/1.4 system-ui;color:#d6ad89;margin:18px 0 0}
+@media(max-height:500px){#mobile-inspection{padding:10px}.inspection-heading h2{font-size:26px}.inspection-heading p{font-size:12px}.inspection-actions button{padding:7px 10px;font-size:12px;min-height:36px}#door-keypad{padding:18px;width:220px}.keypad-keys button{height:40px}#door-keypad h2{margin-bottom:12px}#door-keypad output{padding:8px;margin-bottom:12px}}

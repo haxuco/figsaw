@@ -20,7 +20,7 @@ export function createFireAxe(){
  for(const y of[.29,.34]){const rivet=mesh(new THREE.CylinderGeometry(.008,.008,.069,12),steel);rivet.rotation.x=Math.PI/2;rivet.position.y=y;}
  // Fine grain and nicks stay geometry-light and inherit the room lighting.
  const grain=[];for(let i=0;i<9;i++){const x=(i-4)*.0034;grain.push(x-.02,-.34,.017,x-.009,-.13,.018,x-.009,-.13,.018,x,.17,.017);}
- const lines=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(grain,3)),new THREE.LineBasicMaterial({color:0x48321f,transparent:true,opacity:.48}));object.add(lines);
+ const lines=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(grain,3)),new THREE.LineBasicMaterial({color:0x48321f,transparent:true,opacity:.48}));lines.raycast=()=>{};object.add(lines);
  for(const y of[-.28,.13]){
   const bracketX=y<0?-.062:.016;
   const pad=mesh(new THREE.BoxGeometry(.105,.08,.018),dark,mount);pad.position.set(bracketX,y,0);
