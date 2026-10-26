@@ -14,11 +14,13 @@ export function createMobileInspection({mobile,state}){
  const mountedAnimals=mobile.animals.map((animal,i)=>{
   const object=animal.object,home={parent:object.parent,position:object.position.clone(),quaternion:object.quaternion.clone(),scale:object.scale.clone()};
   const target=new THREE.Vector3(...targets[i]),start=new THREE.Vector3((i%2?1:-1)*.15,-.10+i*.015,(i<2?1:-1)*.10);
-  const end=target.clone().add(animal.tab.position.clone().multiplyScalar(1.08).applyQuaternion(hangingQ));
+  // Point each upright face away from the hub toward a different wall.
+  const targetQ=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.atan2(-target.x,-target.z)).multiply(hangingQ);
+  const end=target.clone().add(animal.tab.position.clone().multiplyScalar(1.08).applyQuaternion(targetQ));
   const arm=[end.x,.28,end.z];tube([[0,.30,0],arm],.008,metal);
   tube([arm,[end.x+.004,.06,end.z],end.toArray()],.0028,cord,cleanStrings);
   tube([[0,.27,0],[.23*Math.sin(i+1),.14,.23*Math.cos(i)],[.02,.04,-.12],start.clone().add(new THREE.Vector3(0,.17,-.06)).toArray()],.003,cord,knots);
-  return {object,home,patch:object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`),start,target,startQ:new THREE.Quaternion().setFromEuler(new THREE.Euler((i-1.5)*.39,i*.66,(i%2?1:-1)*.48))};
+  return {object,home,headPose:animal.headPose,patch:object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`),start,target,targetQ,startQ:new THREE.Quaternion().setFromEuler(new THREE.Euler((i-1.5)*.39,i*.66,(i%2?1:-1)*.48))};
  });
  for(let j=0;j<5;j++){
   const points=[];for(let i=0;i<=24;i++){const a=i/24*Math.PI*3+j*.8;points.push([Math.cos(a)*(.10+j*.018),.10+Math.sin(a*1.7)*.055,Math.sin(a)*(.09+j*.019)]);}
@@ -38,14 +40,14 @@ export function createMobileInspection({mobile,state}){
   for(const c of mountedAnimals)c.patch.visible=state.phase==='repaired';
   if(!hung)return done;
   const repair=state.phase==='repaired'?1:state.action==='restring'?THREE.MathUtils.smootherstep(state.progress,0,1):0;
-  for(const c of mountedAnimals){c.patch.visible=state.phase==='repaired';c.object.position.lerpVectors(c.start,c.target,repair);c.object.quaternion.copy(c.startQ).slerp(hangingQ,repair);}
+  for(const c of mountedAnimals){c.patch.visible=state.phase==='repaired';c.object.position.lerpVectors(c.start,c.target,repair);c.object.quaternion.copy(c.startQ).slerp(c.targetQ,repair);c.headPose.rotation.x=-Math.PI/2*repair;}
   knots.visible=state.phase==='tangled';cleanStrings.visible=state.phase==='repaired';
   scissors.group.visible=state.action==='cut';
   if(scissors.group.visible){const p=state.progress;scissors.group.position.set(.24-.19*Math.sin(Math.PI*p),.06,.16);scissors.group.rotation.set(0,-.3,-1.2);scissors.setOpen(reducedMotion?.1:.5+.45*Math.sin(p*Math.PI*6));knots.scale.setScalar(1-Math.max(0,p-.7)*1.5);}
   else knots.scale.setScalar(1);
   return done;
  }
- function reset(){hung=false;group.visible=false;mobile.group.visible=true;for(const c of mountedAnimals){c.home.parent.add(c.object);c.object.position.copy(c.home.position);c.object.quaternion.copy(c.home.quaternion);c.object.scale.copy(c.home.scale);c.patch.visible=false;}}
+ function reset(){hung=false;group.visible=false;mobile.group.visible=true;for(const c of mountedAnimals){c.home.parent.add(c.object);c.object.position.copy(c.home.position);c.object.quaternion.copy(c.home.quaternion);c.object.scale.copy(c.home.scale);c.headPose.rotation.x=0;c.patch.visible=false;}}
  return {group,update,getTarget,reset,get hung(){return hung;}};
 }
 

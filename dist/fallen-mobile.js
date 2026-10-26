@@ -43,21 +43,23 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
    ball([side*.134,-.007,z+.015],[.021,.030,.041],kind==='Pig'?brown:kind==='Elephant'?blueDark:pinkPale,g);
    if(kind==='Tiger'||kind==='Fox')for(let j=0;j<3;j++)ball([side*.151,-.012+(j-1)*.014,z+.034],[.004,.004,.006],brown,g);
   }
-  const head=ball([0,.102,-.170],kind==='Elephant'?[.097,.094,.094]:[.090,.083,.083],mat,g);
+  // Articulate the whole face together when the torso hangs rear-down.
+  const headPose=new THREE.Group();headPose.name=`${kind} head pose`;g.add(headPose);
+  ball([0,.102,-.170],kind==='Elephant'?[.097,.094,.094]:[.090,.083,.083],mat,headPose);
   if(kind==='Pig'){
-   ball([0,.080,-.244],[.049,.032,.024],pinkPale,g);for(const side of[-1,1])ball([side*.019,.082,-.267],[.006,.009,.003],brown,g);
-   for(const side of[-1,1]){const e=ear([side*.061,.153,-.177],[.072,.083,.09],pink,g);e.rotation.z=-side*.35;}
+   ball([0,.080,-.244],[.049,.032,.024],pinkPale,headPose);for(const side of[-1,1])ball([side*.019,.082,-.267],[.006,.009,.003],brown,headPose);
+   for(const side of[-1,1]){const e=ear([side*.061,.153,-.177],[.072,.083,.09],pink,headPose);e.rotation.z=-side*.35;}
    const points=[];for(let j=0;j<=45;j++){const t=j/45*Math.PI*3.9,r=.025*(1-j/70);points.push([Math.sin(t)*r,.115+Math.cos(t)*r,.167+j/45*.028]);}line(points,.0065,pinkPale,g);
-   eyes(g,-.242,.122);
+   eyes(headPose,-.242,.122);
   }else if(kind==='Elephant'){
-   for(const side of[-1,1]){ball([side*.098,.098,-.160],[.071,.080,.027],blue,g);ball([side*.113,.101,-.184],[.047,.055,.009],blueDark,g);}
-   line([[0,.099,-.240],[0,.055,-.273],[0,-.006,-.268],[.018,-.031,-.304],[.032,-.006,-.317]],.022,blue,g);
-   eyes(g,-.248,.127,.043);
+   for(const side of[-1,1]){ball([side*.098,.098,-.160],[.071,.080,.027],blue,headPose);ball([side*.113,.101,-.184],[.047,.055,.009],blueDark,headPose);}
+   line([[0,.099,-.240],[0,.055,-.273],[0,-.006,-.268],[.018,-.031,-.304],[.032,-.006,-.317]],.022,blue,headPose);
+   eyes(headPose,-.248,.127,.043);
    line([[0,.122,.150],[.025,.115,.185],[.042,.080,.199]],.006,blueDark,g);ball([.044,.077,.200],[.013,.018,.012],blueDark,g);
   }else{
-   for(const side of[-1,1]){const e=ear([side*.057,.155,-.172],[.067,.071,.10],mat,g);e.rotation.z=-side*.26;ear([side*.057,.162,-.184],[.038,.045,.055],pinkPale,g);}
-   for(const side of[-1,1])ball([side*.025,.076,-.235],[.035,.027,.023],cream,g);
-   ball([0,.091,-.260],[.015,.011,.011],brown,g);eyes(g,-.241,.124,.044);
+   for(const side of[-1,1]){const e=ear([side*.057,.155,-.172],[.067,.071,.10],mat,headPose);e.rotation.z=-side*.26;ear([side*.057,.162,-.184],[.038,.045,.055],pinkPale,headPose);}
+   for(const side of[-1,1])ball([side*.025,.076,-.235],[.035,.027,.023],cream,headPose);
+   ball([0,.091,-.260],[.015,.011,.011],brown,headPose);eyes(headPose,-.241,.124,.044);
    if(kind==='Tiger'){
     line([[0,.134,.150],[.035,.162,.193],[.067,.155,.201],[.075,.129,.182]],.012,tigerMat,g);
     ball([.075,.129,.182],[.014,.015,.016],brown,g);
@@ -66,10 +68,12 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
     const tip=ball([.039,.182,.271],[.045,.046,.061],cream,g);tip.rotation.x=-.45;
    }
   }
+  headPose.position.set(0,.102,-.170);
+  for(const part of headPose.children)part.position.sub(headPose.position);
   // Fabric seam on each flank and a small suspension tab on the shoulder.
   for(const side of[-1,1])line([[side*.10,.10,.07],[side*.113,.065,-.02],[side*.094,.092,-.10]],.0015,thread,g);
   const tab=mesh(new THREE.TorusGeometry(.014,.004,6,16,Math.PI*1.75),cord,g);tab.position.set(0,.158,-.065);tab.rotation.x=Math.PI/2;
-  return {object:g,tab,body};
+  return {object:g,tab,body,headPose};
  }
  // Plush rests on its broad body, not on a single projecting paw or trunk.
  // Compress only the underside against the actual concrete/carpet surface.
@@ -117,7 +121,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   {kind:'Fox',x:-.27,z:-.43,rear:true,yaw:1.12,roll:.20,arm:2}
  ];
  for(const p of placements){
-  const {object,tab,body}=makeAnimal(p.kind);animals.push({object,kind:p.kind,tab});object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
+  const {object,tab,body,headPose}=makeAnimal(p.kind);animals.push({object,kind:p.kind,tab,headPose});object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
   const toward=Math.atan2(viewerPosition.x-(group.position.x+p.x),viewerPosition.z-(group.position.z+p.z));
   object.rotation.set(p.kind==='Pig'?-.06:.03,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
   group.updateMatrixWorld(true);settlePlush(object,body);group.updateMatrixWorld(true);

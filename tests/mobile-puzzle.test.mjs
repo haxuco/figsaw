@@ -7,6 +7,7 @@ import {createMobileInspection} from '../dist/mobile-inspection.js';
 import {createMobileSupplies} from '../dist/mobile-supplies.js';
 import {createMobileCamera} from '../dist/mobile-camera.js';
 import {createFireAxe} from '../dist/fire-axe.js';
+import {batchStaticScenery} from '../dist/static-batching.js';
 
 test('decorative axe grain does not intercept a ray aimed at the neighboring door keypad',()=>{
  const axe=createFireAxe();axe.mount.position.set(-.4,2.06,4.43);axe.mount.rotation.y=Math.PI;axe.mount.updateMatrixWorld(true);
@@ -40,15 +41,21 @@ test('the actual toys hang in a fixed room position, with rear numbers facing do
  const home=mobile.animals.map(a=>({position:a.object.position.clone(),quaternion:a.object.quaternion.clone(),scale:a.object.scale.clone()}));
  const inspect=createMobileInspection({mobile,state}),supplies=createMobileSupplies(new THREE.Group()),scene=new THREE.Scene();scene.add(mobile.group,inspect.group);
  for(const animal of mobile.animals){const patch=animal.object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`);assert.ok(patch);patch.geometry.computeBoundingBox();const bounds=patch.geometry.boundingBox;assert.ok(bounds.min.z>.12,'number is on the rear haunches');assert.ok(bounds.max.y<.10,'number sits below the tail');}
+ for(const animal of mobile.animals){batchStaticScenery(animal.headPose,{minObjects:2});batchStaticScenery(animal.object,{exclude:[animal.headPose],minObjects:2});assert.equal(animal.headPose.parent,animal.object);assert.ok(animal.headPose.children.length>0,'batched faces still move with the head');}
  state.inspect();inspect.update(0,true);assert.equal(mobile.group.visible,false);assert.equal(inspect.group.visible,true);
  const patches=[];inspect.group.traverse(o=>{if(o.name.startsWith('Stitched '))patches.push(o);});assert.equal(patches.length,4);assert.ok(patches.every(o=>!o.visible));
  collect(state);supplies.sync(state);assert.equal(supplies.objects.scissors.visible,false);assert.equal(supplies.objects.string.visible,false);
  state.cut(0);inspect.update(.3,true);state.restring(.4);inspect.update(.7,true);assert.equal(state.phase,'repaired');assert.ok(patches.every(o=>o.visible));
  scene.updateMatrixWorld(true);
- for(const animal of mobile.animals){const normal=new THREE.Vector3(0,0,1).applyQuaternion(animal.object.getWorldQuaternion(new THREE.Quaternion()));assert.ok(normal.y<-.999,'rear faces below the hanging animal');}
+ for(const animal of mobile.animals){
+  const normal=new THREE.Vector3(0,0,1).applyQuaternion(animal.object.getWorldQuaternion(new THREE.Quaternion()));assert.ok(normal.y<-.999,'rear faces below the hanging animal');
+  const headQ=animal.headPose.getWorldQuaternion(new THREE.Quaternion()),face=new THREE.Vector3(0,0,-1).applyQuaternion(headQ),up=new THREE.Vector3(0,1,0).applyQuaternion(headQ);
+  const outward=animal.object.position.clone().setY(0).normalize();
+  assert.ok(Math.abs(face.y)<1e-6,'face is level instead of looking at the ceiling');assert.ok(face.dot(outward)>.999,'face points outward toward the walls');assert.ok(up.y>.999,'ears remain above the face');
+ }
  const fixed=inspect.group.position.clone();state.close();inspect.update(1,true);assert.equal(inspect.group.visible,true);assert.equal(mobile.group.visible,false);assert.ok(inspect.group.position.equals(fixed));
  state.reset();inspect.reset();supplies.sync(state);assert.equal(mobile.group.visible,true);assert.equal(inspect.group.visible,false);assert.equal(supplies.objects.string.visible,true);assert.equal(supplies.objects.scissors.visible,true);
- for(const [i,animal] of mobile.animals.entries()){assert.equal(animal.object.parent,mobile.group);assert.ok(animal.object.position.equals(home[i].position));assert.ok(animal.object.quaternion.angleTo(home[i].quaternion)<1e-7);assert.ok(animal.object.scale.equals(home[i].scale));}
+ for(const [i,animal] of mobile.animals.entries()){assert.equal(animal.object.parent,mobile.group);assert.ok(animal.object.position.equals(home[i].position));assert.ok(animal.object.quaternion.angleTo(home[i].quaternion)<1e-7);assert.ok(animal.object.scale.equals(home[i].scale));assert.equal(animal.headPose.rotation.x,0);}
 }));
 
 test('inspection camera moves above and beneath the fixed mobile on an arc, then returns to the saved room view',()=>{
