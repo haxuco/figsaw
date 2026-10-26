@@ -35,29 +35,15 @@ export function createFloorTimer(viewerPosition,position){
  const legend=document.createElement('canvas');legend.width=512;legend.height=64;const lc=legend.getContext('2d');lc.font='500 20px monospace';lc.fillStyle='#8e8b7a';lc.textAlign='center';lc.fillText('MIN',128,42);lc.fillText('SEC',384,42);
  const legendMap=new THREE.CanvasTexture(legend);legendMap.colorSpace=THREE.SRGBColorSpace;
  const legendMesh=mesh(new THREE.PlaneGeometry(.43,.018),new THREE.MeshBasicMaterial({map:legendMap,transparent:true,depthWrite:false}));legendMesh.position.set(0,.069,.104);legendMesh.castShadow=false;
- const lit=new THREE.MeshBasicMaterial({color:0xff2817,toneMapped:false}),unlit=new THREE.MeshBasicMaterial({color:0x230705,toneMapped:false});
- const halo=new THREE.MeshBasicMaterial({color:0xff1907,transparent:true,opacity:.12,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false});
- const segmentShape=new THREE.Shape(),length=.066,thickness=.010,b=.005;
- segmentShape.moveTo(-length/2,0);segmentShape.lineTo(-length/2+b,thickness/2);segmentShape.lineTo(length/2-b,thickness/2);segmentShape.lineTo(length/2,0);segmentShape.lineTo(length/2-b,-thickness/2);segmentShape.lineTo(-length/2+b,-thickness/2);segmentShape.closePath();
- const segmentGeometry=new THREE.ShapeGeometry(segmentShape);
+ const length=.066,thickness=.010,b=.005;
  const patterns=['abcdef','bc','abdeg','abcdg','bcfg','acdfg','acdefg','abc','abcdefg','abcdfg'];
  const positions={a:[0,.058,0],b:[.036,.029,1],c:[.036,-.029,1],d:[0,-.058,0],e:[-.036,-.029,1],f:[-.036,.029,1],g:[0,0,0]};
- const digits=[];
- for(const x of quality.mobile?[]:[-.187,-.081,.081,.187]){
-  const digit=new THREE.Group();digit.position.set(x,-.005,.106);caseGroup.add(digit);const segments=[];
-  for(const [key,[sx,sy,vertical]] of Object.entries(positions)){
-   const segment=mesh(segmentGeometry,unlit,digit);segment.position.set(sx,sy,0);segment.rotation.z=vertical?Math.PI/2:0;segment.scale.x=vertical?.76:1;segment.castShadow=false;
-   const glow=mesh(segmentGeometry,halo,digit);glow.position.set(sx,sy,-.0002);glow.rotation.z=segment.rotation.z;glow.scale.set(segment.scale.x*1.12,1.9,1);glow.castShadow=false;
-   segments.push({key,segment,glow});
-  }
-  digits.push(segments);
- }
- for(const y of[-.025,.015]){const dot=mesh(new THREE.CircleGeometry(.005,16),lit);dot.position.set(0,y,.106);dot.castShadow=false;}
  const spill=new THREE.PointLight(0xff1a08,.12,.70,2);spill.position.set(0,.06,.16);caseGroup.add(spill);
- // One texture replaces 56 separate LED/glow meshes on phones; redraw once a second.
+ // The flat LED segments and their glow share one texture on every device.
+ // Redraw only when the displayed second changes, keeping the physical case/lens.
  let mobileDisplay=null,mobilePaint=null,mobileMap=null;
- if(quality.mobile){const canvas=document.createElement('canvas');canvas.width=512;canvas.height=160;mobilePaint=canvas.getContext('2d');mobileMap=new THREE.CanvasTexture(canvas);mobileMap.colorSpace=THREE.SRGBColorSpace;mobileMap.generateMipmaps=false;mobileMap.minFilter=THREE.LinearFilter;
- mobileDisplay=mesh(new THREE.PlaneGeometry(.46,.136),new THREE.MeshBasicMaterial({map:mobileMap,toneMapped:false}));mobileDisplay.position.set(0,-.005,.108);mobileDisplay.castShadow=false;spill.visible=false;}
+ {const canvas=document.createElement('canvas');canvas.width=512;canvas.height=160;mobilePaint=canvas.getContext('2d');mobileMap=new THREE.CanvasTexture(canvas);mobileMap.colorSpace=THREE.SRGBColorSpace;mobileMap.generateMipmaps=false;mobileMap.minFilter=THREE.LinearFilter;
+ mobileDisplay=mesh(new THREE.PlaneGeometry(.46,.136),new THREE.MeshBasicMaterial({map:mobileMap,toneMapped:false}));mobileDisplay.position.set(0,-.005,.108);mobileDisplay.castShadow=false;spill.visible=!quality.mobile;}
  batchStaticScenery(group,{minObjects:2,exclude:[...caseGroup.children.filter(c=>c.isGroup),mobileDisplay],dispose:false});
  let lastSeconds=-1;
  function update(){
@@ -73,7 +59,6 @@ export function createFloorTimer(viewerPosition,position){
      }
     });ctx.fillStyle='#ff3928';for(const y of[65,105]){ctx.beginPath();ctx.arc(256,y,4,0,Math.PI*2);ctx.fill();}ctx.shadowBlur=0;mobileMap.needsUpdate=true;
    }
-   digits.forEach((segments,i)=>{const pattern=patterns[Number(text[i])];for(const part of segments){const on=pattern.includes(part.key);part.segment.material=on?lit:unlit;part.glow.visible=on;}});
    lastSeconds=seconds;
   }
   return seconds;

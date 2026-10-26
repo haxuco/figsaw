@@ -3,6 +3,7 @@ import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
 import {batchStaticScenery} from './static-batching.js';
 import {createRoomReflections} from './room-reflections.js';
 import {createPerformanceReport} from './performance-report.js';
+import {createFrameRateCounter} from './frame-rate.js';
 import { createOffice } from './office.js?v=fewer-faster';
 import { FIGPAL_PLEAS, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
@@ -57,6 +58,7 @@ renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
 const profiler=createPerformanceReport(renderer,scene);
+const frameRate=createFrameRateCounter(document.querySelector('#frame-rate'));
 const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
 const arrivalCameraMove=createArrivalCameraMove(homeCamera.fov);
@@ -466,20 +468,23 @@ const figpalRounds=createFigpalRounds(figpalHoists,countdown);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
-const displayEnvironment=createRoomReflections(renderer);
-setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);
+// Diffuse mobile materials do not sample a reflection environment. Avoid the
+// panorama conversion, render targets and PMREM shader compilation on phones.
+if(!quality.mobile){const displayEnvironment=createRoomReflections(renderer);setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);}
 applySceneBudget(scene);
 acidLeaks.bindTargets([office,model]);
-for(const rigid of[...spinningWheels,...pedalPlatforms,bowTie])batchStaticScenery(rigid,{minObjects:2,dispose:false});
-batchStaticScenery(crank,{exclude:pedalPlatforms,minObjects:2,dispose:false});
-batchStaticScenery(tricycle,{exclude:[...spinningWheels,crank],minObjects:2,dispose:false});
+// Simplify first: mobile materials that differed only in unused PBR properties
+// can now share a draw call without changing their colours or moving parts.
+useMobileMaterials(scene);
+for(const rigid of[...spinningWheels,...pedalPlatforms,bowTie])batchStaticScenery(rigid,{minObjects:2,dispose:false,palette:quality.mobile});
+batchStaticScenery(crank,{exclude:pedalPlatforms,minObjects:2,dispose:false,palette:quality.mobile});
+batchStaticScenery(tricycle,{exclude:[...spinningWheels,crank],minObjects:2,dispose:false,palette:quality.mobile});
 for(const animal of stuffedAnimals){
- batchStaticScenery(animal.headPose,{minObjects:2});
- batchStaticScenery(animal.object,{exclude:[animal.headPose,animal.object.getObjectByName('Split fabric seam and exposed stuffing')],minObjects:2});
+ batchStaticScenery(animal.headPose,{minObjects:2,palette:quality.mobile});
+ batchStaticScenery(animal.object,{exclude:[animal.headPose,animal.object.getObjectByName('Split fabric seam and exposed stuffing')],minObjects:2,palette:quality.mobile});
 }
 batchStaticScenery(office,{exclude:[laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object],minObjects:2,palette:quality.mobile});
 const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
-useMobileMaterials(scene);
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
  if(mobilePuzzle.active||doorKeypadUI.active||!entranceArrived||departure.active||figpalRounds.active||fireAlarm.dying){arrivalDialogue.hidden=true;return;}
@@ -876,7 +881,7 @@ const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);r
 const clock=new THREE.Clock();
 let contextLost=false,sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
 function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.hidden)frameRequest=requestAnimationFrame(render);}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){fireAlarm.silence();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
+document.addEventListener('visibilitychange',()=>{frameRate.reset();if(document.hidden){fireAlarm.silence();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
  frameRequest=0;if(document.hidden||contextLost)return;
  const cpuStart=performance.now();
@@ -885,7 +890,7 @@ function render(){
  lastRenderAt=cpuStart;
  const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  // Once the trap finishes, only animate the lightweight screen overlay.
- if(gameEnded){updateGameOver(t);if(!deathTransition.finished)scheduleFrame();return;}
+ if(gameEnded){frameRate.reset();updateGameOver(t);if(!deathTransition.finished)scheduleFrame();return;}
  if(resetting){
   state.yaw=wrapAngle(state.yaw+wrapAngle(homeView.yaw-state.yaw)*eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
   cameraPosition.lerp(homePosition,eased*.5);
@@ -955,6 +960,7 @@ function render(){
  }
  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
  renderer.render(scene,camera);
+ frameRate.frame(performance.now());
  updateArrivalDialogue(t);hangingPleas.update(t,mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
@@ -970,7 +976,7 @@ camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera
 (quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
 installGraphicsRecovery(canvas,{
  status:loadingStatus,
- pause(){contextLost=true;cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},
+ pause(){contextLost=true;frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},
  lowerQuality(){renderer.shadowMap.enabled=false;requestedPixelRatio=Math.min(requestedPixelRatio,.6);resize();},
  resume(){contextLost=false;lastRenderAt=0;clock.getDelta();scheduleFrame();}
 });

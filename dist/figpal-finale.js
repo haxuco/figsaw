@@ -31,7 +31,7 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
   wrapper.dataset.figpal=String(index+1);
   const text=document.createElement('span');text.className='figpal-speech-text';text.textContent=line;
   const tail=document.createElementNS('http://www.w3.org/2000/svg','svg');tail.classList.add('figpal-speech-tail');tail.setAttribute('aria-hidden','true');
-  const path=document.createElementNS('http://www.w3.org/2000/svg','path');tail.append(path);
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M 0 0 L 12 0 L 6 15 Z');tail.append(path);
   wrapper.append(text,tail);container.append(wrapper);return wrapper;
  });
  const point=new THREE.Vector3(),startedAt=bubbles.map(()=>null),durations=bubbles.map(()=>15);
@@ -47,6 +47,7 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
   container.hidden=true;for(let i=0;i<bubbles.length;i++){startedAt[i]=null;bubbles[i].hidden=true;}
  }
  function update(camera,time){
+  if(!isActive(time)){hide();return;}
   container.hidden=false;
   const rect=canvas.getBoundingClientRect();let visible=0;
   for(let i=0;i<anchors.length;i++){
@@ -63,8 +64,6 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
    bubble.hidden=false;
    const anchorX=rect.left+(point.x*.5+.5)*rect.width,anchorY=rect.top+(-point.y*.5+.5)*rect.height;
    bubble.style.transform=`translate3d(${anchorX}px,${anchorY-14}px,0) translate(-50%,-100%)`;
-   const center=bubble.offsetWidth/2;
-   bubble.querySelector('path').setAttribute('d',`M ${center-5} 0 L ${center+6} 0 L ${center} 15 Z`);
    visible++;
   }
   container.hidden=visible===0;

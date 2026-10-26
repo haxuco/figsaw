@@ -33,7 +33,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const canvas=artCanvas;
  function texture(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=Math.min(quality.mobile?2:8,renderer.capabilities.getMaxAnisotropy());return t;}
  function cloud(ctx,x,y,r,color,alpha){const g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`rgba(${color},${alpha})`);g.addColorStop(1,`rgba(${color},0)`);ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
- function speckle(ctx,size,n,color,alpha){for(let i=0;i<n;i++){ctx.fillStyle=`rgba(${color},${random()*alpha})`;const x=random()*size,y=random()*size,w=range(.4,2.2),h=range(.4,2);if(!quality.mobile||i%4===0)ctx.fillRect(x,y,w,h);}}
+ function speckle(ctx,size,n,color,alpha){for(let i=0;i<n;i++){const opacity=random()*alpha,x=random()*size,y=random()*size,w=range(.4,2.2),h=range(.4,2);if(!quality.mobile||i%4===0){ctx.fillStyle=`rgba(${color},${opacity})`;ctx.fillRect(x,y,w,h);}}}
  function weathered(base,kind='paint'){
   const[c,ctx]=canvas();ctx.fillStyle=base;ctx.fillRect(0,0,512,512);
   for(let i=0;i<210;i++)cloud(ctx,random()*512,random()*512,range(4,70),i%3?'27,33,23':'110,83,48',range(.025,.15));
@@ -48,10 +48,12 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const material=(color,roughness=.88,map=null,metalness=0)=>{const key=[color,roughness,map?.uuid,metalness].join('|');if(!materialCache.has(key))materialCache.set(key,quality.mobile&&metalness===0?new THREE.MeshLambertMaterial({color,map}):new THREE.MeshStandardMaterial({color,roughness,map,bumpMap:quality.mobile?null:map,bumpScale:map?.008:0,metalness}));return materialCache.get(key);};
  const plaster=material(0xffffff,.98,plasterMap),wood=material(0xffffff,.86,woodMap),plastic=material(0xffffff,.80,plasticMap),steel=material(0xffffff,.73,metalMap,.42),fabric=material(0xffffff,.95,fabricMap),black=material(0x171c19,.86),rubber=material(0x101512,.95),concrete=material(0xffffff,.98,floorMap),silver=material(0x828c86,.4,null,.8);
  function mesh(geometry,mat,parent=office){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
- function box(size,pos,mat=steel,parent=office){const m=mesh(new THREE.BoxGeometry(...size),mat,parent);m.position.set(...pos);return m;}
+ const geometryCache=new Map();
+ function sharedGeometry(key,create){if(!geometryCache.has(key))geometryCache.set(key,create());return geometryCache.get(key);}
+ function box(size,pos,mat=steel,parent=office){const m=mesh(sharedGeometry(`box:${size}`,()=>new THREE.BoxGeometry(...size)),mat,parent);m.position.set(...pos);return m;}
  const sphereGeometry=new THREE.SphereGeometry(1,quality.mobile?12:20,quality.mobile?8:12);
  function sphere(size,pos,mat,parent=office){const m=mesh(sphereGeometry,mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
- function cylinder(radius,height,pos,mat=steel,parent=office,segments=12){const m=mesh(new THREE.CylinderGeometry(radius,radius,height,quality.mobile?Math.min(segments,12):segments),mat,parent);m.position.set(...pos);return m;}
+ function cylinder(radius,height,pos,mat=steel,parent=office,segments=12){const n=quality.mobile?Math.min(segments,12):segments;const m=mesh(sharedGeometry(`cylinder:${radius},${height},${n}`,()=>new THREE.CylinderGeometry(radius,radius,height,n)),mat,parent);m.position.set(...pos);return m;}
  function rod(a,b,r=.015,mat=steel,parent=office){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),direction=end.clone().sub(start);const m=cylinder(r,direction.length(),start.clone().add(end).multiplyScalar(.5).toArray(),mat,parent);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),direction.normalize());return m;}
  function cable(points,r=.008,mat=black,parent=office){const curve=new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p)));const wire=mesh(new THREE.TubeGeometry(curve,Math.max(12,points.length*(quality.mobile?3:8)),r,quality.mobile?4:6,false),mat,parent);if(parent===office&&points.some(p=>p[1]<.06))floorCables.push(wire);return wire;}
  function bevelBox(w,h,d,r=.025){r=Math.min(r,w*.45,h*.45);const s=new THREE.Shape();const x=w/2,y=h/2;s.moveTo(-x+r,-y);s.lineTo(x-r,-y);s.quadraticCurveTo(x,-y,x,-y+r);s.lineTo(x,y-r);s.quadraticCurveTo(x,y,x-r,y);s.lineTo(-x+r,y);s.quadraticCurveTo(-x,y,-x,y-r);s.lineTo(-x,-y+r);s.quadraticCurveTo(-x,-y,-x+r,-y);const b=Math.min(.012,w/6,h/6,d/6),g=new THREE.ExtrudeGeometry(s,{depth:d-b*2,bevelEnabled:true,bevelSize:b,bevelThickness:b,bevelSegments:2,steps:1,curveSegments:4});g.translate(0,0,-d/2+b);return g;}
@@ -593,11 +595,11 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
 
  // Papers conform to the concrete and thin carpet remnants instead of hovering above them.
  office.updateMatrixWorld(true);
+ const paperPoint=new THREE.Vector3();
  for(const sheet of floorPapers){
   const p=sheet.geometry.attributes.position;
   for(let i=0;i<p.count;i++){
-   const point=sheet.localToWorld(new THREE.Vector3(p.getX(i),p.getY(i),0));let support=.003;
-   for(const patch of carpetPatches){const local=patch.worldToLocal(point.clone()),size=patch.geometry.parameters;if(Math.abs(local.x)<size.width/2&&Math.abs(local.z)<size.depth/2)support=Math.max(support,.013);}
+   const point=paperPoint.set(p.getX(i),p.getY(i),0).applyMatrix4(sheet.matrixWorld),support=floorSupport(point.x,point.z);
    p.setZ(i,p.getZ(i)+support+.002-sheet.position.y);
   }
   p.needsUpdate=true;sheet.geometry.computeVertexNormals();sheet.geometry.computeBoundingSphere();

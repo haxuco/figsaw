@@ -1,4 +1,6 @@
 import {ANIMAL_DIGITS} from './mobile-puzzle-state.js';
+import {renderQuality as quality} from './render-quality.js';
+import {artCanvas} from './texture-budget.js';
 import * as THREE from './vendor/three.module.js';
 import { settleOnFloor, drapeFloorCable, floorClearance } from './floor-contact.js';
 
@@ -7,7 +9,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  const animals=[],strings=[],shadows=[];
  const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.userData.mobilePuzzle=true;group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
- const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
+ const [canvas,ctx]=artCanvas(512);ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
  for(let i=0;i<7000;i++){const x=random()*512,y=random()*512;ctx.strokeStyle=i%2?'rgba(58,52,36,.12)':'rgba(246,236,212,.28)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2,y+3);ctx.stroke();}
  for(let i=0;i<45;i++){const x=random()*512,y=random()*512,r=8+random()*70,g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(63,52,31,.15)');g.addColorStop(1,'rgba(63,52,31,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
  function texture(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;}
@@ -19,14 +21,14 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  const black=new THREE.MeshStandardMaterial({color:0x191b19,roughness:.48});
  const agedIvory=new THREE.MeshStandardMaterial({color:0xc2bca1,map:fabricMap,roughness:.68,bumpMap:fabricMap,bumpScale:.001});
  const metal=new THREE.MeshStandardMaterial({color:0x7c8275,metalness:.65,roughness:.56});
- const stripeCanvas=document.createElement('canvas');stripeCanvas.width=stripeCanvas.height=512;const stripeCtx=stripeCanvas.getContext('2d');stripeCtx.drawImage(canvas,0,0);
+ const [stripeCanvas,stripeCtx]=artCanvas(512);stripeCtx.drawImage(canvas,0,0,512,512);
  stripeCtx.fillStyle='#343027';
  for(let i=0;i<12;i++){const x=i*45-15,y=(i%2)*30;stripeCtx.beginPath();stripeCtx.moveTo(x,y);stripeCtx.bezierCurveTo(x+55,105,x+8,180,x+51,268);stripeCtx.lineTo(x+23,238);stripeCtx.bezierCurveTo(x-12,148,x+26,93,x-9,y);stripeCtx.fill();stripeCtx.beginPath();stripeCtx.moveTo(x+25,512);stripeCtx.bezierCurveTo(x+69,417,x+6,367,x+45,285);stripeCtx.lineTo(x+24,314);stripeCtx.bezierCurveTo(x-11,395,x+41,438,x-3,512);stripeCtx.fill();}
  const tigerMat=plush(0xd9a05d,texture(stripeCanvas));
- const sphereGeometry=new THREE.SphereGeometry(1,24,16);
+ const sphereGeometry=new THREE.SphereGeometry(1,quality.mobile?12:24,quality.mobile?8:16);
  function mesh(geometry,mat,parent=group){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
  function ball(pos,size,mat,parent){const m=mesh(sphereGeometry,mat,parent);m.position.set(...pos);m.scale.set(...size);return m;}
- function line(points,r,mat,parent=group){return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),Math.max(20,points.length*6),r,6,false),mat,parent);}
+ function line(points,r,mat,parent=group){return mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),Math.max(quality.mobile?12:20,points.length*(quality.mobile?2:6)),r,quality.mobile?4:6,false),mat,parent);}
  function rod(a,b,r,mat,parent=group){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),d=end.clone().sub(start);const m=mesh(new THREE.CylinderGeometry(r,r,d.length(),12),mat,parent);m.position.copy(start).add(end).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m;}
  function box(size,pos,mat,parent=group){const m=mesh(new THREE.BoxGeometry(...size),mat,parent);m.position.set(...pos);return m;}
  function ear(pos,size,mat,parent){const s=new THREE.Shape();s.moveTo(-.5,0);s.quadraticCurveTo(-.48,.44,0,1);s.quadraticCurveTo(.49,.49,.5,0);s.quadraticCurveTo(0,-.1,-.5,0);const g=new THREE.ExtrudeGeometry(s,{depth:.18,bevelEnabled:true,bevelSize:.06,bevelThickness:.05,bevelSegments:2,curveSegments:8,steps:1});g.translate(0,0,-.09);const m=mesh(g,mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}

@@ -25,7 +25,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #figpal-dialogues{position:fixed;inset:0;z-index:4;pointer-events:none}
 #figpal-dialogues[hidden],.figpal-speech[hidden]{display:none}
 .figpal-speech{position:absolute;left:0;top:0;box-sizing:border-box;width:max-content;max-width:132px;padding:5px 7px;border:0;border-radius:7px 6px 8px 3px;background:#000;color:#fff;filter:drop-shadow(0 3px 5px #0008);font:650 italic 12px/1.2 system-ui,-apple-system,sans-serif;text-align:center;will-change:transform}
-.figpal-speech-tail{position:absolute;top:calc(100% - 1px);left:0;width:1px;height:1px;overflow:visible;fill:#000;stroke:none}
+.figpal-speech-tail{position:absolute;top:calc(100% - 1px);left:50%;width:12px;height:15px;transform:translateX(-50%);overflow:visible;fill:#000;stroke:none}
 .figpal-speech-text{display:block;animation:figpal-panic .19s steps(2,end) infinite}
 @keyframes figpal-panic{0%,100%{transform:rotate(-1.4deg) translateY(0)}50%{transform:rotate(1.2deg) translateY(-1px)}}
 @media(prefers-reduced-motion:reduce){.figpal-speech-text{animation:none}}
@@ -136,3 +136,5 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 .keypad-keys{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.keypad-keys button{height:50px;border:1px solid #6c7064;border-radius:4px;background:linear-gradient(#52584d,#3a4036);color:#e3e4d2;font:23px monospace;box-shadow:0 3px 0 #161c15;cursor:pointer}.keypad-keys button:active{transform:translateY(2px);box-shadow:none}.keypad-keys button:hover{background:#626a59}
 .keypad-close{position:absolute;top:9px;right:10px;background:none;border:0;color:#c0c4b3;font:25px system-ui;cursor:pointer}#door-keypad p{min-height:34px;font:12px/1.4 system-ui;color:#d6ad89;margin:18px 0 0}
 @media(max-height:500px){#mobile-inspection{padding:10px}.inspection-heading h2{font-size:26px}.inspection-heading p{font-size:12px}.inspection-actions button{padding:7px 10px;font-size:12px;min-height:36px}#door-keypad{padding:18px;width:220px}.keypad-keys button{height:40px}#door-keypad h2{margin-bottom:12px}#door-keypad output{padding:8px;margin-bottom:12px}}
+/* Diagnostic HUD stays out of the way of touch controls and the scene. */
+#frame-rate{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));z-index:10;color:#b7c2b5;font:10px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000;pointer-events:none;user-select:none;}

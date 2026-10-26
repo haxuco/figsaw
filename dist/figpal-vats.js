@@ -1,5 +1,6 @@
 import {createTankBreakage} from './tank-breakage.js';
 import {batchStaticScenery} from './static-batching.js';
+import {useMobileMaterials} from './scene-budget.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality} from './render-quality.js';
 import { weatheredMetal, createTankMaterials } from './industrial-materials.js?v=brighter-liquid';
@@ -11,6 +12,7 @@ import { createTankDecalFactory } from './tank-decal.js';
 // The three little captives are modeled from the supplied Figpals illustration.
 // Shapes, glass, liquid and wear are procedural; the supplied tank decal is bundled.
 export function createFigpalVats({floorSupport}={}){
+ function batchRigid(root,options={}){useMobileMaterials(root);return batchStaticScenery(root,{...options,palette:quality.mobile});}
  const group=new THREE.Group();group.name='Three suspended Figpals over bubbling green canisters';
  const TAU=Math.PI*2;
  let seed=193108;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -141,7 +143,7 @@ export function createFigpalVats({floorSupport}={}){
   const breakage=createTankBreakage({vat,shell,deposits,index:i,floorSupport});
   const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.castShadow=false;liquid.renderOrder=2;
   const floatingBones=createFloatingBones(i);vat.add(floatingBones.group);
-  for(const bone of floatingBones.group.children)batchStaticScenery(bone,{minObjects:2,dispose:false});
+  for(const bone of floatingBones.group.children)batchRigid(bone,{minObjects:2,dispose:false});
   cylinder(.444,.018,[0,.215,0],liquidTop,vat);
   for(const y of[.225,1.235]){ring(.484,.036,y,steel,vat);ring(.454,.010,y-.018,darkMetal,vat);}
   for(const a of[.15,2.24,4.34]){const px=Math.cos(a)*.485,pz=Math.sin(a)*.485;rod([px,.22,pz],[px,1.23,pz],.021,steel,vat);}
@@ -214,8 +216,8 @@ export function createFigpalVats({floorSupport}={}){
   const hanger=new THREE.Group();hanger.name=`Suspended Figpal ${i+1}`;hanger.position.y=height;rig.add(hanger);
   const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
   const transformation=createFigpalTransformation(captive.object,i);
-  batchStaticScenery(captive.object,{exclude:[captive.propeller],minObjects:2,dispose:false});
-  transformation.skeleton.visible=true;batchStaticScenery(transformation.skeleton,{minObjects:2,dispose:false});transformation.skeleton.visible=false;
+  batchRigid(captive.object,{exclude:[captive.propeller],minObjects:2,dispose:false});
+  transformation.skeleton.visible=true;batchRigid(transformation.skeleton,{minObjects:2,dispose:false});transformation.skeleton.visible=false;
   const speechAnchor=new THREE.Object3D();speechAnchor.position.set(0,.50,0);hanger.add(speechAnchor);speechAnchors.push(speechAnchor);
   // A spreader and two linked chain slings support the body, leaving its face clear.
   rod([-.22,.45,0],[.22,.45,0],.019,steel,hanger);
@@ -229,10 +231,10 @@ export function createFigpalVats({floorSupport}={}){
   ball([0,.047,.047],[.024,.024,.015],material(0x7b2e23,.6,0),control);ball([0,-.047,.047],[.024,.024,.015],material(0x697c49,.6,0),control);
   line([[.39,.95,.40],[.44,1.02,.35],[.46,1.27,.12],[.44,winchY-.13,.06],[.24,winchY,.0]],.007,darkMetal,rig);
   // Batch within each independently moving part, preserving the hoist hit target.
-  for(const rigid of[drum,crank,control,wheel])batchStaticScenery(rigid,{minObjects:2,allowInteractiveRoot:true,dispose:false});
-  batchStaticScenery(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
-  batchStaticScenery(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
-  batchStaticScenery(vat,{exclude:[shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
+  for(const rigid of[drum,crank,control,wheel])batchRigid(rigid,{minObjects:2,allowInteractiveRoot:true,dispose:false});
+  batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
+  batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
+  batchRigid(vat,{exclude:[shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
   rigs.push({rig,hanger,transformation,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);

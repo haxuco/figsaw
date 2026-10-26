@@ -2,14 +2,21 @@ import * as THREE from './vendor/three.module.js';
 
 // The visible concrete grime and carpet tops are the support surfaces.
 export function createFloorSupport(patches=[]){
- const rectangles=patches.map(p=>{
+ // Most vertices lie over bare concrete. Index the small carpet rectangles once
+ // instead of applying every inverse matrix for every floor/prop vertex.
+ const cells=new Map(),cellSize=.75;
+ for(const p of patches){
   p.updateWorldMatrix(true,false);
-  return {inverse:p.matrixWorld.clone().invert(),width:p.geometry.parameters.width/2,depth:p.geometry.parameters.depth/2,top:p.getWorldPosition(new THREE.Vector3()).y+p.geometry.parameters.height/2};
- });
- const point=new THREE.Vector3();
+  const r={inverse:p.matrixWorld.clone().invert().elements,width:p.geometry.parameters.width/2,depth:p.geometry.parameters.depth/2,top:p.getWorldPosition(new THREE.Vector3()).y+p.geometry.parameters.height/2};
+  const bounds=new THREE.Box3().setFromObject(p);
+  for(let x=Math.floor(bounds.min.x/cellSize);x<=Math.floor(bounds.max.x/cellSize);x++)for(let z=Math.floor(bounds.min.z/cellSize);z<=Math.floor(bounds.max.z/cellSize);z++){
+   const key=`${x},${z}`;if(!cells.has(key))cells.set(key,[]);cells.get(key).push(r);
+  }
+ }
  return (x,z)=>{
   let height=.003;
-  for(const r of rectangles){point.set(x,0,z).applyMatrix4(r.inverse);if(Math.abs(point.x)<=r.width&&Math.abs(point.z)<=r.depth)height=Math.max(height,r.top);}
+  const candidates=cells.get(`${Math.floor(x/cellSize)},${Math.floor(z/cellSize)}`);
+  if(candidates)for(const r of candidates){const m=r.inverse;if(Math.abs(m[0]*x+m[8]*z+m[12])<=r.width&&Math.abs(m[2]*x+m[10]*z+m[14])<=r.depth)height=Math.max(height,r.top);}
   return height;
  };
 }

@@ -5,6 +5,33 @@ import {chooseRenderQuality} from '../dist/render-quality.js';
 import {batchStaticScenery} from '../dist/static-batching.js';
 import {createKetchupKeyState} from '../dist/ketchup-key-state.js';
 import {createRestraintState} from '../dist/restraint-state.js';
+import {createFrameRateCounter} from '../dist/frame-rate.js';
+import {createFloorSupport} from '../dist/floor-contact.js';
+
+test('FPS reports rendered cadence and real stalls, throttles DOM writes and resets across pauses',()=>{
+ let text='',writes=0;const node={set textContent(value){text=value;writes++;}},counter=createFrameRateCounter(node);
+ for(let frame=0;frame<=60;frame++)counter.frame(frame*1000/60);
+ assert.equal(text,'60 FPS');assert.ok(writes<=3,'no per-frame DOM changes');
+ counter.reset();assert.equal(text,'— FPS');for(let frame=0;frame<=30;frame++)counter.frame(2000+frame*1000/30);assert.equal(text,'30 FPS');
+ counter.reset();counter.frame(4000);counter.frame(8000);assert.equal(text,'<1 FPS');counter.reset();counter.frame(12000);assert.equal(text,'— FPS');for(let frame=1;frame<=60;frame++)counter.frame(12000+frame*1000/60);assert.equal(text,'60 FPS');
+});
+
+test('spatial floor lookup matches transformed carpet edges, overlaps and bare concrete',()=>{
+ const group=new THREE.Group();group.position.set(-.31,0,.42);group.rotation.y=.27;
+ const patches=[];for(let i=0;i<14;i++){const p=new THREE.Mesh(new THREE.BoxGeometry(.3+(i%3)*.2,.012,.3+(i%4)*.16));p.position.set((i%4)*.45-1.2,.007+(i%2)*.012,Math.floor(i/4)*.52-.9);p.rotation.y=i*.17;group.add(p);patches.push(p);}
+ const support=createFloorSupport(patches),v=new THREE.Vector3();
+ const reference=patches.map(p=>({inverse:p.matrixWorld.clone().invert(),width:p.geometry.parameters.width/2,depth:p.geometry.parameters.depth/2,top:p.getWorldPosition(new THREE.Vector3()).y+.006}));
+ for(let x=-2;x<=2;x+=.043)for(let z=-2;z<=2;z+=.047){let expected=.003;for(const r of reference){v.set(x,0,z).applyMatrix4(r.inverse);if(Math.abs(v.x)<=r.width&&Math.abs(v.z)<=r.depth)expected=Math.max(expected,r.top);}assert.equal(support(x,z),expected);}
+ assert.equal(support(100,-100),.003);assert.equal(createFloorSupport()(0,0),.003);
+});
+
+test('mobile simplification before batching merges unused PBR variations and retains colours',async()=>{
+ const {useMobileMaterials}=await import('../dist/scene-budget.js'),root=new THREE.Group(),geometry=new THREE.BoxGeometry(.1,.1,.1);
+ const colors=[0xff0000,0x00ff00,0x0000ff];
+ colors.forEach((color,i)=>{const mesh=new THREE.Mesh(geometry,new THREE.MeshStandardMaterial({color,roughness:i*.4,metalness:i*.3}));mesh.position.x=i*.15;root.add(mesh);});
+ useMobileMaterials(root,chooseRenderQuality({coarse:true}));assert.equal(batchStaticScenery(root,{palette:true}).batches,1);
+ const batch=root.children[0];for(let i=0;i<3;i++)assert.equal(new THREE.Color().fromBufferAttribute(batch.geometry.attributes.color,i*24).getHex(),colors[i]);
+});
 
 test('mobile and low-memory devices get bounded budgets without upscaling low-DPR screens',()=>{
  const desktop=chooseRenderQuality({dpr:3});
