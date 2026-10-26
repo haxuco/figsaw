@@ -10,6 +10,7 @@ import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
 import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-contact.js';
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
+import { createDesignCap } from './design-cap.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
 import { createFloorRodents } from './floor-rodents.js';
 import { createChargingKit } from './charging-kit.js';
@@ -758,6 +759,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
  office.add(createFallenMobile(viewerPosition,floorSupport));
+ office.add(createDesignCap(viewerPosition,floorSupport));
  await onProgress('Preparing the tanks…');
  const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);

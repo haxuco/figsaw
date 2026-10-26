@@ -91,3 +91,5 @@ The cat-mug trap now approaches until the actual ear tips reach 20% / 80% of the
 Opening a tank valve with the laptop open smoothly raises the camera above the lid and angles it toward the approaching acid. The player stays at the same floor position, so acid contact and fire hazards keep working. Manual movement or looking cancels the camera assist; retry resets the view.
 
 After the final monologue line finishes, Figsaw waits three seconds, turns away, and rides back along his entrance path into the coffee corner, with wheels and pedals turning. His dialogue disappears when he leaves. Try again skips the monologue and begins the same short departure pause while the fresh timer runs; R replays the full entrance.
+
+A black six-panel DESIGN IS DEAD cap rests beside the laptop, with three-line white embroidery, quotation marks, cotton weave, eyelets and a curved stitched bill based on the supplied reference. It uses small procedural textures and static geometry for mobile.
