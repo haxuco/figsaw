@@ -245,6 +245,12 @@ function rawSurface(t,a){
   const q=((p.x-cx)/.36)**2+((p.y-1.68)/.33)**2;
   if(q<1)p.z+=.09*(1-q)**2*front;
  }
+ // Two soft little cheeks are sculpted into the lower back of the stone.
+ const rear=THREE.MathUtils.smoothstep(-Math.cos(a),.55,.90);
+ for(const cx of[-.48,.36]){
+  const q=((p.x-cx)/.62)**2+((p.y-.72)/.57)**2;
+  if(q<1)p.z-=.43*(1-q)**2*rear;
+ }
  return p;
 }
 function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
@@ -278,6 +284,13 @@ const outlineMaterial=new THREE.MeshBasicMaterial({color:0x171918,side:THREE.Bac
 outlineMaterial.onBeforeCompile=shader=>{shader.vertexShader=shader.vertexShader.replace('#include <begin_vertex>','#include <begin_vertex>\ntransformed += normal * 0.058;');};
 function outline(geometry,parent){const o=new THREE.Mesh(geometry,outlineMaterial);o.name='Black stone outline';parent.add(o);return o;}
 const bodyGeometry=patchGeometry();const body=mesh(bodyGeometry,rockMaterial,puppet);body.name='Figsaw';outline(bodyGeometry,puppet);
+ // A short curved crease makes the rounded rear read as a cartoon butt.
+ const rearCrease=[];
+ for(let i=0;i<=18;i++){
+  const f=i/18,t=(mix(1.02,.41,f)-.05)/bodyHeight;
+  const p=rawSurface(t,Math.PI+.018*Math.sin(f*Math.PI));p.z-=.012;rearCrease.push(p);
+ }
+ const buttCrease=tube(rearCrease,.018,new THREE.MeshBasicMaterial({color:0x252820}),puppet);buttCrease.name='Little cartoon butt crease';
 // The mouth is an opening in the stone. Its dark backing stays deep inside,
 // without dark walls following the projecting muzzle's outer surface.
 const cavity=mesh(patchGeometry(true,true),cavityMaterial,puppet);cavity.castShadow=false;
