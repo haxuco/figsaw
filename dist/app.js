@@ -247,12 +247,17 @@ function rawSurface(t,a){
   const q=((p.x-cx)/.36)**2+((p.y-1.68)/.33)**2;
   if(q<1)p.z+=.09*(1-q)**2*front;
  }
- // Two generous, round cheeks blend into the lower back of the stone.
+ // Broad, smoothly fading domes keep the rear round without a sharp shoulder.
  const rear=THREE.MathUtils.smoothstep(-Math.cos(a),.55,.90);
+ let fullness=0;
  for(const cx of[-.68,.53]){
-  const q=((p.x-cx)/.83)**2+((p.y-.83)/.74)**2;
-  if(q<1)p.z-=.80*Math.pow(1-q,1.5)*rear;
+  const q=((p.x-cx)/1.02)**2+((p.y-.90)/.91)**2;
+  const cap=.76*Math.exp(-q);
+  // Blend the larger dome rather than stacking their overlap into a central point.
+  const blend=Math.max(.08-Math.abs(fullness-cap),0)/.08;
+  fullness=Math.max(fullness,cap)+blend*blend*.02;
  }
+ p.z-=fullness*rear*THREE.MathUtils.smoothstep(t,0,.13)*(1-THREE.MathUtils.smoothstep(t,.72,1));
  return p;
 }
 function angleAtX(t,x){let low=-Math.PI/2,high=Math.PI/2;for(let i=0;i<22;i++){const mid=(low+high)/2;if(rawSurface(t,mid).x<x)low=mid;else high=mid;}return(low+high)/2;}
