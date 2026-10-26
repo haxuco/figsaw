@@ -11,6 +11,7 @@ import { formatCountdown } from './countdown-clock.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
+import { createFigsawDeparture } from './figsaw-departure.js';
 import { createLaptopOpening } from './laptop-opening.js';
 import { createDrawerCamera } from './drawer-camera.js';
 import { createFigpalRounds } from './figpal-rounds.js';
@@ -346,6 +347,7 @@ const entrancePath=new THREE.CatmullRomCurve3([
  [.35,groundOffset,-1.10],[.24,groundOffset,-.66],[.12,groundOffset,.10]
 ].map(point=>new THREE.Vector3(...point)),false,'centripetal');
 entrancePath.arcLengthDivisions=240;
+const departure=createFigsawDeparture(entrancePath,modelScale);
 const entranceDelay=1.0,entranceDuration=8.5;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
 const arrivalDialogue=document.querySelector('#figsaw-dialogue');
@@ -370,12 +372,17 @@ function showFigsawDialogue(index){
  dialogueAnnouncement.textContent=`Figsaw. ${text}`;
  const speech=createDialogueSpeech(text,state.time);
  dialogueSpeech=reducedMotion?null:speech;
- // Leave a beat between lines, then keep the final line visible.
+ // Leave a beat between lines, then depart three seconds after the last line ends.
  nextDialogueAt=index<dialogueLines.length-1?speech.startTime+speech.duration+1:Infinity;
+ if(index===dialogueLines.length-1)departure.schedule(speech.startTime+speech.duration);
  // Preserve the original countdown cue without restarting it for later lines.
  if(index===0)countdownStartTime=speech.startTime+speech.duration;
 }
 function updateEntrance(time){
+ const departingDistance=departure.update(time,model,puppet,reducedMotion);
+ if(departingDistance!==null){
+  setRollingDistance(departingDistance);figsawIdlePose(-1,reducedMotion,idlePose);return;
+ }
  const elapsed=time-entranceStartedAt-entranceDelay;
  const progress=reducedMotion?1:THREE.MathUtils.smoothstep(elapsed,0,entranceDuration);
  entrancePath.getPointAt(progress,ridePoint);entrancePath.getTangentAt(progress,rideDirection);
@@ -427,7 +434,7 @@ const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,ca
 useMobileMaterials(scene);
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
- if(!entranceArrived||figpalRounds.active){arrivalDialogue.hidden=true;return;}
+ if(!entranceArrived||departure.active||figpalRounds.active){arrivalDialogue.hidden=true;return;}
  // Keep the bubble attached to the crown as the viewer walks or turns around.
  puppet.localToWorld(dialogueAnchor.set(-.28,bodyHeight+.24,0));
  dialogueProjection.copy(dialogueAnchor).project(camera);
@@ -592,7 +599,7 @@ function resetView({skipIntro=false}={}){
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
  figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
- resetting=!skipIntro;
+ resetting=!skipIntro;departure.reset();
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
  arrivalDialogue.hidden=true;arrivalDialogue.classList.remove('long-dialogue');dialogueAnnouncement.textContent='';dialogueSpeech=null;
@@ -606,7 +613,7 @@ function resetView({skipIntro=false}={}){
   arrivalDialogue.querySelector('.dialogue-bubble span').textContent=dialogueLines[dialogueLineIndex];
   arrivalCameraMove.start(state.time,cameraPosition,state);
   arrivalCameraMove.update(state.time,cameraPosition,state,true);
-  updateEntrance(state.time);
+  updateEntrance(state.time);departure.schedule(state.time);
   countdown.start();countdownAnnouncement.textContent='The five-minute countdown has started.';
  }
 }
