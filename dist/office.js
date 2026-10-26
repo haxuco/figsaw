@@ -339,14 +339,16 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
  const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
  const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
- let laptopOpened=false,laptopProgress=0,manualOpening=false,waterDamage=0;
+ let laptopOpened=false,laptopProgress=0,manualOpening=false,waterDamage=0,batteryPowered=true;
  function applyLidProgress(progress){
   laptopLid.rotation.x=THREE.MathUtils.lerp(Math.PI/2,-.20,progress);
   const wake=THREE.MathUtils.smoothstep(progress,.22,.72);
-  displayMat.color.copy(screenColor).multiplyScalar(wake*(1-waterDamage));screenSpill.intensity=.60*wake*(1-waterDamage);
+  displayMat.color.copy(screenColor).multiplyScalar(wake*(1-waterDamage)*Number(batteryPowered));screenSpill.intensity=.60*wake*(1-waterDamage)*Number(batteryPowered);
  }
  const laptopControl={
   object:laptop,screen:laptopScreen,
+  setPower(powered){if(batteryPowered===powered)return;batteryPowered=powered;applyLidProgress(laptopProgress);},
+  get isPowered(){return batteryPowered&&waterDamage<1;},
   damageWater(amount){waterDamage=THREE.MathUtils.clamp(amount,0,1);applyLidProgress(laptopProgress);},
   get isReady(){return laptopProgress===1;},
   get isOpen(){return laptopOpened;},

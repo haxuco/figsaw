@@ -521,6 +521,8 @@ function openLaptop(){
   restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. You can't reach the laptop.";return;
  }
  if(chargingKit.phase==='powered'){useCharging('laptop');return;}
+ chargingKit.syncPower();
+ if(laptop.isOpen&&!laptop.isPowered){keyFeedback('The laptop is out of power. Connect the charger to use it.');return;}
  if(laptop.isOpen){finishOpeningLaptop();return;}
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
  if(laptopOpening.start(state.time)){
@@ -529,6 +531,8 @@ function openLaptop(){
  }
 }
 function finishOpeningLaptop(fromHand=false){
+ chargingKit.syncPower();
+ if(!laptop.isPowered){keyFeedback('The laptop is out of power. Connect the charger to use it.');return;}
  if(!fromHand&&!laptop.open())return;
  restraintStatus.textContent='You lift the lid and let go. The laptop is open.';
  canvas.classList.remove('over-laptop');
@@ -836,7 +840,9 @@ function render(){
  else if(fireFinished)endGame('The fire reaches you before the sprinklers can stop it. Game over.');
  else if(acidFinished)endGame('The corrosive green liquid reaches you. Game over.');
  else if(mugFinished)endGame("The mug's pointed ears hit your eyes. Everything goes dark. Game over.");
- laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);updateChargingHint();
+ laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
+ const powerMessage=chargingKit.takePowerMessage();if(powerMessage&&!gameEnded)keyFeedback(powerMessage);
+ updateChargingHint();
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
