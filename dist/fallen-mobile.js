@@ -3,6 +3,7 @@ import { settleOnFloor, drapeFloorCable, floorClearance } from './floor-contact.
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
 export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
+ const animals=[];
  const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const canvas=document.createElement('canvas');canvas.width=canvas.height=512;const ctx=canvas.getContext('2d');ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
@@ -30,7 +31,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  function ear(pos,size,mat,parent){const s=new THREE.Shape();s.moveTo(-.5,0);s.quadraticCurveTo(-.48,.44,0,1);s.quadraticCurveTo(.49,.49,.5,0);s.quadraticCurveTo(0,-.1,-.5,0);const g=new THREE.ExtrudeGeometry(s,{depth:.18,bevelEnabled:true,bevelSize:.06,bevelThickness:.05,bevelSegments:2,curveSegments:8,steps:1});g.translate(0,0,-.09);const m=mesh(g,mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
  function eyes(parent,z,y=.092,x=.047){for(const side of[-1,1])ball([side*x,y,z],[.009,.012,.007],black,parent);}
  function makeAnimal(kind){
-  const g=new THREE.Group();g.name=`${kind} mobile animal`;
+  const g=new THREE.Group();g.name=`${kind} mobile animal`;g.userData.stuffedAnimal=kind;
   const mat=kind==='Pig'?pink:kind==='Elephant'?blue:kind==='Tiger'?tigerMat:ochre;
   // The rump is rounded in two lobes, with an actual sewn centre seam and a tail.
   const body=ball([0,.065,-.025],[.112,.091,.154],mat,g);body.name='Soft body resting on the floor';
@@ -115,7 +116,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   {kind:'Fox',x:-.27,z:-.43,rear:true,yaw:1.12,roll:.20,arm:2}
  ];
  for(const p of placements){
-  const {object,tab,body}=makeAnimal(p.kind);object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
+  const {object,tab,body}=makeAnimal(p.kind);animals.push({object,kind:p.kind});object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
   const toward=Math.atan2(viewerPosition.x-(group.position.x+p.x),viewerPosition.z-(group.position.z+p.z));
   object.rotation.set(p.kind==='Pig'?-.06:.03,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
   group.updateMatrixWorld(true);settlePlush(object,body);group.updateMatrixWorld(true);
@@ -130,5 +131,5 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   shadowGeometry.computeVertexNormals();
   const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;
  }
- return group;
+ return {group,animals};
 }

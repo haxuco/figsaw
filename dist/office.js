@@ -4,6 +4,7 @@ import {renderQuality as quality} from './render-quality.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=no-skulls';
 
+import { createPlushCut } from './plush-cut.js';
 import { createFallenMobile } from './fallen-mobile.js?v=plush-grounded';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
 import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
@@ -761,7 +762,8 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   wire.userData.ignoreFloorContact=true;wire.userData.anchorStart=true;
  }
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
- office.add(createFallenMobile(viewerPosition,floorSupport));
+ const fallenMobile=createFallenMobile(viewerPosition,floorSupport);office.add(fallenMobile.group);
+ const stuffedAnimals=fallenMobile.animals,plushCut=createPlushCut({saw:handsaw.group,animals:stuffedAnimals,floorSupport});office.add(plushCut.group);
  office.add(createDesignCap(viewerPosition,floorSupport));
  await onProgress('Preparing the tanks…');
  const figpalVats=createFigpalVats();figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
@@ -779,5 +781,5 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,acidLeaks,chargingKit,fireHazard,fireAlarm,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
