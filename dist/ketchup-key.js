@@ -19,10 +19,13 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
  const capEnd=capStart.clone().add(new THREE.Vector3(-.13,0,.10));capEnd.y=floorSupport(capEnd.x,capEnd.z)+.016;
  const brass=new THREE.MeshStandardMaterial({color:0xd0a951,metalness:.72,roughness:.27,emissive:0x6d4815,emissiveIntensity:.18});
  const key=new THREE.Group();key.name='Brass shackle key';key.userData.keyAction='collect';group.add(key);key.visible=false;
+ // Center the small brass model so it clears the glass neck as it tumbles out.
+ // Keep the invisible pickup target generous for touch screens.
+ const keyModel=new THREE.Group();keyModel.name='Small brass key model';keyModel.scale.setScalar(.28);keyModel.position.x=.01025*.28;key.add(keyModel);
  function mesh(geo,mat,parent){const m=new THREE.Mesh(geo,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
- const bow=mesh(new THREE.TorusGeometry(.025,.0055,8,24),brass,key);bow.rotation.x=Math.PI/2;bow.position.x=-.042;
- const shaft=mesh(new THREE.BoxGeometry(.078,.009,.010),brass,key);shaft.position.x=.013;
- for(const x of[.027,.047]){const tooth=mesh(new THREE.BoxGeometry(.010,.009,.022),brass,key);tooth.position.set(x,0,.010);}
+ const bow=mesh(new THREE.TorusGeometry(.025,.0055,8,24),brass,keyModel);bow.rotation.x=Math.PI/2;bow.position.x=-.042;
+ const shaft=mesh(new THREE.BoxGeometry(.078,.009,.010),brass,keyModel);shaft.position.x=.013;
+ for(const x of[.027,.047]){const tooth=mesh(new THREE.BoxGeometry(.010,.009,.022),brass,keyModel);tooth.position.set(x,0,.010);}
  const keyPick=mesh(new THREE.BoxGeometry(.15,.04,.10),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false}),key);keyPick.castShadow=false;keyPick.receiveShadow=false;
  const sauce=new THREE.MeshPhysicalMaterial({color:0xb7210c,roughness:.28,clearcoat:1,clearcoatRoughness:.18});
  const spill=new THREE.Group();spill.position.copy(landing);spill.position.y-=.006;group.add(spill);spill.visible=false;
