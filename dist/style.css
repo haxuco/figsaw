@@ -92,13 +92,15 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 
 #scene.over-alarm:not(:active){cursor:pointer}
 
-#saw-menu{width:min(270px,calc(100vw - 48px));padding:12px;border:1px solid #49443e;border-radius:9px;background:#171715;color:#e8e4dc;box-shadow:0 15px 55px #000b;font:14px system-ui,sans-serif}
-#saw-menu::backdrop{background:#0005}
-#saw-menu h2{margin:4px 10px 12px;color:#a7a398;font-size:12px;font-weight:500;letter-spacing:.06em}
-#saw-menu button{display:block;width:100%;min-height:44px;padding:11px 12px;border:0;border-radius:5px;text-align:left;color:inherit;background:transparent;font:inherit;cursor:pointer}
-#saw-menu button:hover,#saw-menu button:focus-visible{background:#35322d;outline:none}
-#saw-menu button:disabled{color:#69665f;cursor:default;background:transparent}
-#saw-menu [data-saw="cancel"]{margin-top:8px;border-top:1px solid #393630;border-radius:0;color:#9d998f;font-size:12px}
+#saw-menu{box-sizing:border-box;width:min(880px,calc(100vw - 32px));max-height:calc(100dvh - 32px);padding:16px;border:0;border-radius:0;background:transparent;color:#fff;box-shadow:none;text-align:center;text-shadow:0 2px 10px #000b;font:500 clamp(30px,4vw,44px)/1.16 "Grenze Gotisch",Georgia,serif;letter-spacing:.012em}
+#saw-menu::backdrop{background:transparent}
+#saw-menu h2{margin:0 0 30px;color:inherit;font:inherit;font-size:clamp(42px,5.8vw,68px);line-height:1.06;letter-spacing:0}
+#saw-menu button{display:block;width:100%;min-height:44px;padding:8px 12px;border:0;border-radius:0;text-align:center;color:inherit;background:transparent;font:inherit;text-shadow:inherit;cursor:pointer}
+#saw-menu button:hover,#saw-menu button:focus-visible{color:#ff3535;background:transparent;text-decoration:underline;text-underline-offset:.16em;text-decoration-thickness:1px;outline:none}
+#saw-menu button:disabled{color:#827e76;cursor:default;background:transparent;text-decoration:none}
+#saw-menu [data-saw="cancel"]{margin-top:22px;color:#b9b4a9;font-size:clamp(22px,2.6vw,28px)}
+#saw-menu [data-saw="cancel"]:hover,#saw-menu [data-saw="cancel"]:focus-visible{color:#fff}
+@media(max-height:500px){#saw-menu{padding:8px;font-size:30px}#saw-menu h2{margin-bottom:14px;font-size:42px}#saw-menu button{padding:4px 10px}#saw-menu [data-saw="cancel"]{margin-top:10px;font-size:22px}}
 #scene.over-plush:not(:active){cursor:crosshair}
 
 #cancel-saw-selection{position:fixed;z-index:16;right:14px;bottom:68px;min-height:44px;padding:10px 14px;border:1px solid #575247;border-radius:6px;background:#171715;color:#e8e4dc;font:13px system-ui;cursor:pointer}
