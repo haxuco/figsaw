@@ -10,8 +10,8 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
  const state=createFireAlarmState(),station=new THREE.Group(),effects=new THREE.Group();
  station.name='Unbranded red FIRE pull station';station.userData.fireAlarm=true;station.userData.ignoreAcid=true;
  effects.name='Sprinkler water damage and acid reaction';effects.userData.ignoreAcid=true;
- const red=new THREE.MeshStandardMaterial({color:0x9e1719,roughness:.55,metalness:.15,emissive:0x74110e,emissiveIntensity:.45});
- const trim=new THREE.MeshStandardMaterial({color:0xd3cfc1,roughness:.55,metalness:.25,emissive:0x39362d,emissiveIntensity:.25});
+ const red=new THREE.MeshStandardMaterial({color:0x9e1719,roughness:.72,metalness:.15,emissive:0x74110e,emissiveIntensity:.025});
+ const trim=new THREE.MeshStandardMaterial({color:0xaca99e,roughness:.72,metalness:.25});
  const black=new THREE.MeshStandardMaterial({color:0x181914,roughness:.57,metalness:.32});
  const metal=new THREE.MeshStandardMaterial({color:0x9b9d91,roughness:.39,metalness:.75});
  function mesh(geometry,material,parent=station){const m=new THREE.Mesh(geometry,material);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
@@ -27,7 +27,7 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
  function textPlane(w,h,draw,parent=station){
   const [canvas,ctx]=artCanvas(512,256);draw(ctx,512,256);
   const map=new THREE.CanvasTexture(canvas);map.colorSpace=THREE.SRGBColorSpace;
-  const material=new THREE.MeshStandardMaterial({map,transparent:true,alphaTest:.1,roughness:.8,emissiveMap:map,emissive:0xffffff,emissiveIntensity:.5});
+  const material=new THREE.MeshStandardMaterial({map,transparent:true,alphaTest:.1,roughness:.8,emissiveMap:map,emissive:0xffffff,emissiveIntensity:.035});
   const m=mesh(new THREE.PlaneGeometry(w,h),material,parent);m.castShadow=false;return m;
  }
  const title=textPlane(.194,.066,(c,w,h)=>{c.font=`900 ${h*.91}px Arial,sans-serif`;c.textAlign='center';c.textBaseline='middle';c.fillStyle='#f0eadb';c.fillText('FIRE',w/2,h*.53,w*.96);});title.position.set(0,.116,.036);
