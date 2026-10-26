@@ -15,6 +15,7 @@ import { createLightInsects } from './light-insects.js?v=visible-swarms';
 import { createFloorRodents } from './floor-rodents.js';
 import { createChargingKit } from './charging-kit.js';
 import { createKetchupKey } from './ketchup-key.js';
+import { createKetchupClosure } from './ketchup-closure.js';
 import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
 
@@ -508,13 +509,11 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   const pose=new THREE.Group();pose.name=bottle.name;pose.add(bottle);bottle.position.y=-center;office.add(pose);pose.position.set(x,0,z);pose.rotation.set(...rotation);pose.scale.setScalar(scale);pose.updateMatrixWorld(true);return settleOnFloor(pose,floorSupport);
  }
  const glassKetchup=new THREE.Group();glassKetchup.name='Discarded glass ketchup bottle';
- const glassProfile=[[0,0],[.063,0],[.076,.014],[.080,.047],[.079,.19],[.069,.267],[.049,.342],[.030,.410],[.029,.447],[.033,.454],[.032,.471],[0,.471]];
- const filling=glassProfile.filter(p=>p[1]<.44).map(([r,y])=>[Math.max(0,r-.0035),y+.004]);filling.push([.026,.469],[0,.469]);
+ const glassProfile=[[0,0],[.063,0],[.076,.014],[.080,.047],[.079,.19],[.069,.267],[.049,.342],[.030,.410],[.029,.447]];
+ const filling=glassProfile.filter(p=>p[1]<.44).map(([r,y])=>[Math.max(0,r-.0035),y+.004]);filling.push([.0225,.473],[0,.473]);
  const glassFilling=bottleShell(filling,ketchup,glassKetchup);const glassBody=bottleShell(glassProfile,bottleGlass,glassKetchup);glassBody.castShadow=false;
  bottleLabel(glassKetchup,glassProfile,.047,.240,glassLabel);bottleLabel(glassKetchup,glassProfile,.365,.432,neckLabel,1,.95);
- const glassCap=new THREE.Group();glassCap.position.y=.480;glassKetchup.add(glassCap);
- cylinder(.037,.036,[0,0,0],bottleCap,glassCap,32);cylinder(.0365,.006,[0,.461,0],capSeam,glassKetchup,32);
- for(let i=0;i<30;i++){const a=i/30*Math.PI*2;rod([Math.cos(a)*.037,-.013,Math.sin(a)*.037],[Math.cos(a)*.037,.014,Math.sin(a)*.037],.0011,capSeam,glassCap);}
+ const glassClosure=createKetchupClosure(),glassCap=glassClosure.cap;glassKetchup.add(glassClosure.neck,glassCap);
  const glassBottom=mesh(new THREE.TorusGeometry(.070,.003,6,32),bottleGlass,glassKetchup);glassBottom.rotation.x=Math.PI/2;glassBottom.position.y=.016;
  const glassBottlePose=placeBottle(glassKetchup,.98,2.82,[-.25,.45,Math.PI/2],.25,.82);
  const squeezeKetchup=new THREE.Group();squeezeKetchup.name='Discarded squeeze ketchup bottle';
@@ -767,7 +766,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
  const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
  const rodents=createFloorRodents({room:office,floorSupport,viewerPosition});office.add(rodents.group);
- function setEnvironment(map){fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
+ function setEnvironment(map){glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
   ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);

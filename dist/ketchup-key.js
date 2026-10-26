@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {createKetchupKeyState} from './ketchup-key-state.js';
 import {createBottleLiquid} from './bottle-liquid.js';
+import {KETCHUP_MOUTH_Y} from './ketchup-closure.js';
 
 export function createKetchupKey({bottle,contents,cap,floorSupport}){
  const group=new THREE.Group();group.name='Ketchup spill and hidden shackle key';
@@ -11,7 +12,7 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
  const raised=home.clone().add(new THREE.Vector3(-.32,.42,-.04));
  const liquid=createBottleLiquid(contents);
  // The pool is directly below the actual mouth in the fully tipped pose.
- const landing=new THREE.Vector3(0,.469,0).applyMatrix4(bottle.children[0].matrix).multiply(bottle.scale).applyQuaternion(pourRotation).add(raised);
+ const landing=new THREE.Vector3(0,KETCHUP_MOUTH_Y,0).applyMatrix4(bottle.children[0].matrix).multiply(bottle.scale).applyQuaternion(pourRotation).add(raised);
  landing.y=floorSupport(landing.x,landing.z)+.009;
  const capHome=cap.position.clone(),capRotation=cap.quaternion.clone();cap.updateWorldMatrix(true,false);
  const capStart=cap.getWorldPosition(new THREE.Vector3()),capWorldRotation=cap.getWorldQuaternion(new THREE.Quaternion());
@@ -48,7 +49,7 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
   cap.quaternion.copy(capWorldRotation).multiply(new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,0,1),smooth(t/.55)*2));
   const drain=smooth((t-.8)/2.5);liquid.update(drain);
   spill.visible=t>.75;spill.scale.setScalar(Math.max(.01,drain));
-  bottle.updateWorldMatrix(true,true);bottle.children[0].localToWorld(spout.set(0,.469,0));
+  bottle.updateWorldMatrix(true,true);bottle.children[0].localToWorld(spout.set(0,KETCHUP_MOUTH_Y,0));
   stream.visible=t>.8&&t<3.3;
   if(stream.visible){mid.copy(spout).add(landing).multiplyScalar(.5);flowDirection.subVectors(spout,landing);stream.position.copy(mid);stream.quaternion.setFromUnitVectors(up,flowDirection.clone().normalize());const pulse=reducedMotion?1:1+Math.sin(t*21)*.12;stream.scale.set(.012*pulse,flowDirection.length(),.012*pulse);}
   key.visible=t>=2.5&&!state.hasKey;

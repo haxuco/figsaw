@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createKetchupKey} from '../dist/ketchup-key.js';
+import {KETCHUP_MOUTH_Y} from '../dist/ketchup-closure.js';
 
 function fixture(){
  const scene=new THREE.Scene(),bottle=new THREE.Group(),body=new THREE.Group();
@@ -19,7 +20,7 @@ test('ketchup falls vertically from the bottle mouth onto the floor',()=>{
  for(const time of [1,1.8,2.6,3.2]){
   key.update(time,false);
   const stream=key.group.getObjectByName('Downward ketchup stream');assert.equal(stream.visible,true);
-  const mouth=body.localToWorld(new THREE.Vector3(0,.469,0));
+  const mouth=body.localToWorld(new THREE.Vector3(0,KETCHUP_MOUTH_Y,0));
   const upper=stream.localToWorld(new THREE.Vector3(0,.5,0)),lower=stream.localToWorld(new THREE.Vector3(0,-.5,0));
   assert.ok(upper.distanceTo(mouth)<1e-6,'stream must start at the open neck');
   assert.ok(upper.y>lower.y+.1,'sauce must flow downward');
