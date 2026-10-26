@@ -92,6 +92,8 @@ Opening a tank valve with the laptop open smoothly raises the camera above the l
 
 After the final monologue line finishes, Figsaw waits three seconds, turns away, and rides back along his entrance path into the coffee corner, with wheels and pedals turning. His dialogue disappears when he leaves. Try again skips the monologue and begins the same short departure pause while the fresh timer runs; R replays the full entrance.
 
-A black six-panel DESIGN IS DEAD cap rests beside the laptop, with three-line white embroidery, quotation marks, cotton weave, eyelets and a curved stitched bill based on the supplied reference. It uses small procedural textures and static geometry for mobile.
+A black six-panel DESIGN IS DEAD cap rests farther back on the open floor, with three-line white embroidery, quotation marks, cotton weave, eyelets and a curved stitched bill based on the supplied reference. It uses small procedural textures and static geometry for mobile.
 
 The glass ketchup bottle has a smooth white-enamel metal twist-off lid with a rolled hem and metal underside. The whole lid detaches, revealing a hollow glass lip, screw threads and recessed inner neck; no fixed cap band or sealed disc remains. The pour stream starts at the mouth.
+
+Startup displays a compact red loading bar: download is indeterminate, then progress advances through character, office, prop, tank and lighting setup. It reaches completion after the first frame renders, and errors replace the bar with a reload message.

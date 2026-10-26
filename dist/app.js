@@ -25,8 +25,11 @@ import {createTouchNavigation} from './touch-navigation.js';
 import {createContactShadows} from './contact-shadows.js';
 import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
 import {installGraphicsRecovery} from './graphics-recovery.js';
+import {createStartupProgress} from './startup-progress.js';
 const loadingStatus=document.querySelector('#loading-status');
-const yieldStartup=async message=>{if(loadingStatus)loadingStatus.textContent=message;await new Promise(resolve=>setTimeout(resolve,0));};
+const startupProgress=createStartupProgress(loadingStatus);
+startupProgress.update('Creating Figsaw…');
+const yieldStartup=async message=>{startupProgress.update(message);await new Promise(resolve=>setTimeout(resolve,0));};
 const canvas=document.querySelector('#scene');
 const initialCanvasDescription=canvas.getAttribute('aria-label');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -823,7 +826,7 @@ await yieldStartup('Warming up the lights…');
 camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera.lookAt));camera.updateMatrixWorld(true);
 // On phones compile only what the first render actually uses. Precompiling the
 // entire scene also compiles hidden traps/skeletons and duplicates clipping variants.
-(quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();loadingStatus.hidden=true;}).catch(error=>{console.error(error);const status=document.querySelector('#loading-status');if(status)status.textContent='The room could not load. Please reload to try again.';});
+(quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
 installGraphicsRecovery(canvas,{
  status:loadingStatus,
  pause(){contextLost=true;cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},

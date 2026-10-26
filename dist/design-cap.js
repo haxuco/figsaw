@@ -62,7 +62,7 @@ export function createDesignCap(viewer,floorSupport){
  const lettering=new THREE.CanvasTexture(letterCanvas);lettering.colorSpace=THREE.SRGBColorSpace;lettering.anisotropy=quality.mobile?2:4;
  const embroidery=new THREE.MeshStandardMaterial({map:lettering,transparent:true,alphaTest:.15,emissive:0xffffff,emissiveMap:lettering,emissiveIntensity:.10,roughness:.95,bumpMap:quality.mobile?null:lettering,bumpScale:.0008,side:THREE.DoubleSide,depthWrite:false});
  add(surface(14,32,(u,v)=>crown((u-.5)*1.68,.49+v*1.00,.0018)),embroidery).name='White DESIGN / IS / DEAD embroidery with quotation marks';
- group.position.set(.24,0,1.25);group.rotation.set(-.04,Math.atan2(viewer.x-group.position.x,viewer.z-group.position.z)-.12,0,'YXZ');
+ group.position.set(-.80,0,-.65);group.rotation.set(-.04,Math.atan2(viewer.x-group.position.x,viewer.z-group.position.z)-.12,0,'YXZ');
  settleOnFloor(group,floorSupport);
  // A soft contact footprint also grounds the bill with mobile shadows disabled.
  const [shadowCanvas,shade]=artCanvas(64);const gradient=shade.createRadialGradient(32,32,9,32,32,31);gradient.addColorStop(0,'rgba(0,0,0,.66)');gradient.addColorStop(1,'rgba(0,0,0,0)');shade.fillStyle=gradient;shade.fillRect(0,0,64,64);
