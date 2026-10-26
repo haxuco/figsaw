@@ -442,7 +442,7 @@ const chainMenu=createRestraintMenu(()=>{
  if(!ketchupKey.hasKey){keyFeedback('The shackle is locked. Find its key first.');return;}
  if(restraint.detach(state.time)){restraintStatus.textContent='Instance detached. Your wrist is free. You can open the laptop, drink from the cat mug, or turn a tank drain valve.';canvas.classList.remove('over-chain');canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('Your wrist is chained to the rear pipes. Pour the glass ketchup bottle beside the cat mug, collect the key, then click or right-click the shackle and choose Detach instance to free your hand.','Your wrist is free. Click the laptop, cat mug, or a red tank drain valve to use it.'));}
 },{canDetach:()=>ketchupKey.hasKey,onBlocked:()=>keyFeedback('The shackle is locked. Find its key first.')});
-const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!ketchupKey.hasKey,canSawAnimal:()=>stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
+const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!ketchupKey.hasKey,canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
 const figpalRounds=createFigpalRounds(figpalHoists,countdown);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
@@ -568,14 +568,16 @@ function sawShackle(){
 }
 function chooseStuffedAnimal(){
  if(sawBusy())return;
+ if(restraint.locked){keyFeedback('Unlock your shackle before cutting a stuffed animal.');return;}
  prepareSawAction();selectingAnimal=true;cancelSawSelection.hidden=false;keyFeedback('Choose one of the stuffed animals on the floor.');
  const target=stuffedAnimals[0].object.getWorldPosition(new THREE.Vector3());target.y+=.10;
  const direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=.78;
 }
 function cutStuffedAnimal(object){
  if(sawBusy())return;
+ if(restraint.locked){clearSawSelection();keyFeedback('Unlock your shackle before cutting a stuffed animal.');return;}
  if(!object?.userData.stuffedAnimal){keyFeedback('Click a stuffed animal, or press Escape to put the saw down.');return;}
- if(!plushCut.start(object,state.time)){keyFeedback('That animal is already split open. Choose another one.');return;}
+ if(!plushCut.start(object,state.time,restraint.locked)){keyFeedback('That animal is already split open. Choose another one.');return;}
  clearSawSelection();prepareSawAction();chargingToast='';
  restraintStatus.textContent=`You saw into the stuffed ${object.userData.stuffedAnimal.toLowerCase()}. Cotton filling spills out.`;
 }

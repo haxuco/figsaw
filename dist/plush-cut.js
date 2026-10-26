@@ -26,8 +26,8 @@ export function createPlushCut({saw,animals,floorSupport}){
  const contact=new THREE.Vector3(),target=new THREE.Vector3(),axis=new THREE.Vector3(),offset=new THREE.Vector3(),point=new THREE.Vector3(),worldQ=new THREE.Quaternion(),parentQ=new THREE.Quaternion(),rotation=new THREE.Quaternion();
  const upright=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,Math.PI,0,'ZYX'));
  let active=null;
- function start(object,time){
-  const record=records.get(object);if(active||!record||record.startedAt!==null)return false;
+ function start(object,time,locked=false){
+  const record=records.get(object);if(locked||active||!record||record.startedAt!==null)return false;
   record.startedAt=time;record.settled=false;object.localToWorld(record.origin.set(0,.16,-.025));active=record;
   saw.getWorldPosition(startPosition);saw.getWorldQuaternion(startQ);return true;
  }

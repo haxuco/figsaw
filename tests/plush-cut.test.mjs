@@ -17,6 +17,18 @@ function fixture(){
  return {room,saw,animals,cut,floorSupport};
 }
 
+test('a shackled wrist cannot cut a toy; unlocking allows the same untouched toy to be cut',()=>{
+ const {saw,animals,cut}=fixture(),toy=animals[0].object,home=saw.position.clone(),rotation=saw.quaternion.clone();
+ const fluff=cut.group.getObjectByName('Loose cotton filling'),before=Array.from(fluff.instanceMatrix.array);
+ assert.equal(cut.start(toy,0,true),false);cut.update(4);
+ assert.equal(cut.active,false);assert.equal(cut.canCut(toy),true);
+ assert.equal(toy.getObjectByName('Split fabric seam and exposed stuffing').visible,false);
+ assert.deepEqual(Array.from(fluff.instanceMatrix.array),before);
+ assert.ok(saw.position.equals(home));assert.ok(saw.quaternion.angleTo(rotation)<1e-7);
+ assert.equal(cut.start(toy,5,false),true);cut.update(6.3);
+ assert.equal(toy.getObjectByName('Split fabric seam and exposed stuffing').visible,true);
+});
+
 test('a toy cut strokes the saw, opens its seam, restores the saw and never triggers a fatal trap',()=>{
  const {saw,animals,cut}=fixture(),home=saw.position.clone(),rotation=saw.quaternion.clone(),toy=animals[0].object;
  assert.equal(cut.start(new THREE.Group(),0),false);assert.equal(cut.start(toy,0),true);assert.equal(cut.start(animals[1].object,.1),false);
