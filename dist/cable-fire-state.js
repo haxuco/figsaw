@@ -34,6 +34,10 @@ export function createCableFireState(){
   return false;
  }
  return {update,patches,activateSprinklers(){armed=true;},
+  releaseSprinklers(time){
+   if(phase==='dead'||hitAt!==null||sprayAt!==null)return false;
+   armed=true;sprayAt=time;if(phase==='burning')phase='extinguishing';return true;
+  },
   reset(){phase='idle';armed=false;contactAt=ignitedAt=sprayAt=hitAt=origin=head=null;intensity=melt=0;patches.length=0;},
   blackout(time){return hitAt===null?0:clamp((time-hitAt)/1.0);},
   get phase(){return phase;},get armed(){return armed;},get origin(){return origin;},get melt(){return melt;},get intensity(){return intensity;},get dying(){return hitAt!==null;},

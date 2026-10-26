@@ -93,3 +93,5 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #touch-navigation .touch-pad{display:grid;grid-template-columns:repeat(3,44px);gap:5px;margin-top:6px}
 #touch-navigation .touch-pad[hidden]{display:none}
 @media(pointer:coarse),(max-width:700px){#touch-navigation{display:block}#chain-menu button{min-height:48px}#copy-view{min-height:36px}.mug-impact #touch-navigation{display:none}}
+
+#scene.over-alarm:not(:active){cursor:pointer}

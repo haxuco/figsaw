@@ -50,15 +50,15 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
   for(const p of chargingKit.cablePoints)for(const leak of acidLeaks.leaks)for(const wet of leak.points){if(Math.hypot(p.x-wet.x,p.z-wet.z)<wet.radius+.006)return p;}
   return null;
  }
- function update(time,dt,viewer,camera,reducedMotion=false){
+ function update(time,dt,viewer,camera,reducedMotion=false,pauseHazards=false){
+  const water=state.water(time);sprinklers.update(time,water,reducedMotion);
   if(state.phase==='idle'&&(!chargingKit.energized||acidLeaks.leaks.length===0))return false;
-  const finished=state.update(time,dt,{live:chargingKit.energized,contact:state.phase==='idle'?wetCableContact():null,viewer});
+  const finished=pauseHazards?false:state.update(time,dt,{live:chargingKit.energized,contact:state.phase==='idle'?wetCableContact():null,viewer});
   if(state.origin){point.set(state.origin.x,state.origin.y,state.origin.z);chargingKit.meltCable(point,state.melt);}
   if(lastPhase!==state.phase){
-   const messages={melting:'The acid is melting the plugged-in charger cable…',burning:'The damaged cable sparks. Fire is spreading across the floor!',extinguishing:'The armed sprinklers trigger automatically. Water smothers the flames.',extinguished:'The fire is out. The charger is ruined, and the spilled acid is still dangerous.'};
+   const messages={melting:'The acid is melting the plugged-in charger cable…',burning:'The damaged cable sparks. Fire is spreading across the floor! Pull the fire alarm by the door.',extinguishing:'The sprinklers release water. The flames are dying down.',extinguished:'The fire is out. The charger is ruined, and the spilled acid is still dangerous.'};
    message=messages[state.phase]||'';lastPhase=state.phase;
   }
-  const water=state.water(time);sprinklers.update(time,water,reducedMotion);
   clock.value=reducedMotion?0:time;power.value=state.intensity;
   let flameCount=0,smokeCount=0,ashCount=0;
   camera.getWorldQuaternion(rotation);
@@ -95,7 +95,8 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
   }sparkGeometry.attributes.position.needsUpdate=true;}
   return finished;
  }
- return {group,update,flowTarget,setEnvironment:sprinklers.setEnvironment,activateSprinklers:state.activateSprinklers,
+ return {group,update,flowTarget,setEnvironment:sprinklers.setEnvironment,activateSprinklers:state.activateSprinklers,releaseSprinklers:state.releaseSprinklers,
+  get origin(){return state.origin;},
   get phase(){return state.phase;},get dying(){return state.dying;},get sprinklersArmed(){return state.armed;},blackout:state.blackout,
   takeMessage(){const text=message;message='';return text;},
   reset(){state.reset();sprinklers.reset();target=null;message='';lastPhase='idle';flames.count=smoke.count=ash.count=0;sparks.visible=false;light.intensity=frontLight.intensity=0;power.value=0;}

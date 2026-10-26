@@ -18,6 +18,7 @@ import { createKetchupKey } from './ketchup-key.js';
 import { createKetchupClosure } from './ketchup-closure.js';
 import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
+import { createFireAlarm } from './fire-alarm.js';
 
 export async function createOffice(renderer,viewerPosition,onProgress=async()=>{}){
  const office=new THREE.Group();office.name='Abandoned technology office';
@@ -338,14 +339,15 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
  const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
  const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
- let laptopOpened=false,laptopProgress=0,manualOpening=false;
+ let laptopOpened=false,laptopProgress=0,manualOpening=false,waterDamage=0;
  function applyLidProgress(progress){
   laptopLid.rotation.x=THREE.MathUtils.lerp(Math.PI/2,-.20,progress);
   const wake=THREE.MathUtils.smoothstep(progress,.22,.72);
-  displayMat.color.copy(screenColor).multiplyScalar(wake);screenSpill.intensity=.60*wake;
+  displayMat.color.copy(screenColor).multiplyScalar(wake*(1-waterDamage));screenSpill.intensity=.60*wake*(1-waterDamage);
  }
  const laptopControl={
   object:laptop,screen:laptopScreen,
+  damageWater(amount){waterDamage=THREE.MathUtils.clamp(amount,0,1);applyLidProgress(laptopProgress);},
   get isReady(){return laptopProgress===1;},
   get isOpen(){return laptopOpened;},
   get openProgress(){return laptopProgress;},
@@ -764,6 +766,8 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
+ const fireAlarm=createFireAlarm({fireHazard,acidLeaks,laptop:laptopControl,floorSupport});
+ fireAlarm.station.position.set(.40,1.22,.065);rear.add(fireAlarm.station);office.add(fireAlarm.effects);
  const ketchupKey=createKetchupKey({bottle:glassBottlePose,contents:glassFilling,cap:glassCap,floorSupport});office.add(ketchupKey.group);
  const rodents=createFloorRodents({room:office,floorSupport,viewerPosition});office.add(rodents.group);
  function setEnvironment(map){glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
@@ -773,5 +777,5 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,acidLeaks,chargingKit,fireHazard,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,acidLeaks,chargingKit,fireHazard,fireAlarm,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
