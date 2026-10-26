@@ -5,6 +5,7 @@ import {createMobilePuzzleState,createDoorKeypadState,ANIMAL_DIGITS} from '../di
 import {createFallenMobile} from '../dist/fallen-mobile.js';
 import {createMobileInspection} from '../dist/mobile-inspection.js';
 import {createMobileSupplies} from '../dist/mobile-supplies.js';
+import {createMobileCamera} from '../dist/mobile-camera.js';
 import {createFireAxe} from '../dist/fire-axe.js';
 
 test('decorative axe grain does not intercept a ray aimed at the neighboring door keypad',()=>{
@@ -34,15 +35,31 @@ test('a configured animal order unlocks only the matching digits and resets comp
  for(const digit of'2873')k.press(digit);assert.equal(k.press('enter'),'Door unlocked.');assert.equal(k.unlocked,true);k.reset();assert.equal(k.unlocked,false);assert.equal(k.entry,'');
 });
 function withCanvas(fn){const previous=globalThis.document;const gradient={addColorStop(){}};const ctx=new Proxy({createRadialGradient:()=>gradient,createLinearGradient:()=>gradient},{get:(t,k)=>k in t?t[k]:()=>{}});globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>ctx})};try{fn();}finally{globalThis.document=previous;}}
-test('actual repaired mobile shows four underside patches, follows the camera, restores its floor pose and supplies reset',()=>withCanvas(()=>{
- const mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11),()=>.012),state=createMobilePuzzleState(),camera=new THREE.PerspectiveCamera(62,1,.06,35);camera.position.set(1.85,.82,3.11);camera.lookAt(1,.7,2);camera.updateMatrixWorld();
- const inspect=createMobileInspection({mobile,state,camera}),supplies=createMobileSupplies(new THREE.Group()),scene=new THREE.Scene();scene.add(mobile.group,inspect.group);
- for(const animal of mobile.animals){const patch=animal.object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`);assert.ok(patch);assert.ok(new THREE.Vector3(0,0,1).applyQuaternion(patch.quaternion).y<-.999);}
- state.inspect();inspect.update(0,true);assert.equal(mobile.group.visible,false);assert.equal(inspect.group.visible,true);assert.equal(inspect.underneath,false);
+test('the actual toys hang in a fixed room position, with rear numbers facing down and a complete floor reset',()=>withCanvas(()=>{
+ const mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11),()=>.012),state=createMobilePuzzleState();
+ const home=mobile.animals.map(a=>({position:a.object.position.clone(),quaternion:a.object.quaternion.clone(),scale:a.object.scale.clone()}));
+ const inspect=createMobileInspection({mobile,state}),supplies=createMobileSupplies(new THREE.Group()),scene=new THREE.Scene();scene.add(mobile.group,inspect.group);
+ for(const animal of mobile.animals){const patch=animal.object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`);assert.ok(patch);patch.geometry.computeBoundingBox();const bounds=patch.geometry.boundingBox;assert.ok(bounds.min.z>.12,'number is on the rear haunches');assert.ok(bounds.max.y<.10,'number sits below the tail');}
+ state.inspect();inspect.update(0,true);assert.equal(mobile.group.visible,false);assert.equal(inspect.group.visible,true);
  const patches=[];inspect.group.traverse(o=>{if(o.name.startsWith('Stitched '))patches.push(o);});assert.equal(patches.length,4);assert.ok(patches.every(o=>!o.visible));
  collect(state);supplies.sync(state);assert.equal(supplies.objects.scissors.visible,false);assert.equal(supplies.objects.string.visible,false);
- state.cut(0);inspect.update(.3,true);assert.equal(mobile.tangled.visible,false);assert.ok(mobile.strings.every(o=>!o.visible));state.restring(.4);inspect.update(.7,true);assert.equal(state.phase,'repaired');assert.equal(inspect.underneath,false);
- inspect.view('under');inspect.update(.8,true);assert.equal(inspect.underneath,true);assert.ok(mobile.strings.every(o=>o.visible));assert.ok(patches.every(o=>o.visible));
- const local=inspect.group.position.clone().applyMatrix4(camera.matrixWorld.clone().invert());assert.ok(local.distanceTo(new THREE.Vector3(0,.045,-1.65))<1e-7);
- state.close();inspect.update(1,true);assert.equal(mobile.group.visible,true);assert.equal(inspect.group.visible,false);state.reset();inspect.reset();supplies.sync(state);assert.equal(mobile.tangled.visible,true);assert.equal(supplies.objects.string.visible,true);assert.equal(supplies.objects.scissors.visible,true);
+ state.cut(0);inspect.update(.3,true);state.restring(.4);inspect.update(.7,true);assert.equal(state.phase,'repaired');assert.ok(patches.every(o=>o.visible));
+ scene.updateMatrixWorld(true);
+ for(const animal of mobile.animals){const normal=new THREE.Vector3(0,0,1).applyQuaternion(animal.object.getWorldQuaternion(new THREE.Quaternion()));assert.ok(normal.y<-.999,'rear faces below the hanging animal');}
+ const fixed=inspect.group.position.clone();state.close();inspect.update(1,true);assert.equal(inspect.group.visible,true);assert.equal(mobile.group.visible,false);assert.ok(inspect.group.position.equals(fixed));
+ state.reset();inspect.reset();supplies.sync(state);assert.equal(mobile.group.visible,true);assert.equal(inspect.group.visible,false);assert.equal(supplies.objects.string.visible,true);assert.equal(supplies.objects.scissors.visible,true);
+ for(const [i,animal] of mobile.animals.entries()){assert.equal(animal.object.parent,mobile.group);assert.ok(animal.object.position.equals(home[i].position));assert.ok(animal.object.quaternion.angleTo(home[i].quaternion)<1e-7);assert.ok(animal.object.scale.equals(home[i].scale));}
 }));
+
+test('inspection camera moves above and beneath the fixed mobile on an arc, then returns to the saved room view',()=>{
+ const position=new THREE.Vector3(1.85221,.821615,3.1149),state={yaw:-.8,pitch:.1,zoom:.78},home={position:position.clone(),...state},target=new THREE.Vector3(-1.05,1.32,.55);
+ const camera=createMobileCamera({position,state,getTarget:out=>out.copy(target)});
+ camera.view('above',0);camera.update(1.2);assert.ok(position.y>target.y+1);assert.equal(camera.underneath,false);
+ camera.view('under',2);for(let t=2;t<3.2;t+=.05){camera.update(t);assert.ok(position.distanceTo(target)>1.4,'camera orbits outside the toys instead of passing through them');assert.ok(position.y>=.159&&position.y<3.2);}
+ assert.equal(camera.underneath,true);assert.ok(position.y<target.y-1);camera.restore(4);camera.update(5);assert.equal(camera.active,false);assert.ok(position.equals(home.position));assert.equal(state.yaw,home.yaw);assert.equal(state.pitch,home.pitch);assert.equal(state.zoom,home.zoom);
+});
+test('portrait inspection stays inside the room and a forced interruption restores the player before other camera sequences',()=>{
+ const position=new THREE.Vector3(1.8,.8,3.1),state={yaw:0,pitch:0,zoom:1},home=position.clone(),target=new THREE.Vector3(-1.05,1.32,.55);
+ const camera=createMobileCamera({position,state,getTarget:out=>out.copy(target),aspect:()=>.48});camera.view('under',0);camera.update(0,true);assert.ok(position.y>=.159);assert.ok(position.z<4.2);assert.equal(camera.underneath,true);camera.drag(100,20,1);camera.update(2.2);assert.ok(position.distanceTo(target)>2);
+ camera.restore(3,true);assert.ok(position.equals(home));assert.equal(camera.active,false);camera.reset();camera.update(4);assert.ok(position.equals(home));
+});

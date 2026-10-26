@@ -132,7 +132,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   shadowGeometry.computeVertexNormals();
   const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;shadows.push(shadow);
  }
- // Small cloth number patches face down, concealed from the ordinary overhead view.
+ // Stitch the numbers onto the rounded rear below the tail, not the belly.
  for(const animal of animals){
   const c=document.createElement('canvas');c.width=c.height=256;const p=c.getContext('2d');
   p.fillStyle='#777164';p.beginPath();p.ellipse(128,128,109,116,0,0,Math.PI*2);p.fill();
@@ -140,7 +140,16 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   p.font='bold 174px Georgia';p.textAlign='center';p.textBaseline='middle';p.fillStyle='#e7d9b8';p.fillText(ANIMAL_DIGITS[animal.kind],128,139);
   p.strokeStyle='#aaa08b';p.lineWidth=2;p.setLineDash([2,4]);p.strokeText(ANIMAL_DIGITS[animal.kind],128,139);
   const material=new THREE.MeshStandardMaterial({map:texture(c),transparent:true,alphaTest:.15,roughness:1});
-  const patch=new THREE.Mesh(new THREE.PlaneGeometry(.127,.139),material);patch.name=`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`;patch.position.set(0,-.032,-.005);patch.rotation.x=Math.PI/2;animal.object.add(patch);
+  const geometry=new THREE.PlaneGeometry(.100,.082,16,12),positions=geometry.attributes.position;
+  for(let i=0;i<positions.count;i++){
+   const x=positions.getX(i),y=positions.getY(i)+.055;
+   // The cloth follows the haunches and bridges their central crease.
+   const haunch=Math.max(...[-1,1].map(side=>.080+.090*Math.sqrt(Math.max(0,1-((x-side*.047)/.077)**2-((y-.073)/.090)**2))));
+   const stitchedBridge=.080+.090*Math.sqrt(Math.max(0,1-((y-.073)/.090)**2))-.004;
+   positions.setXYZ(i,x,y,Math.max(haunch,stitchedBridge)+.0018);
+  }
+  geometry.computeVertexNormals();
+  const patch=new THREE.Mesh(geometry,material);patch.name=`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`;animal.object.add(patch);
  }
  const tangled=new THREE.Group();tangled.name='Knotted and crossed mobile cords';group.add(tangled);
  for(let j=0;j<7;j++){

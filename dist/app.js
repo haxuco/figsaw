@@ -18,6 +18,7 @@ import { createFigpalRounds } from './figpal-rounds.js';
 import { createFigpalCamera } from './figpal-camera.js';
 import { createAcidCamera } from './acid-camera.js';
 import { createAlarmCamera } from './alarm-camera.js';
+import {createMobileCamera} from './mobile-camera.js';
 import {createMobilePuzzleState} from './mobile-puzzle-state.js';
 import {createMobileInspection,createMobileInspectionUI} from './mobile-inspection.js';
 import {createDoorKeypadUI} from './door-keypad.js';
@@ -448,8 +449,9 @@ const deathTransition=createGameOverTransition(document.querySelector('#death-bl
 let gameEnded=false;
 restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
-const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle,camera});const inspectionScene=new THREE.Scene();inspectionScene.add(mobileInspection.group);
-const mobileUI=createMobileInspectionUI({state:mobilePuzzle,inspection:mobileInspection,time:()=>state.time,onClose:closeMobileInspection,onFeedback:keyFeedback});
+const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle});scene.add(mobileInspection.group);
+const mobileCamera=createMobileCamera({position:cameraPosition,state,getTarget:mobileInspection.getTarget,aspect:()=>camera.aspect,baseFov:homeCamera.fov});
+const mobileUI=createMobileInspectionUI({state:mobilePuzzle,inspectionCamera:mobileCamera,time:()=>state.time,onClose:closeMobileInspection,onFeedback:keyFeedback});
 const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:()=>exitDoor.unlock(),onFeedback:keyFeedback});
 let selectingAnimal=false;
 const cancelSawSelection=document.querySelector('#cancel-saw-selection');
@@ -466,7 +468,7 @@ const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpal
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 const displayEnvironment=createRoomReflections(renderer);
 setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);
-applySceneBudget(scene);applySceneBudget(inspectionScene);
+applySceneBudget(scene);
 acidLeaks.bindTargets([office,model]);
 for(const rigid of[...spinningWheels,...pedalPlatforms,bowTie])batchStaticScenery(rigid,{minObjects:2,dispose:false});
 batchStaticScenery(crank,{exclude:pedalPlatforms,minObjects:2,dispose:false});
@@ -474,7 +476,7 @@ batchStaticScenery(tricycle,{exclude:[...spinningWheels,crank],minObjects:2,disp
 for(const animal of stuffedAnimals)batchStaticScenery(animal.object,{exclude:[animal.object.getObjectByName('Split fabric seam and exposed stuffing')],minObjects:2});
 batchStaticScenery(office,{exclude:[laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object],minObjects:2,palette:quality.mobile});
 const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
-useMobileMaterials(scene);useMobileMaterials(inspectionScene);
+useMobileMaterials(scene);
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
  if(mobilePuzzle.active||doorKeypadUI.active||!entranceArrived||departure.active||figpalRounds.active||fireAlarm.dying){arrivalDialogue.hidden=true;return;}
@@ -502,7 +504,7 @@ function interactionAt(event){
  interactionPointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
  interactionRay.setFromCamera(interactionPointer,camera);
  // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
- const hit=interactionRay.intersectObjects([office,model,restraint.group],true).find(hit=>{
+ const hit=interactionRay.intersectObjects([office,model,restraint.group,mobileInspection.group],true).find(hit=>{
   for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
   return true;
  });
@@ -513,9 +515,9 @@ function inspectMobile(){
  if(sawBusy()||mobilePuzzle.active)return;
  if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Free your wrist before picking up the tangled mobile.');return;}
  clearSawSelection();putAxeBack();prepareSawAction();sawMenu.hide();
- if(mobilePuzzle.inspect()){mobileInspection.view('above');mobileUI.sync();keyFeedback('The mobile is tangled. Inspect it, then find repair supplies.');}
+ if(mobilePuzzle.inspect()){mobileCamera.view('above',state.time);mobileUI.sync();keyFeedback(mobilePuzzle.phase==='repaired'?'The mobile is hanging here. Look underneath for the stitched numbers.':'The mobile is tangled. Inspect it, then find repair supplies.');}
 }
-function closeMobileInspection(force=false){if(mobilePuzzle.close(force)){mobileUI.sync();releaseControls();canvas.focus({preventScroll:true});}}
+function closeMobileInspection(force=false){if(mobilePuzzle.close(force)){mobileCamera.restore(state.time,force);mobileUI.sync();releaseControls();canvas.focus({preventScroll:true});}}
 function takeMobileSupply(item){
  if(sawBusy())return;
  if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Unlock your shackle before taking supplies.');return;}
@@ -711,7 +713,7 @@ function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;
- gameEnded=false;closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileSupplies.sync(mobilePuzzle);doorKeypadUI.reset();exitDoor.reset();acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
+ gameEnded=false;closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();mobileSupplies.sync(mobilePuzzle);doorKeypadUI.reset();exitDoor.reset();acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -744,10 +746,10 @@ document.addEventListener('keydown',event=>{
   return;
  }
  if((figpalRounds.active||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
- if(chainMenu.active||sawMenu.active||doorKeypadUI.active)return;
+ if(chainMenu.active||sawMenu.active||doorKeypadUI.active||mobileCamera.returning)return;
  if(mobilePuzzle.active){
   if(event.code==='Escape'){event.preventDefault();closeMobileInspection();}
-  else if(event.code.startsWith('Arrow')){event.preventDefault();mobileInspection.drag(event.code==='ArrowLeft'?-12:event.code==='ArrowRight'?12:0,event.code==='ArrowUp'?12:event.code==='ArrowDown'?-12:0);}
+  else if(event.code.startsWith('Arrow')){event.preventDefault();mobileCamera.drag(event.code==='ArrowLeft'?-12:event.code==='ArrowRight'?12:0,event.code==='ArrowUp'?12:event.code==='ArrowDown'?-12:0,state.time);}
   return;
  }
  if(axeInteraction.held&&event.code==='Escape'){event.preventDefault();putAxeBack();keyFeedback('You return the axe to its brackets.');return;}
@@ -775,7 +777,7 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
 window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
-createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!mobilePuzzle.active&&!doorKeypadUI.active&&!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
+createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!mobileCamera.returning&&!mobilePuzzle.active&&!doorKeypadUI.active&&!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
  if(mobilePuzzle.active){closeMobileInspection();return;}
@@ -785,7 +787,7 @@ canvas.addEventListener('contextmenu',event=>{
  if(restraint.locked&&interactionAt(event)===restraint.target)chainMenu.show(event.clientX,event.clientY);else chainMenu.hide();
 });
 canvas.addEventListener('pointerdown',event=>{
- if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(mobileCamera.returning||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(event.button!==0)return;
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
@@ -793,7 +795,7 @@ canvas.addEventListener('pointerdown',event=>{
 });
 canvas.addEventListener('pointermove',event=>{
  if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer&&!mobilePuzzle.action){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileInspection.drag(dx,dy);lastPointer={x:event.clientX,y:event.clientY};}return;}
+ if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer&&!mobilePuzzle.action){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(dragPointer===null){const hit=interactionAt(event);hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredSupply||hoveredMobile||hoveredKeypad);canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
@@ -827,7 +829,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>{hoveredSupply=null;hoveredMobile=hoveredKeypad=false;canvas.classList.remove('over-puzzle');hoveredAlarm=false;canvas.classList.remove('over-alarm');hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-axe','over-tank','over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging','over-plush');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(mobilePuzzle.active||doorKeypadUI.active)return;if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(mobilePuzzle.active||mobileCamera.returning||doorKeypadUI.active)return;if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -892,11 +894,11 @@ function render(){
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(dragPointer!==null)arrivalCameraMove.cancel();
- if(laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||drawerCamera.active)arrivalCameraMove.cancel();
+ if(laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||drawerCamera.active||mobileCamera.active)arrivalCameraMove.cancel();
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
  drawerCamera.update(t,reducedMotion);acidCamera.update(t,reducedMotion);alarmCamera.update(t,reducedMotion);
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
- updateFigpalRound(t);figpalCamera.update(t,reducedMotion);
+ updateFigpalRound(t);figpalCamera.update(t,reducedMotion);mobileCamera.update(t,reducedMotion);
  const viewYaw=state.yaw;
  // Manual controls rotate the view only; scripted interactions own camera position.
  camera.position.copy(cameraPosition);
@@ -950,7 +952,6 @@ function render(){
  }
  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
  renderer.render(scene,camera);
- if(mobilePuzzle.active){renderer.autoClear=false;renderer.clearDepth();renderer.render(inspectionScene,camera);renderer.autoClear=true;}
  updateArrivalDialogue(t);hangingPleas.update(t,mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
