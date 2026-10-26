@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 
-// Reuse the floor prop and chained arm. The consequence cuts to black; no wound
-// geometry or extra arm is needed, and unlocked pickups stay invisible.
+// Reuse the floor prop and chained arm. The blackout value cues the shared
+// game-over transition; unlocked pickups stay invisible.
 export function createSawTrap({saw,camera,restraint,hasKey}){
  const homePosition=saw.position.clone(),homeRotation=saw.quaternion.clone();
  const floorPosition=new THREE.Vector3(),floorRotation=new THREE.Quaternion();

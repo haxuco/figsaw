@@ -26,6 +26,7 @@ import {createContactShadows} from './contact-shadows.js';
 import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
 import {installGraphicsRecovery} from './graphics-recovery.js';
 import {createStartupProgress} from './startup-progress.js';
+import {createGameOverTransition} from './game-over-transition.js';
 const loadingStatus=document.querySelector('#loading-status');
 const startupProgress=createStartupProgress(loadingStatus);
 startupProgress.update('Creating Figsaw…');
@@ -413,6 +414,7 @@ const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>ketchupKey.
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
+const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
 let gameEnded=false;
 restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
@@ -576,11 +578,18 @@ function updateFigpalRound(time){
 function endGame(message){
  if(gameEnded)return;gameEnded=true;
  drawerCamera.cancel();acidCamera.cancel();figpalCamera.cancel();
- gameOver.hidden=false;gameOver.style.opacity='1';
+ deathTransition.start(state.time,reducedMotion);
  releaseControls();chainMenu.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
  document.body.classList.add('game-over');canvas.inert=true;
- gameOverContent.hidden=false;restartGame.focus({preventScroll:true});
  restraintStatus.textContent=message;
+}
+function updateGameOver(time){
+ const frame=deathTransition.update(time);
+ gameOver.hidden=frame.blackout<=0;gameOver.style.opacity=String(frame.blackout);
+ if(gameEnded&&frame.finished&&gameOverContent.hidden){
+  mugEyeImpact.hidden=true;gameOverContent.hidden=false;restartGame.focus({preventScroll:true});
+ }
+ return frame;
 }
 function operateHoist(index){
  if(figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying)return;
@@ -596,7 +605,7 @@ function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;
- gameEnded=false;acidLeaks.reset();fireHazard.reset();mugTrap.reset();sawTrap.reset();mugImpactOverlay.reset();
+ gameEnded=false;acidLeaks.reset();fireHazard.reset();mugTrap.reset();sawTrap.reset();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -739,12 +748,13 @@ function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.h
 document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
  frameRequest=0;if(document.hidden||contextLost)return;
- if(gameEnded){clock.getDelta();return;}
  const cpuStart=performance.now();
  const frameInterval=lastRenderAt?cpuStart-lastRenderAt:0;
  if(lastRenderAt&&frameInterval<1000/quality.maxFps-1){scheduleFrame();return;}
  lastRenderAt=cpuStart;
  const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
+ // Once the trap finishes, only animate the lightweight screen overlay.
+ if(gameEnded){updateGameOver(t);if(!deathTransition.finished)scheduleFrame();return;}
  if(resetting){
   state.yaw=wrapAngle(state.yaw+wrapAngle(homeView.yaw-state.yaw)*eased*.5);state.pitch=mix(state.pitch,homeView.pitch,eased*.5);state.zoom=mix(state.zoom,1,eased*.5);
   cameraPosition.lerp(homePosition,eased*.5);
@@ -790,9 +800,10 @@ function render(){
  const mugFinished=mugTrap.update(t,reducedMotion);
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
  const sawFinished=sawTrap.update(t,reducedMotion),blackout=Math.max(mugTrap.blackout,sawTrap.blackout,acidLeaks.blackout(t),fireHazard.blackout(t),figpalRounds.blackout(t));
- mugImpactOverlay.update(mugTrap,blackout);
+ if(blackout>0){deathTransition.start(t,reducedMotion);document.body.classList.add('mug-impact');}
+ const deathFrame=updateGameOver(t);
+ mugImpactOverlay.update(mugTrap,deathFrame.blackout);
  if(mugTrap.eyeImpact>0)document.body.classList.add('mug-impact');
- if(blackout>0){gameOver.hidden=false;gameOver.style.opacity=String(blackout);document.body.classList.add('mug-impact');}
  if(figpalRoundFinished)endGame('All three Figpals have been lowered into the acid. Game over.');
  else if(sawFinished)endGame('You used the saw before finding the key. Your hand is lost. Game over.');
  else if(fireFinished)endGame('The fire reaches you before the sprinklers can stop it. Game over.');

@@ -97,3 +97,5 @@ A black six-panel DESIGN IS DEAD cap rests farther back on the open floor, with 
 The glass ketchup bottle has a smooth white-enamel metal twist-off lid with a rolled hem and metal underside. The whole lid detaches, revealing a hollow glass lip, screw threads and recessed inner neck; no fixed cap band or sealed disc remains. The pour stream starts at the mouth.
 
 Startup displays a compact red loading bar: download is indeterminate, then progress advances through character, office, prop, tank and lighting setup. It reaches completion after the first frame renders, and errors replace the bar with a reload message.
+
+Every game-over trigger now shares a screen transition: uneven blood drips run down over the scene, the view fills red and holds briefly, then fades to black before the red Game over title and Try again button appear. Retry clears the overlay. Reduced motion uses a shorter red-to-black fade without moving drips, and the transition stops rendering the 3D scene once the trap finishes.
