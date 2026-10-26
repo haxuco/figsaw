@@ -29,26 +29,27 @@ export function createCeilingSprinklers({floorSupport,pipeMaterial}){
  // Real pipe clamps tie the branches to the ceiling grid.
  for(const z of[-2.9,.4,3.4]){cylinder(.033,.020,[1.6,3.08,z]);pipe([1.6,3.08,z],[1.6,3.15,z],.009);}
  batchStaticScenery(hardware);
- const count=renderQuality.mobile?160:320,positions=new Float32Array(count*6),geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
- const material=new THREE.LineBasicMaterial({color:0xc0d4dc,transparent:true,opacity:.38,depthWrite:false});
+ const count=renderQuality.mobile?480:960,positions=new Float32Array(count*6),geo=new THREE.BufferGeometry();geo.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));
+ const material=new THREE.LineBasicMaterial({color:0xc0d4dc,transparent:true,opacity:.64,depthWrite:false});
  const spray=new THREE.LineSegments(geo,material);spray.name='Sprinkler droplets falling from ceiling deflectors';spray.frustumCulled=false;spray.visible=false;spray.raycast=()=>{};group.add(spray);
  const mistGeometry=new THREE.RingGeometry(.8,1,20);mistGeometry.rotateX(-Math.PI/2);
- const splashes=new THREE.InstancedMesh(mistGeometry,new THREE.MeshBasicMaterial({color:0x9db7bb,transparent:true,opacity:.24,side:THREE.DoubleSide,depthWrite:false}),40);splashes.name='Sprinkler splashes on the floor';splashes.visible=false;splashes.frustumCulled=false;splashes.raycast=()=>{};group.add(splashes);
- const dummy=new THREE.Object3D();
+ const splashes=new THREE.InstancedMesh(mistGeometry,new THREE.MeshBasicMaterial({color:0x9db7bb,transparent:true,opacity:.38,side:THREE.DoubleSide,depthWrite:false}),renderQuality.mobile?80:144);splashes.name='Sprinkler splashes on the floor';splashes.visible=false;splashes.frustumCulled=false;splashes.raycast=()=>{};group.add(splashes);
+ const dummy=new THREE.Object3D(),splashCount=splashes.instanceMatrix.count;
  function update(time,strength,reducedMotion=false){
   spray.visible=splashes.visible=strength>0;if(!strength)return;
-  material.opacity=strength*(reducedMotion?.15:.42);
+  material.opacity=strength*(reducedMotion?.32:.68);
+  const flowTime=reducedMotion?0:time;
   for(let i=0;i<count;i++){
-   const h=heads[i%heads.length],phase=(time*(.75+(i%7)*.035)+i*.618)%1,angle=i*2.3999;
-   const distance=.4+(i%19)/19*1.65,r=distance*phase,y=2.86*(1-phase*phase);
+   const h=heads[i%heads.length],phase=(flowTime*(1.10+(i%7)*.055)+i*.618)%1,angle=i*2.3999;
+   const distance=.30+(i%23)/23*2.05,r=distance*phase,y=2.86*(1-phase*phase);
    const x=h[0]+Math.cos(angle)*r,z=h[2]+Math.sin(angle)*r,floor=floorSupport(x,z)+.012;
    const j=i*6;positions[j]=x;positions[j+1]=Math.max(floor,y);positions[j+2]=z;
-   positions[j+3]=x-Math.cos(angle)*.022;positions[j+4]=Math.max(floor,y+.045+phase*.08);positions[j+5]=z-Math.sin(angle)*.022;
+   positions[j+3]=x-Math.cos(angle)*.022;positions[j+4]=Math.max(floor,y+.085+phase*.14);positions[j+5]=z-Math.sin(angle)*.022;
   }
-  geo.attributes.position.needsUpdate=true;splashes.material.opacity=.22*strength;
-  for(let i=0;i<40;i++){
-   const h=heads[i%heads.length],phase=(time*1.7+i*.618)%1,angle=i*2.399,r=.4+(i%11)/11*1.6,x=h[0]+Math.cos(angle)*r,z=h[2]+Math.sin(angle)*r;
-   dummy.position.set(x,floorSupport(x,z)+.012,z);dummy.scale.setScalar(.006+phase*.042);dummy.updateMatrix();splashes.setMatrixAt(i,dummy.matrix);
+  geo.attributes.position.needsUpdate=true;splashes.material.opacity=.38*strength;
+  for(let i=0;i<splashCount;i++){
+   const h=heads[i%heads.length],phase=(flowTime*2.6+i*.618)%1,angle=i*2.399,r=.30+(i%17)/17*2.05,x=h[0]+Math.cos(angle)*r,z=h[2]+Math.sin(angle)*r;
+   dummy.position.set(x,floorSupport(x,z)+.012,z);dummy.scale.setScalar(.012+phase*.065);dummy.updateMatrix();splashes.setMatrixAt(i,dummy.matrix);
   }
   splashes.instanceMatrix.needsUpdate=true;
  }

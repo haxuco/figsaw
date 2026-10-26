@@ -3,8 +3,10 @@ import {artCanvas} from './texture-budget.js';
 import {renderQuality} from './render-quality.js';
 import {batchStaticScenery} from './static-batching.js';
 import {createFireAlarmState} from './fire-alarm-state.js';
+import {createLaptopSizzle} from './laptop-sizzle.js';
 
 export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
+ const sizzle=createLaptopSizzle();
  const state=createFireAlarmState(),station=new THREE.Group(),effects=new THREE.Group();
  station.name='Unbranded red FIRE pull station';station.userData.fireAlarm=true;station.userData.ignoreAcid=true;
  effects.name='Sprinkler water damage and acid reaction';effects.userData.ignoreAcid=true;
@@ -48,19 +50,22 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
 
  const [smokeCanvas,paint]=artCanvas(128),gradient=paint.createRadialGradient(64,64,5,64,64,62);gradient.addColorStop(0,'rgba(255,255,255,.85)');gradient.addColorStop(.48,'rgba(255,255,255,.5)');gradient.addColorStop(1,'rgba(255,255,255,0)');paint.fillStyle=gradient;paint.fillRect(0,0,128,128);
  const smokeMap=new THREE.CanvasTexture(smokeCanvas),cloudMaterial=new THREE.MeshBasicMaterial({map:smokeMap,color:0xcbd7a1,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide});
- const clouds=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),cloudMaterial,renderQuality.mobile?24:42);clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);clouds.frustumCulled=false;clouds.count=0;clouds.raycast=()=>{};clouds.renderOrder=13;effects.add(clouds);
+ const clouds=new THREE.InstancedMesh(new THREE.PlaneGeometry(1,1),cloudMaterial,renderQuality.mobile?24:42);clouds.name='Steam and vapor from sprinkler damage';clouds.instanceMatrix.setUsage(THREE.DynamicDrawUsage);clouds.frustumCulled=false;clouds.count=0;clouds.raycast=()=>{};clouds.renderOrder=13;effects.add(clouds);
  const ripple=mesh(new THREE.RingGeometry(.9,1,48),new THREE.MeshBasicMaterial({color:0xe1edb6,transparent:true,opacity:0,depthWrite:false,side:THREE.DoubleSide}),effects);ripple.rotation.x=-Math.PI/2;ripple.visible=false;ripple.raycast=()=>{};
  const puddle=mesh(new THREE.CircleGeometry(1,40),new THREE.MeshBasicMaterial({map:smokeMap,color:0x789aab,transparent:true,opacity:0,depthWrite:false}),effects);puddle.rotation.x=-Math.PI/2;puddle.visible=false;puddle.raycast=()=>{};
- const sparkArray=new Float32Array(12*6),sparkGeometry=new THREE.BufferGeometry();sparkGeometry.setAttribute('position',new THREE.BufferAttribute(sparkArray,3).setUsage(THREE.DynamicDrawUsage));
- const sparks=new THREE.LineSegments(sparkGeometry,new THREE.LineBasicMaterial({color:0xc8eaff,transparent:true,opacity:0,depthWrite:false}));sparks.frustumCulled=false;sparks.visible=false;sparks.raycast=()=>{};effects.add(sparks);
+ const sparkCount=32,sparkArray=new Float32Array(sparkCount*6),sparkGeometry=new THREE.BufferGeometry();sparkGeometry.setAttribute('position',new THREE.BufferAttribute(sparkArray,3).setUsage(THREE.DynamicDrawUsage));
+ const sparks=new THREE.LineSegments(sparkGeometry,new THREE.LineBasicMaterial({color:0xc8eaff,transparent:true,opacity:0,depthWrite:false}));sparks.name='Repeated electrical crackles across the wet laptop';sparks.frustumCulled=false;sparks.visible=false;sparks.raycast=()=>{};effects.add(sparks);
  const flash=new THREE.PointLight(0xe9f7b0,0,10,2);flash.userData.mobileEssential=true;effects.add(flash);
+ const splashCount=renderQuality.mobile?48:80,splashPositions=new Float32Array(splashCount*6),splashGeometry=new THREE.BufferGeometry();splashGeometry.setAttribute('position',new THREE.BufferAttribute(splashPositions,3).setUsage(THREE.DynamicDrawUsage));
+ const laptopSplashes=new THREE.LineSegments(splashGeometry,new THREE.LineBasicMaterial({color:0xd1eaf0,transparent:true,opacity:.78,depthWrite:false,toneMapped:false}));laptopSplashes.name='Water bouncing off the laptop';laptopSplashes.frustumCulled=false;laptopSplashes.visible=false;laptopSplashes.raycast=()=>{};effects.add(laptopSplashes);
+ const wetPoint=new THREE.Vector3(),wetTail=new THREE.Vector3();
  const target=new THREE.Vector3(),dummy=new THREE.Object3D(),rotation=new THREE.Quaternion();
  function pull(time,locked=false){
   const outcome=state.pull(time,{locked,fireActive:fireHazard.phase==='burning'||fireHazard.phase==='extinguishing',acidSpilled:acidLeaks.leaks.length>0});
   if(!outcome)return false;
   if(outcome==='fire')target.copy(fireHazard.origin);
   else if(outcome==='acid'){const leak=acidLeaks.leaks[0];target.set(leak.head.x,floorSupport(leak.head.x,leak.head.z),leak.head.z);}
-  else laptop.object.getWorldPosition(target);
+  else {laptop.object.getWorldPosition(target);sizzle.play();}
   fireHazard.releaseSprinklers(time+.18);return outcome;
  }
  function update(time,camera,reducedMotion=false){
@@ -71,27 +76,52 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
   const acid=state.outcome==='acid',impact=acid?1.25:1.8,burst=Math.max(0,age-impact),active=age>=impact;
   camera.getWorldQuaternion(rotation);
   flash.position.set(target.x,target.y+.35,target.z);flash.color.setHex(acid?0xe9f7b0:0xb3dfff);
-  flash.intensity=active&&!reducedMotion?Math.max(0,1-burst/(acid?.65:.4))*(acid?22:3):0;
-  clouds.count=active?clouds.instanceMatrix.count:0;cloudMaterial.color.setHex(acid?0xbac595:0x646a6a);cloudMaterial.opacity=active?(acid?.74:.35)*Math.min(1,burst*4):0;
+  const wet=age>=.85,steamAge=Math.max(0,age-.85),effectTime=reducedMotion?1.4:age;
+  flash.intensity=reducedMotion?0:acid?(active?Math.max(0,1-burst/.65)*22:0):wet&&age<3.4?1.4+3.6*Math.sin(age*21)**8:0;
+  clouds.count=(acid?active:wet)?clouds.instanceMatrix.count:0;
+  cloudMaterial.color.setHex(acid?0xbac595:0xb5c3bf);cloudMaterial.opacity=acid?(active?.74*Math.min(1,burst*4):0):.46*Math.min(1,steamAge*3);
   for(let i=0;i<clouds.count;i++){
-   const phase=(i*.618)%1,angle=i*2.399,r=(acid?.22+burst*1.5:.08+burst*.12)*Math.sqrt(phase),rise=(acid?burst*1.2:burst*.25)+phase*.16;
-   dummy.position.set(target.x+Math.cos(angle)*r,target.y+.06+rise,target.z+Math.sin(angle)*r);dummy.quaternion.copy(rotation);dummy.rotateZ(i*.7);
-   const size=acid?.28+burst*.85+phase*.45:.10+burst*.16;dummy.scale.set(size,size*1.15,1);dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix);
+   const seed=(i*.618)%1,angle=i*2.399;
+   if(acid){
+    const r=(.22+burst*1.5)*Math.sqrt(seed),rise=burst*1.2+seed*.16;
+    dummy.position.set(target.x+Math.cos(angle)*r,target.y+.06+rise,target.z+Math.sin(angle)*r);
+    const size=.28+burst*.85+seed*.45;dummy.scale.set(size,size*1.15,1);
+   }else{
+    const phase=(effectTime*.8+seed)%1;
+    wetPoint.set(Math.cos(angle)*.29+Math.sin(phase*5+i)*phase*.10,.05+phase*.66,Math.sin(angle)*.18+phase*.035);
+    dummy.position.copy(laptop.object.localToWorld(wetPoint));
+    const size=(.085+phase*.23)*Math.sin(Math.PI*phase);dummy.scale.set(size,size*1.7,1);
+   }
+   dummy.quaternion.copy(rotation);dummy.rotateZ(i*.7);dummy.updateMatrix();clouds.setMatrixAt(i,dummy.matrix);
   }
   if(clouds.count)clouds.instanceMatrix.needsUpdate=true;
   if(acid){
    ripple.visible=active;ripple.position.set(target.x,floorSupport(target.x,target.z)+.016,target.z);ripple.scale.setScalar(.10+burst*4);ripple.material.opacity=Math.max(0,.65-burst*.7);
   }else{
-   puddle.visible=age>.5;puddle.position.set(target.x,floorSupport(target.x,target.z)+.008,target.z);const size=Math.min(1.1,Math.max(0,age-.5)*.36);puddle.scale.set(size,size,1);puddle.material.opacity=.28;
-   laptop.damageWater(THREE.MathUtils.smoothstep(age,1.8,2.5));
-   sparks.visible=active&&burst<.7&&!reducedMotion;sparks.material.opacity=Math.max(0,1-burst/.7);
-   if(sparks.visible){for(let i=0;i<12;i++){const angle=i*2.4,r=.03+burst*.30,j=i*6;sparkArray[j]=target.x+Math.cos(angle)*r;sparkArray[j+1]=target.y+.06+Math.sin(i+age*23)**2*.12;sparkArray[j+2]=target.z+Math.sin(angle)*r;sparkArray[j+3]=sparkArray[j]+Math.cos(angle)*.035;sparkArray[j+4]=sparkArray[j+1]+.035;sparkArray[j+5]=sparkArray[j+2]+Math.sin(angle)*.035;}sparkGeometry.attributes.position.needsUpdate=true;}
+   puddle.visible=age>.5;puddle.position.set(target.x,floorSupport(target.x,target.z)+.008,target.z);const size=Math.min(1.35,Math.max(0,age-.5)*.48);puddle.scale.set(size,size,1);puddle.material.opacity=.38;
+   const damage=THREE.MathUtils.smoothstep(age,1.8,2.8),flicker=!reducedMotion&&wet&&age<2.8?.35*Math.sin(age*23)**6:0;
+   laptop.damageWater(Math.min(1,damage+flicker));
+   laptopSplashes.visible=wet;laptopSplashes.material.opacity=reducedMotion?.36:.78;
+   if(wet){for(let i=0;i<splashCount;i++){
+    const phase=(effectTime*3.2+i*.618)%1,angle=i*2.399,r=.07+phase*.14;
+    wetPoint.set(Math.sin(i*9.1)*.28+Math.cos(angle)*r,.04+Math.sin(Math.PI*phase)*.19,Math.cos(i*5.7)*.15+Math.sin(angle)*r);
+    wetTail.copy(wetPoint);wetTail.y+=.022;wetTail.x-=Math.cos(angle)*.012;laptop.object.localToWorld(wetPoint);laptop.object.localToWorld(wetTail);
+    wetPoint.toArray(splashPositions,i*6);wetTail.toArray(splashPositions,i*6+3);
+   }splashGeometry.attributes.position.needsUpdate=true;}
+   sparks.visible=age>1.02&&age<3.4&&!reducedMotion;sparks.material.opacity=.60+.35*Math.sin(age*18)**2;
+   if(sparks.visible){for(let i=0;i<sparkCount;i++){
+    const phase=(age*4.3+i*.618)%1,angle=i*2.4,r=phase*.16;
+    wetPoint.set(Math.sin(i*7.7)*.28+Math.cos(angle)*r,.035+Math.sin(phase*Math.PI)*.13,Math.cos(i*4.1)*.14+Math.sin(angle)*r);
+    wetTail.copy(wetPoint);wetTail.x+=Math.cos(angle)*(.018+phase*.022);wetTail.y+=.028;wetTail.z+=Math.sin(angle)*.018;
+    laptop.object.localToWorld(wetPoint);laptop.object.localToWorld(wetTail);wetPoint.toArray(sparkArray,i*6);wetTail.toArray(sparkArray,i*6+3);
+   }sparkGeometry.attributes.position.needsUpdate=true;}
+
   }
   return state.update(time);
  }
- return {station,effects,pull,update,target,blackout:state.blackout,
+ return {station,effects,pull,update,target,silence:sizzle.stop,blackout:state.blackout,
   get active(){return state.active;},get dying(){return state.dying;},get outcome(){return state.outcome;},get message(){return state.message;},
   hint(){return state.active?'Fire alarm pulled · Sprinklers released':'Pull fire alarm';},
-  reset(){state.reset();lever.rotation.x=0;lever.position.y=.052;status.material.color.setHex(0x48150b);clouds.count=0;ripple.visible=puddle.visible=sparks.visible=false;flash.intensity=0;laptop.damageWater(0);}
+  reset(){sizzle.stop();state.reset();lever.rotation.x=0;lever.position.y=.052;status.material.color.setHex(0x48150b);clouds.count=0;ripple.visible=puddle.visible=sparks.visible=laptopSplashes.visible=false;flash.intensity=0;laptop.damageWater(0);}
  };
 }

@@ -54,7 +54,7 @@ const profiler=createPerformanceReport(renderer,scene);
 const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
 const arrivalCameraMove=createArrivalCameraMove(homeCamera.fov);
-const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3(),moveDirection=new THREE.Vector3();
+const cameraTarget=new THREE.Vector3(),viewDirection=new THREE.Vector3();
 const hemi=new THREE.HemisphereLight(0x91a5a0,0x242c28,.62);hemi.userData.mobileEssential=true;scene.add(hemi);
 const fluorescentPower=17.5;
 const fluorescent=new THREE.SpotLight(0xc4d2b0,fluorescentPower,12,1.25,.72,2);fluorescent.position.set(.22,2.83,-.55);fluorescent.target.position.set(0,0,-.1);fluorescent.castShadow=quality.shadows;
@@ -604,7 +604,7 @@ function updateFigpalRound(time){
 }
 
 function endGame(message){
- if(gameEnded)return;gameEnded=true;
+ if(gameEnded)return;gameEnded=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion);
  releaseControls();chainMenu.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
@@ -627,7 +627,6 @@ function operateHoist(index){
  document.querySelector('#hoist-status').textContent=lowering&&figpalHoists.canSpeak(index)?`${message} ${FIGPAL_PLEAS[index]}`:message;
 }
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
-const movementKeys=new Set(['KeyW','KeyA','KeyS','KeyD','KeyE','KeyQ']),pressedKeys=new Set();
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
  scheduleFrame();
@@ -658,7 +657,7 @@ function resetView({skipIntro=false}={}){
  }
 }
 
-function releaseControls(){pressedKeys.clear();state.space=false;dragPointer=null;}
+function releaseControls(){state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
  if(gameEnded){
@@ -668,7 +667,6 @@ document.addEventListener('keydown',event=>{
  if((figpalRounds.active||laptopOpening.active||mugTrap.active||sawTrap.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
  if(chainMenu.active)return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
- if(movementKeys.has(event.code)){event.preventDefault();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();pressedKeys.add(event.code);resetting=false;return;}
  if(event.code==='Escape'&&drawerCamera.active){event.preventDefault();drawerCamera.restore(state.time);return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
@@ -686,10 +684,10 @@ document.addEventListener('keydown',event=>{
   if(event.code==='ArrowDown')state.pitch=THREE.MathUtils.clamp(state.pitch-.05,-1.40,1.40);
  }
 });
-document.addEventListener('keyup',event=>{pressedKeys.delete(event.code);if(event.code==='Space')state.space=false;});
+document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
 window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
-createTouchNavigation({canvas,state,keys:pressedKeys,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
+createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!gameEnded&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
  if(figpalRounds.active||mugTrap.active||sawTrap.active||gameEnded||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
@@ -774,7 +772,7 @@ const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);r
 const clock=new THREE.Clock();
 let contextLost=false,sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
 function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.hidden)frameRequest=requestAnimationFrame(render);}
-document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){fireAlarm.silence();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
  frameRequest=0;if(document.hidden||contextLost)return;
  const cpuStart=performance.now();
@@ -794,24 +792,14 @@ function render(){
  updateEntrance(t);contactShadows?.update();
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
- if(pressedKeys.size||dragPointer!==null)arrivalCameraMove.cancel();
+ if(dragPointer!==null)arrivalCameraMove.cancel();
  if(laptopOpening.active||mugTrap.active||sawTrap.active||drawerCamera.active)arrivalCameraMove.cancel();
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
  drawerCamera.update(t,reducedMotion);acidCamera.update(t,reducedMotion);alarmCamera.update(t,reducedMotion);
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
  updateFigpalRound(t);figpalCamera.update(t,reducedMotion);
  const viewYaw=state.yaw;
- // Walk along the floor plane relative to the view; E/Q independently change eye height.
- const forward=Number(pressedKeys.has('KeyW'))-Number(pressedKeys.has('KeyS'));
- const strafe=Number(pressedKeys.has('KeyD'))-Number(pressedKeys.has('KeyA'));
- const vertical=Number(pressedKeys.has('KeyE'))-Number(pressedKeys.has('KeyQ'));
- moveDirection.set(-Math.sin(viewYaw)*forward+Math.cos(viewYaw)*strafe,vertical,-Math.cos(viewYaw)*forward-Math.sin(viewYaw)*strafe);
- if(moveDirection.lengthSq()>0){
-  cameraPosition.addScaledVector(moveDirection.normalize(),dt*1.05);
-  cameraPosition.x=THREE.MathUtils.clamp(cameraPosition.x,-3.72,3.72);
-  cameraPosition.y=THREE.MathUtils.clamp(cameraPosition.y,.08,3.0);
-  cameraPosition.z=THREE.MathUtils.clamp(cameraPosition.z,-3.78,4.25);
- }
+ // Manual controls rotate the view only; scripted interactions own camera position.
  camera.position.copy(cameraPosition);
  viewDirection.set(-Math.sin(viewYaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(viewYaw)*Math.cos(state.pitch));
  cameraTarget.copy(cameraPosition).add(viewDirection);camera.lookAt(cameraTarget);
