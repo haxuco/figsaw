@@ -8,7 +8,7 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=saw-chevron-lock">
+  <link rel="stylesheet" href="./style.css?v=saw-object-choices">
   <link rel="modulepreload" href="./game.bundle.js?v=2a032d4fe945">
 </head>
 <body>
@@ -34,8 +34,14 @@
   </div>
   <dialog id="saw-menu" aria-labelledby="saw-menu-title">
     <h2 id="saw-menu-title">What do you want to saw?</h2>
-    <button type="button" data-saw="shackle"><span class="saw-choice-label">Saw shackle</span></button>
-    <button type="button" data-saw="animal"><span class="saw-choice-label">Saw stuffed animal</span></button>
+    <div class="saw-object-choices">
+      <button type="button" data-saw="shackle" aria-label="Saw shackle">
+        <span class="saw-choice-label saw-object"><img src="./assets/saw-choices/shackle.png" alt="" width="384" height="384" decoding="async" loading="lazy" draggable="false"><svg class="saw-choice-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></span>
+      </button>
+      <button type="button" data-saw="animal" aria-label="Saw stuffed animal">
+        <span class="saw-choice-label saw-object"><img src="./assets/saw-choices/stuffed-elephant.png" alt="" width="384" height="384" decoding="async" loading="lazy" draggable="false"><svg class="saw-choice-lock" viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/><path d="M12 14v3"/></svg></span>
+      </button>
+    </div>
     <button type="button" data-saw="cancel"><span class="saw-choice-label">Cancel</span></button>
   </dialog>
   <div id="chain-menu" role="menu" aria-label="Chain instance" hidden>

@@ -1,0 +1,22 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Figsaw object preview assets</title><style>body{margin:24px;background:#242925;color:white;font:16px system-ui;display:flex;gap:24px;flex-wrap:wrap}canvas{display:block;width:320px;height:320px}p{width:100%}</style></head><body><p id="status">Rendering object previews…</p><script type="module">
+// Authoring-only: export transparent previews of the same meshes used in the room.
+// The game loads the baked images, not another WebGL renderer.
+import * as THREE from '../dist/vendor/three.module.js';
+import {createPlayerRestraint} from '../dist/player-restraint.js';
+import {createFallenMobile} from '../dist/fallen-mobile.js';
+const renderer=new THREE.WebGLRenderer({alpha:true,antialias:true,preserveDrawingBuffer:true});renderer.setSize(384,384);renderer.setClearColor(0x000000,0);renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.1;
+const studio=document.createElement('canvas');studio.width=256;studio.height=128;const ctx=studio.getContext('2d');ctx.fillStyle='#68717a';ctx.fillRect(0,0,256,128);ctx.fillStyle='#fff';ctx.fillRect(32,10,65,60);ctx.fillStyle='#c4d8df';ctx.fillRect(170,24,35,75);ctx.fillStyle='#282d31';ctx.fillRect(0,100,256,28);
+const panorama=new THREE.CanvasTexture(studio);panorama.colorSpace=THREE.SRGBColorSpace;panorama.mapping=THREE.EquirectangularReflectionMapping;const filter=new THREE.PMREMGenerator(renderer),environment=filter.fromEquirectangular(panorama);
+function renderObject(object,id,direction){
+ const scene=new THREE.Scene();scene.environment=environment.texture;scene.add(new THREE.HemisphereLight(0xeaf2ff,0x615347,2.1));const key=new THREE.DirectionalLight(0xfff0de,3.1);key.position.set(-2,3,-4);scene.add(key);const rim=new THREE.DirectionalLight(0xc4e8ff,2);rim.position.set(2,1,2);scene.add(rim);scene.add(object);
+ const box=new THREE.Box3().setFromObject(object),center=box.getCenter(new THREE.Vector3()),size=box.getSize(new THREE.Vector3());
+ const camera=new THREE.OrthographicCamera(-1,1,1,-1,.001,100);camera.position.copy(center).add(new THREE.Vector3(...direction).normalize().multiplyScalar(size.length()*4));camera.lookAt(center);camera.updateMatrixWorld();
+ let extent=0;for(const x of[box.min.x,box.max.x])for(const y of[box.min.y,box.max.y])for(const z of[box.min.z,box.max.z]){const p=new THREE.Vector3(x,y,z).applyMatrix4(camera.matrixWorldInverse);extent=Math.max(extent,Math.abs(p.x),Math.abs(p.y));}extent*=1.12;camera.left=camera.bottom=-extent;camera.right=camera.top=extent;camera.updateProjectionMatrix();renderer.render(scene,camera);
+ const canvas=document.createElement('canvas');canvas.width=canvas.height=384;canvas.getContext('2d').drawImage(renderer.domElement,0,0);const image=document.createElement('img');image.id=id;image.width=image.height=320;image.src=canvas.toDataURL('image/png');document.body.append(image);
+}
+const restraint=createPlayerRestraint(new THREE.PerspectiveCamera()),cuff=restraint.target.getObjectByName('Close-fitting oval wrist cuff').clone(true);cuff.position.set(-.06,.02,0);cuff.quaternion.identity();cuff.scale.setScalar(1);const shackle=new THREE.Group();shackle.add(cuff);
+const sourceLink=restraint.target.getObjectByName('Heavy interlocking wrist chain');for(let i=0;i<4;i++){const link=new THREE.Mesh(sourceLink.geometry,sourceLink.material);link.position.set(.042+i*.039,.002-i*i*.005,0);link.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),new THREE.Vector3(1,-i*.24,0).normalize());if(i%2)link.rotateY(Math.PI/2);shackle.add(link);}
+renderObject(shackle,'shackle-preview',[.28,.35,-1]);
+const mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11)),toy=mobile.animals.find(a=>a.kind==='Elephant').object;toy.removeFromParent();toy.position.set(0,0,0);toy.rotation.set(0,0,0);toy.scale.setScalar(1);renderObject(toy,'animal-preview',[.65,.55,-1]);
+renderer.dispose();filter.dispose();environment.dispose();panorama.dispose();document.querySelector('#status').textContent='Object previews ready';
+</script></body></html>
