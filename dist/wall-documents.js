@@ -4,7 +4,7 @@ const specs=[['org-chart','Figpal Labs — people & practice',1600,1100],['onboa
 export async function createWallDocuments(){
  const entries=new Map(),targets=[];
  await Promise.all(specs.map(async([id,title,width,height])=>{
-  const src=`./assets/documents/${id}.svg`,image=new Image();image.decoding='async';image.src=src;
+  const src=`./assets/documents/${id}.svg?v=haunted-wear-2`,image=new Image();image.decoding='async';image.src=src;
   await image.decode();const scale=Math.min(1,(quality.mobile?256:1024)/Math.max(width,height));
   const c=document.createElement('canvas');c.width=Math.round(width*scale);c.height=Math.round(height*scale);c.getContext('2d').drawImage(image,0,0,c.width,c.height);
   const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=quality.mobile?2:4;

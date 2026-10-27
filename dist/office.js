@@ -12,6 +12,7 @@ import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-cont
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
 import {createWallDocuments} from './wall-documents.js';
+import {createWallDecay,wornPaperGeometry} from './wall-decay.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
 import { createFloorRodents } from './floor-rodents.js';
 import { createChargingKit } from './charging-kit.js';
@@ -27,6 +28,7 @@ import { createFireAlarm } from './fire-alarm.js';
 export async function createOffice(renderer,viewerPosition,onProgress=async()=>{},puzzle=null){
  const office=new THREE.Group();office.name='Abandoned technology office';
  const documents=await createWallDocuments();
+ const wallDecay=createWallDecay();
  const floorProps=[],floorCables=[];
  const onFloor=object=>{floorProps.push(object);return object;};
  let seed=87021;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -394,16 +396,18 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
 
  for(let i=0;i<2;i++){
   const g=new THREE.Group();g.name='Whiteboard with interface wireframes';g.position.set(i?2.25:.12,2.20,-3.94);g.rotation.z=i?-.025:.012;office.add(g);
-  box([1.78,1.12,.04],[0,0,0],silver,g);const map=wireframeMap(!i);
+  box([1.78,1.12,.04],[0,0,0],wallDecay.frame,g);const map=wireframeMap(!i);
   const face=mesh(new THREE.PlaneGeometry(1.70,1.04),new THREE.MeshStandardMaterial({map,roughness:.75,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.024;documents.tag(face,i?'workspace':'onboarding');
-  box([1.70,.023,.09],[0,-.57,.025],silver,g);
+  box([1.70,.023,.09],[0,-.57,.025],wallDecay.frame,g);
+  wallDecay.cobweb(g,1.70,1.04,.034,i?1:-1);
   for(let j=0;j<3;j++)rod([-.58+j*.18,-.546,.057],[-.46+j*.18,-.546,.057],.013,j?black:material(0x394e6a,.7),g);
  }
 
  const orgPoster=new THREE.Group();orgPoster.name='Figpal Labs organization chart';orgPoster.position.set(-2.15,2.18,-3.94);orgPoster.rotation.z=-.018;office.add(orgPoster);
- box([1.95,1.37,.045],[0,0,0],silver,orgPoster);
- const orgMap=documents.map('org-chart'),orgFace=mesh(new THREE.PlaneGeometry(1.87,1.286),new THREE.MeshStandardMaterial({map:orgMap,roughness:.98,emissive:0xffffff,emissiveMap:orgMap,emissiveIntensity:.045}),orgPoster);orgFace.position.z=.026;documents.tag(orgFace,'org-chart');
- for(const x of[-.86,.86]){const tape=box([.17,.06,.002],[x,.60,.029],material(0xb8b08c,.96),orgPoster);tape.rotation.z=x*.1;}
+ box([1.95,1.37,.045],[0,0,0],wallDecay.frame,orgPoster);
+ wallDecay.cobweb(orgPoster,1.87,1.286,.036,-1);
+ const orgMap=documents.map('org-chart'),orgFace=mesh(wornPaperGeometry(1.87,1.286,8),new THREE.MeshStandardMaterial({map:orgMap,roughness:1,alphaTest:.45,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:orgMap,emissiveIntensity:.02}),orgPoster);orgFace.position.z=.026;documents.tag(orgFace,'org-chart');
+ for(const x of[-.86,.86]){const tape=box([.17,.06,.002],[x,.60,.029],wallDecay.tape,orgPoster);tape.rotation.z=x*.1;}
 
  // Freestanding planning whiteboard with curled sticky notes and old interface sketches.
  const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(1.90,0,-3.0);partition.rotation.y=0;office.add(partition);
@@ -411,16 +415,16 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   box([.045,.98,.055],[x,.49,0],steel,partition);box([.11,.06,.65],[x,.06,0],steel,partition);
   for(const z of[-.25,.25])sphere([.047,.045,.032],[x,.035,z],black,partition);
  }
- box([2.68,1.94,.05],[0,1.85,0],silver,partition);
+ box([2.68,1.94,.05],[0,1.85,0],wallDecay.frame,partition);
+ wallDecay.cobweb(partition,2.60,1.86,.045,1,1.85);
  const missingNotes=new Set([1,4,7,9,13,17,20,22,24]);
  const planningMap=documents.map('planning'),planningSurface=mesh(new THREE.PlaneGeometry(2.60,1.86),new THREE.MeshStandardMaterial({map:planningMap,roughness:.75,emissive:0xffffff,emissiveMap:planningMap,emissiveIntensity:.025}),partition);planningSurface.position.set(0,1.85,.027);documents.tag(planningSurface,'planning');
- box([2.58,.025,.13],[0,.87,.045],silver,partition);
+ box([2.58,.025,.13],[0,.87,.045],wallDecay.frame,partition);
  for(let i=0;i<3;i++)rod([-.63+i*.23,.899,.09],[-.48+i*.23,.899,.09],.017,i===0?material(0x344f65,.75):black,partition);
  box([.18,.045,.07],[.62,.906,.075],black,partition);
  function sticky(parent,x,y,z,index){
-  const geo=new THREE.PlaneGeometry(.205,.215,3,5),pos=geo.attributes.position;
-  for(let i=0;i<pos.count;i++){const yy=pos.getY(i);pos.setZ(i,Math.max(0,-yy-.015)**2*3.3);}geo.computeVertexNormals();
-  const map=documents.map(`note-${index%8}`),m=mesh(geo,new THREE.MeshStandardMaterial({map,roughness:.96,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),parent);m.position.set(x,y,z);m.rotation.z=range(-.13,.13);documents.tag(m,`note-${index%8}`);return m;
+  const geo=wornPaperGeometry(.205,.215,index);
+  const map=documents.map(`note-${index%8}`),m=mesh(geo,new THREE.MeshStandardMaterial({map,roughness:1,alphaTest:.45,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),parent);m.position.set(x,y,z);m.rotation.z=range(-.13,.13);documents.tag(m,`note-${index%8}`);return m;
  }
  for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(missingNotes.has(row*9+col))continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.040,row*9+col);}
  for(let i=0;i<5;i++){if(i===1||i===4)continue;sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.040,28+i);}
@@ -549,9 +553,10 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  // The left wall carries the remains of the design team's work and reference library.
  for(const[z,y,w,h,mobile]of[[-2.53,2.13,1.52,1.08,true],[-.62,2.13,1.78,1.10,false]]){
   const g=new THREE.Group();g.name='Left-wall design whiteboard';g.position.set(-3.86,y,z);g.rotation.y=Math.PI/2;office.add(g);
-  box([w,h,.045],[0,0,0],silver,g);const map=wireframeMap(mobile);
+  box([w,h,.045],[0,0,0],wallDecay.frame,g);const map=wireframeMap(mobile);
   const face=mesh(new THREE.PlaneGeometry(w-.07,h-.07),new THREE.MeshStandardMaterial({map,roughness:.85,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.026;documents.tag(face,mobile?'onboarding':'workspace');
-  box([w-.07,.025,.10],[0,-h/2,.035],silver,g);
+  box([w-.07,.025,.10],[0,-h/2,.035],wallDecay.frame,g);
+  wallDecay.cobweb(g,w-.07,h-.07,.037,mobile?-1:1);
   rod([-.4,-h/2+.025,.06],[-.23,-h/2+.025,.06],.011,black,g);
   box([.13,.035,.065],[w*.29,-h/2+.029,.045],fabric,g);
   sticky(g,w*.35,h*.21,.034,mobile?6:9);
@@ -654,6 +659,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(const y of[.35,1.20,2.07]){box([.07,.10,.034],[-.515,y,.064],steel,doorLeaf);cylinder(.012,.12,[-.53,y,.08],silver,doorLeaf);}
  function wallLabel(text,w,h,parent,pos,background='#74796b',ink='#d0cdb8'){
   const[c,ctx]=canvas(512,128);ctx.fillStyle=background;ctx.fillRect(0,0,512,128);ctx.fillStyle=ink;ctx.font='600 50px Arial,sans-serif';ctx.textAlign='center';ctx.fillText(text,256,82,470);speckle(ctx,512,1500,'14,20,15',.2);
+  const aged=ctx.createLinearGradient(0,0,0,128);aged.addColorStop(0,'rgba(30,33,19,.7)');aged.addColorStop(.30,'rgba(81,60,27,.12)');aged.addColorStop(.70,'rgba(81,60,27,.08)');aged.addColorStop(1,'rgba(25,31,17,.7)');ctx.fillStyle=aged;ctx.fillRect(0,0,512,128);ctx.fillStyle='rgba(33,39,22,.30)';for(let k=0;k<18;k++)ctx.fillRect((k*137)%512,0,2+k%3,14+(k*43)%55);
   const label=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture(c),roughness:.9}),parent);label.position.set(...pos);label.castShadow=false;return label;
  }
  let doorUnlocked=false,doorAngle=0;
@@ -663,15 +669,16 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const exitLabel=wallLabel('EXIT  →',.48,.15,door,[0,2.66,.133],'#263b30','#a8b593');exitLabel.material.emissive.set(0x5b7657);exitLabel.material.emissiveMap=exitLabel.material.map;exitLabel.material.emissiveIntensity=.25;
  // An old pinboard of discarded design critiques, curling printouts and tape ghosts.
  const notices=new THREE.Group();notices.name='Abandoned critique pinboard';notices.position.set(-.95,1.94,.055);notices.rotation.z=-.018;rear.add(notices);
- const cork=material(0x807052,.99,woodMap);box([1.86,1.25,.045],[0,0,0],cork,notices);
- for(const x of[-.94,.94])box([.035,1.30,.055],[x,0,.01],steel,notices);
- for(const y of[-.64,.64])box([1.91,.035,.055],[0,y,.01],steel,notices);
+ const cork=wallDecay.cork;box([1.86,1.25,.045],[0,0,0],cork,notices);
+ for(const x of[-.94,.94])box([.035,1.30,.055],[x,0,.01],wallDecay.frame,notices);
+ for(const y of[-.64,.64])box([1.91,.035,.055],[0,y,.01],wallDecay.frame,notices);
  for(let i=0;i<7;i++){
-  const x=-.68+(i%4)*.44,y=i<4?.28:-.26,map=wireframeMap(i%2===0),print=mesh(new THREE.PlaneGeometry(.35,.43),new THREE.MeshStandardMaterial({map,color:i%2?0xb9b4a0:0xc6c6b4,roughness:1,side:THREE.DoubleSide}),notices);
+  const x=-.68+(i%4)*.44,y=i<4?.28:-.26,map=wireframeMap(i%2===0),print=mesh(wornPaperGeometry(.35,.43,i),new THREE.MeshStandardMaterial({map,color:i%2?0xb9b4a0:0xc6c6b4,roughness:1,alphaTest:.45,side:THREE.DoubleSide}),notices);
   print.position.set(x,y,.028+i%3*.001);print.rotation.z=range(-.10,.10);print.castShadow=false;documents.tag(print,i%2===0?'onboarding':'workspace');
   sphere([.008,.008,.005],[x,y+.195,.039],i%2?black:material(0x773f33,.8),notices);
-  const tape=box([.11,.033,.001],[x-.06,y+.20,.031],material(0x989a73,.98),notices);tape.rotation.z=range(-.2,.2);
+  const tape=box([.11,.033,.001],[x-.06,y+.20,.031],wallDecay.tape,notices);tape.rotation.z=range(-.2,.2);
  }
+ wallDecay.cobweb(notices,1.86,1.25,.065,-1);
  wallLabel('DESIGN / CRITIQUE',1.1,.10,notices,[-.11,.56,.028],'#77765a','#252d27');
  // A weak remaining task tube reveals the pinboard without lifting the room's darkness.
  box([.94,.065,.13],[-.95,2.78,.11],steel,rear);
