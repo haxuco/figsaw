@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=826f0c7ef563">
-  <link rel="modulepreload" href="./game.bundle.js?v=3dce7265d139">
+  <link rel="stylesheet" href="./style.css?v=1db059430035">
+  <link rel="modulepreload" href="./game.bundle.js?v=c65d1b47b79c">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -46,23 +46,18 @@
     </div>
     <button type="button" data-saw="cancel"><span class="saw-choice-label">Cancel</span></button>
   </dialog>
+  <button id="inspection-back" class="inspection-back" type="button" hidden aria-label="Back to room">‹ BACK</button>
   <section id="mobile-inspection" aria-label="Inspect the animal mobile" hidden>
-    <div class="inspection-heading"><h2>A change of perspective</h2><p data-mobile-status aria-live="polite"></p><small data-mobile-inventory></small></div>
-    <p class="sr-only" data-mobile-digits aria-live="polite"></p>
-    <div class="inspection-actions">
-      <button data-mobile="above">View from above</button><button data-mobile="under">View from underneath</button>
-      <button data-mobile="cut">Cut tangled strings</button><button data-mobile="restring" hidden>Restring mobile</button>
-      <button data-mobile="close">Return to room</button>
-    </div>
+    <div class="inspection-heading"><p data-mobile-status aria-live="polite"></p></div>
   </section>
   <dialog id="document-viewer" aria-labelledby="document-title">
-    <header><div><small>INSPECT</small><h2 id="document-title"></h2></div><button data-document="close" aria-label="Return to room">Return to room ×</button></header>
+    <header><button class="inspection-back" data-document="close" aria-label="Back to room">‹ BACK</button><div><small>INSPECT</small><h2 id="document-title"></h2></div></header>
     <div class="document-stage" tabindex="0" aria-label="Document image. Drag to pan, scroll or pinch to zoom."><img alt="" draggable="false" decoding="async"></div>
     <footer><span>Drag to pan · scroll or pinch to zoom</span><div><button data-document="out" aria-label="Zoom out">−</button><output aria-label="Document zoom">100%</output><button data-document="in" aria-label="Zoom in">+</button><button data-document="fit">Fit</button></div></footer>
   </dialog>
   <section id="escaped" role="dialog" aria-modal="true" aria-labelledby="escaped-title" hidden><h1 id="escaped-title">You escaped.</h1><p>A little perspective changes everything.</p><button id="new-game">Play again</button></section>
   <dialog id="door-keypad" aria-labelledby="keypad-title">
-    <button class="keypad-close" data-key="close" aria-label="Close keypad">×</button>
+    <button class="inspection-back" data-key="close" aria-label="Back to room">‹ BACK</button>
     <h2 id="keypad-title">Door keypad</h2><output aria-label="Entered code">————</output>
     <div class="keypad-keys"><button data-key="1">1</button><button data-key="2">2</button><button data-key="3">3</button><button data-key="4">4</button><button data-key="5">5</button><button data-key="6">6</button><button data-key="7">7</button><button data-key="8">8</button><button data-key="9">9</button><button data-key="clear" aria-label="Clear code">C</button><button data-key="0">0</button><button data-key="enter" aria-label="Enter code">↵</button></div>
     <p data-keypad-status role="status" aria-live="polite"></p>
@@ -96,6 +91,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=3dce7265d139"></script>
+  <script type="module" src="./boot.js?v=c65d1b47b79c"></script>
 </body>
 </html>

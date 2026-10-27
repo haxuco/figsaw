@@ -91,3 +91,9 @@ test('charging cable meets both plug exits, stays on the floor and routes around
   geometry.dispose();
  }
 });
+
+test('panning in a drawer close-up retains the original Back destination',()=>{
+ const {position,state,home,controller}=viewFixture();controller.start(0);controller.update(1);controller.pause();state.yaw+=.8;state.pitch+=.2;
+ controller.update(3);assert.equal(controller.active,true);assert.equal(controller.returning,false);
+ controller.restore(4);controller.restore(4.7);controller.update(5);assert.equal(controller.active,false);assert.ok(position.equals(home.position));assert.ok(Math.abs(state.yaw-home.yaw)<1e-8);assert.equal(state.pitch,home.pitch);
+});

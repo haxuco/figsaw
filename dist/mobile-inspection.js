@@ -1,6 +1,5 @@
 import * as THREE from './vendor/three.module.js';
 import {createScissors} from './mobile-supplies.js';
-import {ANIMAL_DIGITS} from './mobile-puzzle-state.js';
 
 export function createMobileInspection({mobile,state}){
  const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.visible=false;group.userData.ignoreAcid=true;group.userData.mobilePuzzle=true;mobile.group.getWorldPosition(group.position);group.position.y=1.90;
@@ -61,27 +60,20 @@ export function createMobileInspection({mobile,state}){
  return {group,update,getTarget,reset,get hung(){return hung;}};
 }
 
-export function createMobileInspectionUI({state,inspectionCamera,time,onClose,onFeedback,puzzle}){
- const panel=document.querySelector('#mobile-inspection'),status=panel.querySelector('[data-mobile-status]'),inventory=panel.querySelector('[data-mobile-inventory]'),digits=panel.querySelector('[data-mobile-digits]');
- const cut=panel.querySelector('[data-mobile="cut"]'),restring=panel.querySelector('[data-mobile="restring"]'),close=panel.querySelector('[data-mobile="close"]');
+export function createMobileInspectionUI({state,time,onFeedback}){
+ const panel=document.querySelector('#mobile-inspection'),status=panel.querySelector('[data-mobile-status]');
  let previous=null;
- panel.addEventListener('click',event=>{
-  const action=event.target.closest('[data-mobile]')?.dataset.mobile;if(!action)return;
-  if(action==='close'){if(!state.action)onClose();return;}
-  if(state.action)return;
-  if(action==='above'||action==='under'){inspectionCamera.view(action,time());return;}
-  if(action==='cut'){if(!state.cut(time())){status.textContent='Find the scissors in the Supplies drawer.';onFeedback(status.textContent);return;}}
-  if(action==='restring'){if(!state.restring(time())){status.textContent='Find fresh string in the Supplies drawer.';onFeedback(status.textContent);return;}}
+ function activate(){
+  if(!state.active||state.action||state.phase==='repaired')return;
+  const cutting=state.phase==='tangled';
+  if(!(cutting?state.cut(time()):state.restring(time())))onFeedback(cutting?'Find the scissors in the Supplies drawer.':'Find fresh string in the Supplies drawer.');
   sync();
- });
- function sync(){
-  panel.hidden=!state.active;if(!state.active){previous=null;return;}
-  const key=[state.phase,state.action,state.has('scissors'),state.has('string'),inspectionCamera.underneath].join('|');if(key===previous)return;previous=key;
-  status.textContent=state.action==='cut'?'Snipping the tangled cords…':state.action==='restring'?'Tying fresh strings…':state.phase==='tangled'?'The strings are tangled. Cut them free, then rebuild the mobile.':state.phase==='cut'?'The old cords are gone. It needs new string.':inspectionCamera.underneath?'Four stitched numbers. But which animal comes first?':'Rebuilt. Try looking at it from another perspective.';
-  inventory.textContent=`Scissors ${state.has('scissors')?'✓':'—'}  ·  String ${state.has('string')?'✓':state.phase==='repaired'?'used':'—'}`;
-  cut.hidden=state.phase!=='tangled';restring.hidden=state.phase!=='cut';
-  cut.disabled=!!state.action;restring.disabled=!!state.action;close.disabled=!!state.action;
-  digits.textContent=state.phase==='repaired'&&inspectionCamera.underneath?Object.entries(puzzle?.digits??ANIMAL_DIGITS).map(([animal,digit])=>`${animal}: ${digit}`).join('. '):'';
  }
- return {sync};
+ function sync(){
+  panel.hidden=!state.active;document.body.classList.toggle('inspecting-mobile',state.active);
+  if(!state.active){previous=null;return;}
+  const key=[state.phase,state.action,state.has('scissors'),state.has('string')].join('|');if(key===previous)return;previous=key;
+  status.textContent=state.action==='cut'?'Snipping the tangled cords…':state.action==='restring'?'Tying fresh strings…':state.phase==='tangled'?(state.has('scissors')?'Click the tangled cords to cut them free.':'The cords are tangled. Find scissors in Supplies.'):state.phase==='cut'?(state.has('string')?'Click the mobile to attach fresh string.':'Find fresh string in Supplies.'):'Drag to look around';
+ }
+ return {sync,activate};
 }

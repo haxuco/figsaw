@@ -3,7 +3,7 @@ import * as THREE from './vendor/three.module.js';
 const wrap=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 
 // Keep the contents in view until pickup/close, then return to the saved pose.
-// Manual navigation cancels the assist without snapping the camera back.
+// Manual panning pauses the assist while retaining the Back/Escape return pose.
 export function createDrawerCamera({position,state,getView}){
  let saved=null,move=null;
  const target=new THREE.Vector3(),lookAt=new THREE.Vector3(),direction=new THREE.Vector3();
@@ -14,7 +14,7 @@ export function createDrawerCamera({position,state,getView}){
   getView(target,lookAt);direction.subVectors(lookAt,target).normalize();
   transition({position:target.clone(),yaw:Math.atan2(-direction.x,-direction.z),pitch:Math.asin(direction.y),zoom:.90},time,false);
  }
- function restore(time){if(saved)transition(saved,time,true);}
+ function restore(time){if(saved&&!move?.returning)transition(saved,time,true);}
  function cancel(){saved=null;move=null;}
  function update(time,reducedMotion=false){
   if(!move)return;
@@ -25,5 +25,5 @@ export function createDrawerCamera({position,state,getView}){
   state.zoom=THREE.MathUtils.lerp(from.zoom,to.zoom,progress);
   if(progress===1){move=null;if(returning)saved=null;}
  }
- return {start,restore,cancel,update,get active(){return saved!==null;}};
+ return {start,restore,cancel,pause(){move=null;},update,get active(){return saved!==null;},get returning(){return !!move?.returning;}};
 }

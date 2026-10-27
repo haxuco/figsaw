@@ -67,7 +67,7 @@ test('inspection camera moves above and beneath the fixed mobile on an arc, then
 });
 test('portrait inspection stays inside the room and a forced interruption restores the player before other camera sequences',()=>{
  const position=new THREE.Vector3(1.8,.8,3.1),state={yaw:0,pitch:0,zoom:1},home=position.clone(),target=new THREE.Vector3(-1.05,1.32,.55);
- const camera=createMobileCamera({position,state,getTarget:out=>out.copy(target),aspect:()=>.48});camera.view('under',0);camera.update(0,true);assert.ok(position.y>=.159);assert.ok(position.z<4.2);assert.equal(camera.underneath,true);camera.drag(100,20,1);camera.update(2.2);assert.ok(position.distanceTo(target)>2);
+ const camera=createMobileCamera({position,state,getTarget:out=>out.copy(target),aspect:()=>.48});camera.view('under',0);camera.update(0,true);assert.ok(position.y>=.159);assert.ok(position.z<4.2);assert.equal(camera.underneath,true);camera.drag(100,20,1);camera.update(2.2);assert.ok(position.distanceTo(target)>1.4);
  camera.restore(3,true);assert.ok(position.equals(home));assert.equal(camera.active,false);camera.reset();camera.update(4);assert.ok(position.equals(home));
 });
 
@@ -78,3 +78,25 @@ test('a new game repaints the same rear patches and hides them again without rep
  puzzle.reset();mobile.refreshDigits();state.reset();inspection.reset();
  mobile.animals.forEach((a,i)=>{assert.strictEqual(a.patch,patches[i]);assert.strictEqual(a.patch.material.map,maps[i]);assert.ok(maps[i].version>versions[i]);assert.equal(a.patch.name,`Stitched ${puzzle.digits[a.kind]} under ${a.kind}`);assert.equal(a.patch.visible,false);});
 }));
+
+test('continuous pointer dragging immediately orbits a full circle and reaches below the fixed mobile',()=>{
+ const target=new THREE.Vector3(-1.05,1.72,.55),position=new THREE.Vector3(1.85,.82,3.11),state={yaw:.78,pitch:-.07,zoom:.78},home={position:position.clone(),...state};
+ const controller=createMobileCamera({position,state,getTarget:out=>out.copy(target)});
+ controller.start(0);controller.update(2);const first=position.clone();
+ const radius=position.distanceTo(target),angles=new Set();
+ for(let i=0;i<120;i++){
+  const before=position.clone();controller.drag(10,0,2+i/60);controller.update(2+i/60);
+  assert.ok(position.distanceTo(before)>.01,'every drag updates the camera without waiting for an ease to finish');
+  assert.ok(Math.abs(position.distanceTo(target)-radius)<1e-8);angles.add(Math.floor((Math.atan2(position.x-target.x,position.z-target.z)+Math.PI)/(Math.PI/2)));
+ }
+ assert.equal(angles.size,4,'all four sides of the stationary mobile are accessible');assert.ok(position.distanceTo(first)>.1);
+ controller.drag(0,-400,4);assert.ok(position.y<target.y-1.4);assert.ok(position.y>=.159);
+ const direction=target.clone().sub(position).normalize(),look=new THREE.Vector3(-Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(state.yaw)*Math.cos(state.pitch));assert.ok(direction.dot(look)>.9999);
+ controller.restore(5);controller.drag(100,100,5.1);controller.update(6);assert.ok(position.equals(home.position));assert.equal(state.yaw,home.yaw);assert.equal(state.pitch,home.pitch);assert.equal(state.zoom,home.zoom);
+});
+
+test('portrait orbit reaches the underside without crossing the floor',()=>{
+ const target=new THREE.Vector3(-1.05,1.72,.55),position=new THREE.Vector3(1.85,.82,3.11),state={yaw:0,pitch:0,zoom:1};
+ const controller=createMobileCamera({position,state,getTarget:out=>out.copy(target),aspect:()=>390/844});controller.start(0);controller.update(2);controller.drag(0,-400);
+ assert.ok(position.y>=.159);assert.ok(position.y<.3);assert.ok(state.pitch>1.3,'camera looks up at the stitched undersides');assert.ok(state.zoom*62>90,'wider lens keeps the toys in a narrow viewport');
+});

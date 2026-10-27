@@ -458,9 +458,9 @@ restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.foc
 const restraintStatus=document.querySelector('#restraint-status');
 const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle});scene.add(mobileInspection.group);
 const mobileCamera=createMobileCamera({position:cameraPosition,state,getTarget:mobileInspection.getTarget,aspect:()=>camera.aspect,baseFov:homeCamera.fov});
-const mobileUI=createMobileInspectionUI({state:mobilePuzzle,inspectionCamera:mobileCamera,time:()=>state.time,onClose:closeMobileInspection,onFeedback:keyFeedback,puzzle:escapePuzzle});
+const mobileUI=createMobileInspectionUI({state:mobilePuzzle,time:()=>state.time,onFeedback:keyFeedback});
 const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,onFeedback:keyFeedback,puzzle:escapePuzzle});
-const documentViewer=createDocumentViewer({documents,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();resetting=false;chainMenu.hide();sawMenu.hide();},onClose(){canvas.focus({preventScroll:true});}});
+const documentViewer=createDocumentViewer({documents,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();resetting=false;chainMenu.hide();sawMenu.hide();},onClose(){canvas.focus({preventScroll:true});}});
 let selectingAnimal=false;
 const cancelSawSelection=document.querySelector('#cancel-saw-selection');
 cancelSawSelection.addEventListener('click',()=>{clearSawSelection();keyFeedback('You put the saw down.');canvas.focus({preventScroll:true});});
@@ -541,9 +541,19 @@ function inspectMobile(){
  if(sawBusy()||mobilePuzzle.active)return;
  if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Free your wrist before picking up the tangled mobile.');return;}
  clearSawSelection();putAxeBack();prepareSawAction();sawMenu.hide();
- if(mobilePuzzle.inspect()){mobileCamera.view('above',state.time);mobileUI.sync();keyFeedback(mobilePuzzle.phase==='repaired'?'The mobile is hanging here. Look underneath for the stitched numbers.':'The mobile is tangled. Inspect it, then find repair supplies.');}
+ if(mobilePuzzle.inspect()){mobileCamera.start(state.time);mobileUI.sync();keyFeedback(mobilePuzzle.phase==='repaired'?'Drag to look around the mobile.':'The mobile is tangled. Inspect it, then find repair supplies.');}
 }
-function closeMobileInspection(force=false){if(mobilePuzzle.close(force)){mobileCamera.restore(state.time,force);mobileUI.sync();releaseControls();canvas.focus({preventScroll:true});}}
+function closeMobileInspection(force=false){if(mobilePuzzle.close(true)){mobileCamera.restore(state.time,force);mobileUI.sync();syncInspectionBack();releaseControls();canvas.focus({preventScroll:true});}}
+const inspectionBack=document.querySelector('#inspection-back');
+function syncInspectionBack(){
+ inspectionBack.hidden=gameEnded||gameWon||documentViewer.active||doorKeypadUI.active||(!mobilePuzzle.active&&(!drawerCamera.active||drawerCamera.returning));
+}
+function leaveInspection(){
+ if(mobilePuzzle.active)closeMobileInspection();
+ else if(drawerCamera.active){releaseControls();drawerCamera.restore(state.time);canvas.focus({preventScroll:true});}
+ syncInspectionBack();
+}
+inspectionBack.addEventListener('click',leaveInspection);
 function takeMobileSupply(item){
  if(sawBusy())return;
  if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Unlock your shackle before taking supplies.');return;}
@@ -783,7 +793,7 @@ document.addEventListener('keydown',event=>{
  if(selectingAnimal&&event.code==='Escape'){event.preventDefault();clearSawSelection();keyFeedback('You put the saw down.');return;}
  if(selectingAnimal&&!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyR'].includes(event.code))return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
- if(event.code==='Escape'&&drawerCamera.active){event.preventDefault();drawerCamera.restore(state.time);return;}
+ if(event.code==='Escape'&&drawerCamera.active){event.preventDefault();leaveInspection();return;}
  if(event.target.closest('button')&&(event.code==='Space'||event.code==='Enter'))return;
  if(event.code==='Enter'&&event.target===canvas){event.preventDefault();openLaptop();}
  if(event.code==='KeyF'&&event.target===canvas&&!event.repeat){event.preventDefault();useCharging(chargingKit.nextAction);}
@@ -793,7 +803,7 @@ document.addEventListener('keydown',event=>{
  if(event.code==='Space'){event.preventDefault();state.space=true;}
  if(event.code==='KeyR'&&!event.repeat)resetView();
  if(event.code.startsWith('Arrow')){
-  event.preventDefault();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
+  event.preventDefault();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;
   if(event.code==='ArrowLeft')state.yaw=wrapAngle(state.yaw+.08);
   if(event.code==='ArrowRight')state.yaw=wrapAngle(state.yaw-.08);
   if(event.code==='ArrowUp')state.pitch=THREE.MathUtils.clamp(state.pitch+.05,-1.40,1.40);
@@ -803,7 +813,7 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
 window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
-createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!documentViewer.active&&!mobileCamera.returning&&!mobilePuzzle.active&&!doorKeypadUI.active&&!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!gameEnded&&!gameWon&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
+createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!documentViewer.active&&!mobileCamera.returning&&!mobilePuzzle.active&&!doorKeypadUI.active&&!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!gameEnded&&!gameWon&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
  if(mobilePuzzle.active){closeMobileInspection();return;}
@@ -821,17 +831,20 @@ canvas.addEventListener('pointerdown',event=>{
 });
 canvas.addEventListener('pointermove',event=>{
  if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer&&!mobilePuzzle.action){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
+ if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(dragPointer===null){const hit=interactionAt(event);hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad);canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
- if(pointerDistance>=6){arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();}
+ if(pointerDistance>=6){arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();}
  state.yaw=wrapAngle(state.yaw+dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
 });
 canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
  dragPointer=null;
- if(mobilePuzzle.active)return;
+ if(mobilePuzzle.active){
+  if(pointerDistance<6){const hit=interactionAt(event);if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)mobileUI.activate();}
+  return;
+ }
  if(pointerDistance<6){
   const hit=interactionAt(event);
   if(axeInteraction.held)swingFireAxe(hit);
@@ -856,7 +869,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>{hoveredDocument=null;hoveredFish=false;hoveredSupply=null;hoveredMobile=hoveredKeypad=false;canvas.classList.remove('over-puzzle');hoveredAlarm=false;canvas.classList.remove('over-alarm');hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-axe','over-tank','over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging','over-plush');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(mobilePuzzle.active||mobileCamera.returning||doorKeypadUI.active)return;if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(mobilePuzzle.active||mobileCamera.returning||doorKeypadUI.active)return;if(laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -943,7 +956,7 @@ function render(){
  const mouthTarget=state.space?1:Math.max(dialogueMouth,tapMouth);
  state.jaw=mix(state.jaw,mouthTarget,eased);jaw.position.y=-state.jaw*maxMouthTravel;
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
- const mobileEvent=mobileInspection.update(t,reducedMotion);mobileUI.sync();mobileSupplies.sync(mobilePuzzle);
+ const mobileEvent=mobileInspection.update(t,reducedMotion);mobileUI.sync();syncInspectionBack();mobileSupplies.sync(mobilePuzzle);
  if(mobileEvent)keyFeedback(mobileEvent==='cut'?'The tangled cords are cut. Restring the mobile next.':'Mobile repaired. Try a different perspective.');
  axeInteraction.update(t,reducedMotion);cancelAxeSelection.disabled=axeInteraction.active;
  const acidFinished=!fireAlarm.dying&&acidLeaks.update(t,dt,cameraPosition,camera,reducedMotion,{target:fireHazard.flowTarget()});
