@@ -8,7 +8,7 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
   if(locked||hitAt!==null||leaks.some(leak=>leak.index===index))return false;
   leaks.push({index,openedAt:time,progress:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
  }
- function update(time,dt,viewer,{target=viewer}={}){
+ function update(time,dt,viewer,{target=viewer,protectedFromAcid=false}={}){
   if(finished)return false;
   for(const leak of leaks){
    leak.progress=clamp((time-leak.openedAt)/1.35,0,1);
@@ -29,7 +29,7 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
    for(const [index,point] of leak.points.entries()){
     const age=clamp((time-point.born)/3,0,1);
     point.radius=index===0?.16+.23*age:.12+(.13+.025*Math.sin(point.born*1.8+leak.index))*age;
-    if(hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
+    if(!protectedFromAcid&&hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
    }
   }
   if(hitAt!==null&&time-hitAt>=.85){finished=true;return true;}

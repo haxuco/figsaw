@@ -234,7 +234,13 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   return settleChairPart(g,x,z,rotation);
  }
  aeronChair(-2.85,-2.48,[0,.35,-.035],{brokenArm:1,backTear:2});
- aeronChair(-.30,3.35,[-.08,-.28,.08],{brokenArm:-1,missingSpoke:3,backLean:-.16});
+ // The nearby left chair is worn but structurally sound enough to climb onto.
+ const refugeChair=aeronChair(-.30,3.35,[0,Math.PI-.20,0],{seatTear:0,backTear:1,backLean:-.08});
+ refugeChair.name='Usable Aeron chair';refugeChair.userData.chairSeat=true;
+ const chairRefuge={object:refugeChair,getView(eye,target){
+  refugeChair.updateWorldMatrix(true,false);refugeChair.localToWorld(eye.set(0,1.36,.025));
+  target.set(.7,.12,1.25);
+ }};
  aeronChair(2.75,3.30,[-.55,-.80,1.39],{brokenArm:-1,missingSpoke:2,backTwist:.20});
  aeronChair(-.55,-3.42,[1.65,.65,.32],{brokenArm:1,noBack:true});
  // A tipped chair and its detached base frame the right-hand aisle without covering the laptop.
@@ -743,5 +749,5 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,documents,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,chairRefuge,documents,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }
