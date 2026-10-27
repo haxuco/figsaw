@@ -23,7 +23,6 @@ import { createAlarmCamera } from './alarm-camera.js';
 import {createMobileCamera} from './mobile-camera.js';
 import {createMobilePuzzleState,createEscapePuzzle} from './mobile-puzzle-state.js';
 import {createDocumentViewer} from './wall-documents.js';
-import {fishSkullDocument} from './fish-skull-clue.js';
 import {createMobileInspection,createMobileInspectionUI} from './mobile-inspection.js';
 import {createDoorKeypadUI} from './door-keypad.js';
 import { createAxeInteraction } from './fire-axe.js';
@@ -461,8 +460,8 @@ const restraintStatus=document.querySelector('#restraint-status');
 const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle});scene.add(mobileInspection.group);
 const mobileCamera=createMobileCamera({position:cameraPosition,state,getTarget:mobileInspection.getTarget,aspect:()=>camera.aspect,baseFov:homeCamera.fov});
 const mobileUI=createMobileInspectionUI({state:mobilePuzzle,time:()=>state.time,onFeedback:keyFeedback});
-const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,onFeedback:keyFeedback,puzzle:escapePuzzle});
-const documentViewer=createDocumentViewer({documents,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();resetting=false;chainMenu.hide();sawMenu.hide();},onClose(){canvas.focus({preventScroll:true});}});
+const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,onFeedback:keyFeedback,puzzle:escapePuzzle,onOpen:target=>documentViewer.show(target),onClose:immediate=>documentViewer.hide(immediate)});
+const documentViewer=createDocumentViewer({documents,position:cameraPosition,state,aspect:()=>camera.aspect,baseFov:homeCamera.fov,scene,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;chainMenu.hide();sawMenu.hide();canvas.focus({preventScroll:true});},onClose(){canvas.focus({preventScroll:true});}});
 let selectingAnimal=false;
 const cancelSawSelection=document.querySelector('#cancel-saw-selection');
 cancelSawSelection.addEventListener('click',()=>{clearSawSelection();keyFeedback('You put the saw down.');canvas.focus({preventScroll:true});});
@@ -525,7 +524,7 @@ function interactionAt(event){
   for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
   return true;
  });
- for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
+ for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 const leaveChairButton=document.querySelector('#leave-chair');
@@ -547,8 +546,8 @@ function syncChairButton(){
 }
 function inspectDocument(hit){
  if(sawBusy())return;
- if(hit?.userData.wallDocument)documentViewer.show(hit.userData.wallDocument);
- else if(hit?.userData.fishClue&&figpalHoists.fishClueReady)documentViewer.show(fishSkullDocument(escapePuzzle));
+ if(hit?.userData.wallDocument)documentViewer.show(hit);
+ else if(hit?.userData.fishClue&&figpalHoists.fishClueReady)documentViewer.show(figpalHoists.fishInspectionTarget);
 }
 function escapeRoom(){
  if(gameEnded||gameWon)return;exitDoor.unlock();gameWon=true;leaveChairButton.hidden=true;escapedAt=state.time;
@@ -566,10 +565,13 @@ function inspectMobile(){
 function closeMobileInspection(force=false){if(mobilePuzzle.close(true)){mobileCamera.restore(state.time,force);mobileUI.sync();syncInspectionBack();releaseControls();canvas.focus({preventScroll:true});}}
 const inspectionBack=document.querySelector('#inspection-back');
 function syncInspectionBack(){
- inspectionBack.hidden=gameEnded||gameWon||documentViewer.active||doorKeypadUI.active||(!mobilePuzzle.active&&(!drawerCamera.active||drawerCamera.returning));
+ inspectionBack.hidden=gameEnded||gameWon||documentViewer.returning||(!documentViewer.active&&!mobilePuzzle.active&&(!drawerCamera.active||drawerCamera.returning));
 }
 function leaveInspection(){
- if(mobilePuzzle.active)closeMobileInspection();
+ releaseControls();
+ if(doorKeypadUI.active)doorKeypadUI.hide(false);
+ else if(documentViewer.active)documentViewer.hide(false);
+ else if(mobilePuzzle.active)closeMobileInspection();
  else if(drawerCamera.active){releaseControls();drawerCamera.restore(state.time);canvas.focus({preventScroll:true});}
  syncInspectionBack();
 }
@@ -802,7 +804,16 @@ document.addEventListener('keydown',event=>{
   return;
  }
  if((chairSeat.moving||figpalRounds.active||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
- if(documentViewer.active||chainMenu.active||sawMenu.active||doorKeypadUI.active||mobileCamera.returning)return;
+ if(documentViewer.active){
+  if(event.metaKey||event.ctrlKey||event.altKey)return;
+  if(event.target.closest('button')&&(event.code==='Enter'||event.code==='Space'))return;
+  if(event.code==='Escape'){event.preventDefault();leaveInspection();}
+  else if(doorKeypadUI.active&&(/^\d$/.test(event.key)||['Backspace','Enter','Delete'].includes(event.key))){event.preventDefault();doorKeypadUI.press(event.key==='Enter'?'enter':event.key==='Backspace'?'back':event.key==='Delete'?'clear':event.key);}
+  else if(event.code.startsWith('Arrow')){event.preventDefault();documentViewer.drag(event.code==='ArrowLeft'?30:event.code==='ArrowRight'?-30:0,event.code==='ArrowUp'?30:event.code==='ArrowDown'?-30:0);}
+  else if(['+','=','-'].includes(event.key)){event.preventDefault();documentViewer.setZoom(documentViewer.zoom*(event.key==='-'?1.25:.8));}
+  return;
+ }
+ if(chainMenu.active||sawMenu.active||mobileCamera.returning)return;
  if(mobilePuzzle.active){
   if(event.code==='Escape'){event.preventDefault();closeMobileInspection();}
   else if(event.code.startsWith('Arrow')){event.preventDefault();mobileCamera.drag(event.code==='ArrowLeft'?-12:event.code==='ArrowRight'?12:0,event.code==='ArrowUp'?12:event.code==='ArrowDown'?-12:0,state.time);}
@@ -834,9 +845,10 @@ document.addEventListener('keydown',event=>{
 document.addEventListener('keyup',event=>{if(event.code==='Space')state.space=false;});
 window.addEventListener('blur',releaseControls);
 document.addEventListener('visibilitychange',()=>{if(document.hidden)releaseControls();});
-createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;},canInteract:()=>!chairSeat.moving&&!documentViewer.active&&!mobileCamera.returning&&!mobilePuzzle.active&&!doorKeypadUI.active&&!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!gameEnded&&!gameWon&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
+createTouchNavigation({canvas,state,cancel(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;},getZoom:()=>documentViewer.active?documentViewer.zoom:state.zoom,setZoom:value=>{if(documentViewer.active)documentViewer.setZoom(value);else state.zoom=THREE.MathUtils.clamp(value,.60,1.15);},canInteract:()=>!documentViewer.returning&&!chairSeat.moving&&!mobileCamera.returning&&!mobilePuzzle.active&&!figpalRounds.active&&!laptopOpening.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!gameEnded&&!gameWon&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying});
 canvas.addEventListener('contextmenu',event=>{
  event.preventDefault();releaseControls();
+ if(documentViewer.active){leaveInspection();return;}
  if(mobilePuzzle.active){closeMobileInspection();return;}
  if(chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(axeInteraction.held){putAxeBack();keyFeedback('You return the axe to its brackets.');return;}
@@ -844,7 +856,7 @@ canvas.addEventListener('contextmenu',event=>{
  if(restraint.locked&&interactionAt(event)===restraint.target)chainMenu.show(event.clientX,event.clientY);else chainMenu.hide();
 });
 canvas.addEventListener('pointerdown',event=>{
- if(chairSeat.moving||mobileCamera.returning||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(documentViewer.returning||chairSeat.moving||mobileCamera.returning||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(event.button!==0)return;
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
@@ -852,6 +864,7 @@ canvas.addEventListener('pointerdown',event=>{
 });
 canvas.addEventListener('pointermove',event=>{
  if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(documentViewer.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);documentViewer.drag(dx,dy);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(dragPointer===null){const hit=interactionAt(event);hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair);hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad);canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
@@ -862,6 +875,7 @@ canvas.addEventListener('pointermove',event=>{
 canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
  dragPointer=null;
+ if(documentViewer.active){if(!documentViewer.returning&&pointerDistance<6){const hit=interactionAt(event);if(doorKeypadUI.active&&hit?.userData.keypadKey)doorKeypadUI.press(hit.userData.keypadKey);else if(!doorKeypadUI.active&&hit?.userData.wallDocument&&hit!==documentViewer.target)inspectDocument(hit);}return;}
  if(mobilePuzzle.active){
   if(pointerDistance<6){const hit=interactionAt(event);if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)mobileUI.activate();}
   return;
@@ -875,7 +889,7 @@ canvas.addEventListener('pointerup',event=>{
   else if(hit?.userData.wallDocument||hit?.userData.fishClue)inspectDocument(hit);
   else if(hit?.userData.supplyAction)takeMobileSupply(hit.userData.supplyAction);
   else if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)inspectMobile();
-  else if(hit?.userData.exitKeypad)useDoorKeypad();
+  else if(hit?.userData.exitKeypad||hit?.userData.keypadKey)useDoorKeypad();
   else if(hit?.userData.keyAction)useKeyObject(hit.userData.keyAction);
   else if(hit?.userData.fireAlarm)pullFireAlarm();
   else if(hit===restraint.target&&restraint.locked)chainMenu.show(event.clientX,event.clientY);
@@ -891,7 +905,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>{hoveredChair=false;canvas.classList.remove('over-chair');hoveredDocument=null;hoveredFish=false;hoveredSupply=null;hoveredMobile=hoveredKeypad=false;canvas.classList.remove('over-puzzle');hoveredAlarm=false;canvas.classList.remove('over-alarm');hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-axe','over-tank','over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging','over-plush');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(mobilePuzzle.active||mobileCamera.returning||doorKeypadUI.active)return;if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(documentViewer.active){documentViewer.setZoom(documentViewer.zoom*Math.exp(event.deltaY*.0015));return;}if(mobilePuzzle.active||mobileCamera.returning)return;if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -961,11 +975,11 @@ function render(){
  if(entranceArrived&&t>=nextDialogueAt)showFigsawDialogue(dialogueLineIndex+1);
  if(arrivalCameraMove.active)resetting=false;
  if(dragPointer!==null)arrivalCameraMove.cancel();
- if(chairSeat.occupied||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||drawerCamera.active||mobileCamera.active)arrivalCameraMove.cancel();
+ if(chairSeat.occupied||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||drawerCamera.active||mobileCamera.active||documentViewer.active)arrivalCameraMove.cancel();
  arrivalCameraMove.update(t,cameraPosition,state,reducedMotion);
  drawerCamera.update(t,reducedMotion);acidCamera.update(t,reducedMotion);alarmCamera.update(t,reducedMotion);chairSeat.update(t,reducedMotion);
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
- updateFigpalRound(t);figpalCamera.update(t,reducedMotion);mobileCamera.update(t,reducedMotion);
+ updateFigpalRound(t);figpalCamera.update(t,reducedMotion);mobileCamera.update(t,reducedMotion);documentViewer.update(t,reducedMotion);
  const viewYaw=state.yaw;
  // Manual controls rotate the view only; scripted interactions own camera position.
  camera.position.copy(cameraPosition);
@@ -981,8 +995,9 @@ function render(){
  const mobileEvent=mobileInspection.update(t,reducedMotion);mobileUI.sync();syncInspectionBack();syncChairButton();mobileSupplies.sync(mobilePuzzle);
  if(mobileEvent)keyFeedback(mobileEvent==='cut'?'The tangled cords are cut. Restring the mobile next.':'Mobile repaired. Try a different perspective.');
  axeInteraction.update(t,reducedMotion);cancelAxeSelection.disabled=axeInteraction.active;
- const acidFinished=!fireAlarm.dying&&acidLeaks.update(t,dt,chairSeat.hazardPosition,camera,reducedMotion,{target:fireHazard.flowTarget(),protectedFromAcid:chairSeat.protectedFromAcid});
- const fireFinished=fireHazard.update(t,dt,chairSeat.hazardPosition,camera,reducedMotion,fireAlarm.dying);
+ const physicalPosition=chairSeat.occupied?chairSeat.hazardPosition:documentViewer.origin;
+ const acidFinished=!fireAlarm.dying&&acidLeaks.update(t,dt,physicalPosition,camera,reducedMotion,{target:fireHazard.flowTarget(),protectedFromAcid:chairSeat.protectedFromAcid});
+ const fireFinished=fireHazard.update(t,dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
  const alarmFinished=fireAlarm.update(t,camera,reducedMotion);
  const fireMessage=fireHazard.takeMessage();if(fireMessage&&!fireAlarm.dying){chargingToast=fireMessage;chargingToastUntil=t+5;restraintStatus.textContent=fireMessage;}
  if(acidLeaks.dying||fireHazard.dying||fireAlarm.dying)releaseControls();

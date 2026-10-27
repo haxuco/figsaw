@@ -40,5 +40,8 @@ export function wornPaperGeometry(w,h,variant=0){
   const curl=Math.pow(Math.max(0,v-.56),2)*h*.42*(.5+u)+Math.sin(u*8+variant)*Math.sin(v*Math.PI)*w*.007;
   p.setXYZ(i,x,y,curl);
  }
+ // Wrinkles must lift off the backing, never sink through it and obscure text.
+ let minZ=0;for(let i=0;i<p.count;i++)minZ=Math.min(minZ,p.getZ(i));
+ if(minZ<0)for(let i=0;i<p.count;i++)p.setZ(i,p.getZ(i)-minZ);
  geo.computeVertexNormals();return geo;
 }

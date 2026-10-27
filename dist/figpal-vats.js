@@ -214,7 +214,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
   const transformation=createFigpalTransformation(captive.object,i);
   const skullClue=i===2&&puzzle?createFishSkullClue(puzzle):null;
-  if(skullClue){transformation.skeleton.add(skullClue.mesh);transformation.skeleton.userData.fishClue=true;}
+  if(skullClue){transformation.attachBoneDetail(skullClue.mesh);transformation.skeleton.userData.fishClue=true;transformation.skeleton.userData.inspectionFrame={center:[-.10,.055,.133],width:.60,height:.50,distance:.95,lift:.20};}
   if(i===2){
    const c=document.createElement('canvas');c.width=512;c.height=144;const p=c.getContext('2d');p.fillStyle='#c0b68f';p.fillRect(0,0,512,144);p.strokeStyle='#655e43';p.strokeRect(8,8,496,128);p.textAlign='center';p.fillStyle='#30392d';p.font='bold 32px Arial';p.fillText('PUFF',256,46);p.font='bold 37px Arial';p.fillText('PRODUCT MANAGER',256,101);
    const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
@@ -278,7 +278,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
    rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
    rig.transformation.update(1.086);
-   if(rig.skullClue){rig.skullClue.mesh.visible=rig.transformation.transformed;rig.vat.userData.fishClue=rig.transformation.transformed;if(rig.transformation.transformed)puzzle.revealFish();}
+   if(rig.skullClue){rig.vat.userData.fishClue=rig.transformation.cutHeight>.155;if(rig.transformation.cutHeight>.215)puzzle.revealFish();}
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
   for(const vat of vats){
@@ -305,5 +305,5 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  return {group,update,tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
-  canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[2].transformation.transformed;}};
+  canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[2].transformation.skeleton;}};
 }

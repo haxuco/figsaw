@@ -29,3 +29,10 @@ test('cancelled or blocked touch gestures cannot leave zoom stuck',()=>{
  allowed=false;pointer(canvas,'pointerdown',3,0,0);pointer(canvas,'pointerdown',4,100,0);pointer(canvas,'pointermove',4,200,0);assert.equal(state.zoom,1);
  nav.reset();allowed=true;pointer(canvas,'pointerdown',5,0,0);pointer(canvas,'pointerdown',6,100,0);pointer(canvas,'pointermove',6,200,0);assert.equal(state.zoom,.60);
 });
+
+test('pinching an inspection uses its own zoom without overwriting the camera transition',()=>{
+ const canvas=new Element(),state={zoom:.78};let zoom=1;
+ createTouchNavigation({canvas,state,cancel(){},canInteract:()=>true,getZoom:()=>zoom,setZoom:value=>zoom=value});
+ pointer(canvas,'pointerdown',1,0,0);pointer(canvas,'pointerdown',2,100,0);pointer(canvas,'pointermove',2,300,0);
+ assert.equal(zoom,1/3);assert.equal(state.zoom,.78);
+});

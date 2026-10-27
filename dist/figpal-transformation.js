@@ -34,5 +34,5 @@ export function createFigpalTransformation(captive,index){
  }
  update(-100);
  function reset(){cut=bounds.min.y-.04;transformed=false;update(-100);}
- return {skeleton,update,reset,get transformed(){return transformed;},get cutHeight(){return cut;}};
+ return {skeleton,update,reset,attachBoneDetail(object){clipMaterials(object,bonePlane);skeleton.add(object);},get transformed(){return transformed;},get cutHeight(){return cut;}};
 }
