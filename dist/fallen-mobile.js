@@ -5,16 +5,17 @@ import * as THREE from './vendor/three.module.js';
 import { settleOnFloor, drapeFloorCable, floorClearance } from './floor-contact.js';
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
-export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
- const animals=[],strings=[],shadows=[];
+export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=null){
+ const animals=[],strings=[],shadows=[],digitPainters=[];
  const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.userData.mobilePuzzle=true;group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
- const [canvas,ctx]=artCanvas(512);ctx.fillStyle='#c6c1ac';ctx.fillRect(0,0,512,512);
+ const [canvas,ctx]=artCanvas(512);ctx.fillStyle='#e0d9c7';ctx.fillRect(0,0,512,512);
  for(let i=0;i<7000;i++){const x=random()*512,y=random()*512;ctx.strokeStyle=i%2?'rgba(58,52,36,.12)':'rgba(246,236,212,.28)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2,y+3);ctx.stroke();}
- for(let i=0;i<45;i++){const x=random()*512,y=random()*512,r=8+random()*70,g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(63,52,31,.15)');g.addColorStop(1,'rgba(63,52,31,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
+ for(let i=0;i<6500;i++){const x=random()*512,y=random()*512;ctx.strokeStyle=i%3?'rgba(255,249,227,.32)':'rgba(85,72,54,.13)';ctx.lineWidth=1.2;ctx.beginPath();ctx.ellipse(x,y,1.3,2.2,random()*Math.PI,0,Math.PI*1.7);ctx.stroke();}
+ for(let i=0;i<18;i++){const x=random()*512,y=random()*512,r=8+random()*70,g=ctx.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,'rgba(63,52,31,.15)');g.addColorStop(1,'rgba(63,52,31,0)');ctx.fillStyle=g;ctx.fillRect(x-r,y-r,r*2,r*2);}
  function texture(c){const t=new THREE.CanvasTexture(c);t.colorSpace=THREE.SRGBColorSpace;t.anisotropy=4;return t;}
  const fabricMap=texture(canvas);
- function plush(color,map=fabricMap){return new THREE.MeshPhysicalMaterial({color,map,bumpMap:fabricMap,bumpScale:.0012,roughness:.96,sheen:.32,sheenColor:0xbdb9a8,sheenRoughness:.95});}
+ function plush(color,map=fabricMap){return new THREE.MeshPhysicalMaterial({color,map,bumpMap:fabricMap,bumpScale:.0023,roughness:1,sheen:.65,sheenColor:0xbdb9a8,sheenRoughness:.95});}
  const pink=plush(0xd2989e),pinkPale=plush(0xe1b5ac),blue=plush(0x779da9),blueDark=plush(0x506c80),ochre=plush(0xd7a455),cream=plush(0xe6d6a9),brown=plush(0x34302b);
  const thread=new THREE.MeshStandardMaterial({color:0x60574b,roughness:1});
  const cord=new THREE.MeshStandardMaterial({color:0xa09b80,roughness:1});
@@ -23,7 +24,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  const metal=new THREE.MeshStandardMaterial({color:0x7c8275,metalness:.65,roughness:.56});
  const [stripeCanvas,stripeCtx]=artCanvas(512);stripeCtx.drawImage(canvas,0,0,512,512);
  stripeCtx.fillStyle='#343027';
- for(let i=0;i<12;i++){const x=i*45-15,y=(i%2)*30;stripeCtx.beginPath();stripeCtx.moveTo(x,y);stripeCtx.bezierCurveTo(x+55,105,x+8,180,x+51,268);stripeCtx.lineTo(x+23,238);stripeCtx.bezierCurveTo(x-12,148,x+26,93,x-9,y);stripeCtx.fill();stripeCtx.beginPath();stripeCtx.moveTo(x+25,512);stripeCtx.bezierCurveTo(x+69,417,x+6,367,x+45,285);stripeCtx.lineTo(x+24,314);stripeCtx.bezierCurveTo(x-11,395,x+41,438,x-3,512);stripeCtx.fill();}
+ for(let i=0;i<7;i++){const x=i*76-12,y=70+(i%2)*24;stripeCtx.beginPath();stripeCtx.moveTo(x,y);stripeCtx.bezierCurveTo(x+55,105,x+8,180,x+51,268);stripeCtx.lineTo(x+23,238);stripeCtx.bezierCurveTo(x-12,148,x+26,93,x-9,y);stripeCtx.fill();stripeCtx.beginPath();stripeCtx.moveTo(x+25,446);stripeCtx.bezierCurveTo(x+69,417,x+6,367,x+45,285);stripeCtx.lineTo(x+24,314);stripeCtx.bezierCurveTo(x-11,395,x+41,418,x-3,446);stripeCtx.fill();}
  const tigerMat=plush(0xd9a05d,texture(stripeCanvas));
  const sphereGeometry=new THREE.SphereGeometry(1,quality.mobile?12:24,quality.mobile?8:16);
  function mesh(geometry,mat,parent=group){const m=new THREE.Mesh(geometry,mat);m.castShadow=true;m.receiveShadow=true;parent.add(m);return m;}
@@ -32,12 +33,25 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  function rod(a,b,r,mat,parent=group){const start=new THREE.Vector3(...a),end=new THREE.Vector3(...b),d=end.clone().sub(start);const m=mesh(new THREE.CylinderGeometry(r,r,d.length(),12),mat,parent);m.position.copy(start).add(end).multiplyScalar(.5);m.quaternion.setFromUnitVectors(new THREE.Vector3(0,1,0),d.normalize());return m;}
  function box(size,pos,mat,parent=group){const m=mesh(new THREE.BoxGeometry(...size),mat,parent);m.position.set(...pos);return m;}
  function ear(pos,size,mat,parent){const s=new THREE.Shape();s.moveTo(-.5,0);s.quadraticCurveTo(-.48,.44,0,1);s.quadraticCurveTo(.49,.49,.5,0);s.quadraticCurveTo(0,-.1,-.5,0);const g=new THREE.ExtrudeGeometry(s,{depth:.18,bevelEnabled:true,bevelSize:.06,bevelThickness:.05,bevelSegments:2,curveSegments:8,steps:1});g.translate(0,0,-.09);const m=mesh(g,mat,parent);m.scale.set(...size);m.position.set(...pos);return m;}
- function eyes(parent,z,y=.092,x=.047){for(const side of[-1,1])ball([side*x,y,z],[.009,.012,.007],black,parent);}
+ function eyes(parent,z,y=.092,x=.047){for(const side of[-1,1]){ball([side*x,y,z],[.012,.014,.008],black,parent);ball([side*x-.003,y+.005,z-.007],[.0032,.0032,.0018],cream,parent);}}
+ // Short curled pile catches the light at the silhouette, without costly fur shells.
+ function pile(pos,size,mat,parent,count){
+  const vertices=[],normals=[];
+  for(let i=0;i<count;i++){
+   const a=random()*Math.PI*2,z=random()*2-1,r=Math.sqrt(1-z*z),normal=new THREE.Vector3(r*Math.cos(a),z,r*Math.sin(a));
+   const at=new THREE.Vector3(pos[0]+normal.x*size[0],pos[1]+normal.y*size[1],pos[2]+normal.z*size[2]);
+   const tangent=new THREE.Vector3(-normal.z,.2,normal.x).normalize(),length=.002+random()*.0035;
+   const tip=at.clone().addScaledVector(normal,length).addScaledVector(tangent,length*.4);
+   for(const v of[at.clone().addScaledVector(tangent,-.0007),at.clone().addScaledVector(tangent,.0007),tip]){vertices.push(...v);normals.push(...normal);}
+  }
+  const geometry=new THREE.BufferGeometry();geometry.setAttribute('position',new THREE.Float32BufferAttribute(vertices,3));geometry.setAttribute('normal',new THREE.Float32BufferAttribute(normals,3));
+  const fiber=new THREE.MeshStandardMaterial({color:mat.color,roughness:1,side:THREE.DoubleSide});const m=mesh(geometry,fiber,parent);m.name='Soft short plush pile';m.castShadow=false;
+ }
  function makeAnimal(kind){
   const g=new THREE.Group();g.name=`${kind} mobile animal`;g.userData.stuffedAnimal=kind;
   const mat=kind==='Pig'?pink:kind==='Elephant'?blue:kind==='Tiger'?tigerMat:ochre;
   // Rounded plush haunches retain their tails; underside embroidery supplies the clue.
-  const body=ball([0,.065,-.025],[.112,.091,.154],mat,g);body.name='Soft body resting on the floor';
+  const body=ball([0,.065,-.025],[.112,.091,.154],mat,g);body.name='Soft body resting on the floor';pile([0,.065,-.025],[.112,.091,.154],mat,g,quality.mobile?90:360);
   for(const side of[-1,1])ball([side*.047,.073,.080],[.077,.090,.090],mat,g);
 
   for(const side of[-1,1])for(const z of[-.106,.100]){
@@ -47,7 +61,8 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
   }
   // Articulate the whole face together when the torso hangs rear-down.
   const headPose=new THREE.Group();headPose.name=`${kind} head pose`;g.add(headPose);
-  ball([0,.102,-.170],kind==='Elephant'?[.097,.094,.094]:[.090,.083,.083],mat,headPose);
+  ball([0,.102,-.170],kind==='Elephant'?[.105,.101,.101]:[.098,.091,.090],mat,headPose);
+  pile([0,.102,-.170],kind==='Elephant'?[.105,.101,.101]:[.098,.091,.090],mat,headPose,quality.mobile?75:300);
   if(kind==='Pig'){
    ball([0,.080,-.244],[.049,.032,.024],pinkPale,headPose);for(const side of[-1,1])ball([side*.019,.082,-.267],[.006,.009,.003],brown,headPose);
    for(const side of[-1,1]){const e=ear([side*.061,.153,-.177],[.072,.083,.09],pink,headPose);e.rotation.z=-side*.35;}
@@ -59,17 +74,21 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
    eyes(headPose,-.248,.127,.043);
    line([[0,.122,.150],[.025,.115,.185],[.042,.080,.199]],.006,blueDark,g);ball([.044,.077,.200],[.013,.018,.012],blueDark,g);
   }else{
-   for(const side of[-1,1]){const e=ear([side*.057,.155,-.172],[.067,.071,.10],mat,headPose);e.rotation.z=-side*.26;ear([side*.057,.162,-.184],[.038,.045,.055],pinkPale,headPose);}
-   for(const side of[-1,1])ball([side*.025,.076,-.235],[.035,.027,.023],cream,headPose);
+   for(const side of[-1,1]){
+    if(kind==='Tiger'){ball([side*.073,.175,-.168],[.034,.036,.022],mat,headPose);ball([side*.073,.177,-.188],[.021,.023,.007],pinkPale,headPose);}
+    else{const e=ear([side*.065,.165,-.172],[.076,.083,.10],mat,headPose);e.rotation.z=-side*.26;ear([side*.065,.173,-.184],[.043,.053,.055],cream,headPose);}
+   }
+   for(const side of[-1,1])ball([side*.025,.076,-.235],[.039,.032,.026],cream,headPose);
    ball([0,.091,-.260],[.015,.011,.011],brown,headPose);eyes(headPose,-.241,.124,.044);
    if(kind==='Tiger'){
     line([[0,.134,.150],[.035,.162,.193],[.067,.155,.201],[.075,.129,.182]],.012,tigerMat,g);
     ball([.075,.129,.182],[.014,.015,.016],brown,g);
    }else{
-    const tail=ball([.042,.130,.191],[.058,.061,.131],ochre,g);tail.rotation.x=-.45;tail.rotation.z=-.25;
-    const tip=ball([.039,.182,.271],[.045,.046,.061],cream,g);tip.rotation.x=-.45;
+    const tail=ball([.145,.145,.175],[.058,.061,.131],ochre,g);tail.rotation.x=-.55;tail.rotation.z=-.62;
+    const tip=ball([.202,.204,.251],[.045,.046,.061],cream,g);tip.rotation.x=-.45;
    }
   }
+  if(kind!=='Elephant')line([[-.020,.060,-.255],[0,.051,-.259],[.020,.060,-.255]],.0017,brown,headPose);
   headPose.position.set(0,.102,-.170);
   for(const part of headPose.children)part.position.sub(headPose.position);
   // Fabric seam on each flank and a small suspension tab on the shoulder.
@@ -141,10 +160,14 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
  // Stitch the numbers onto the rounded rear below the tail, not the belly.
  for(const animal of animals){
   const c=document.createElement('canvas');c.width=c.height=256;const p=c.getContext('2d');
+  function paintDigit(){const digit=(puzzle?.digits??ANIMAL_DIGITS)[animal.kind];p.clearRect(0,0,256,256);
   p.fillStyle='#777164';p.beginPath();p.ellipse(128,128,109,116,0,0,Math.PI*2);p.fill();
   p.strokeStyle='#c9bea3';p.lineWidth=3;p.setLineDash([5,5]);p.beginPath();p.ellipse(128,128,99,106,0,0,Math.PI*2);p.stroke();
-  p.font='bold 174px Georgia';p.textAlign='center';p.textBaseline='middle';p.fillStyle='#e7d9b8';p.fillText(ANIMAL_DIGITS[animal.kind],128,139);
-  p.strokeStyle='#aaa08b';p.lineWidth=2;p.setLineDash([2,4]);p.strokeText(ANIMAL_DIGITS[animal.kind],128,139);
+  p.font='bold 174px Georgia';p.textAlign='center';p.textBaseline='middle';p.fillStyle='#e7d9b8';p.fillText(digit,128,139);
+  p.strokeStyle='#aaa08b';p.lineWidth=2;p.setLineDash([2,4]);p.strokeText(digit,128,139);
+  p.setLineDash([]);p.strokeStyle='#e7d9b8';p.lineWidth=4;p.beginPath();p.moveTo(96,219);p.lineTo(160,219);p.stroke();
+  }
+  paintDigit();
   const material=new THREE.MeshStandardMaterial({map:texture(c),transparent:true,alphaTest:.15,roughness:1});
   const geometry=new THREE.PlaneGeometry(.100,.082,16,12),positions=geometry.attributes.position;
   for(let i=0;i<positions.count;i++){
@@ -155,12 +178,13 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003){
    positions.setXYZ(i,x,y,Math.max(haunch,stitchedBridge)+.0018);
   }
   geometry.computeVertexNormals();
-  const patch=new THREE.Mesh(geometry,material);patch.name=`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`;animal.object.add(patch);
+  const patch=new THREE.Mesh(geometry,material);patch.name=`Stitched ${(puzzle?.digits??ANIMAL_DIGITS)[animal.kind]} under ${animal.kind}`;animal.object.add(patch);animal.patch=patch;
+  digitPainters.push(()=>{paintDigit();material.map.needsUpdate=true;patch.name=`Stitched ${(puzzle?.digits??ANIMAL_DIGITS)[animal.kind]} under ${animal.kind}`;});
  }
  const tangled=new THREE.Group();tangled.name='Knotted and crossed mobile cords';group.add(tangled);
  for(let j=0;j<7;j++){
   const points=[];for(let i=0;i<=28;i++){const a=i/28*Math.PI*2.5+j*.77,r=.14+.11*Math.sin(a*2+j);const x=Math.cos(a)*r,z=Math.sin(a)*r;points.push([x,floorSupport(group.position.x+x,group.position.z+z)+.013+j*.0015,z]);}
   line(points,.0023,cord,tangled);
  }
- return {group,animals,strings,shadows,tangled};
+ return {group,animals,strings,shadows,tangled,refreshDigits(){digitPainters.forEach(paint=>paint());}};
 }

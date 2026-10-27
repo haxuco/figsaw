@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createMobilePuzzleState,createDoorKeypadState,ANIMAL_DIGITS} from '../dist/mobile-puzzle-state.js';
+import {createMobilePuzzleState,createDoorKeypadState,createEscapePuzzle,ANIMAL_DIGITS} from '../dist/mobile-puzzle-state.js';
 import {createFallenMobile} from '../dist/fallen-mobile.js';
 import {createMobileInspection} from '../dist/mobile-inspection.js';
 import {createMobileSupplies} from '../dist/mobile-supplies.js';
@@ -26,7 +26,7 @@ test('supplies require a free wrist and an open ready drawer; cutting and restri
 test('reduced motion completes each repair step once, and interruption does not expose a half repaired clue',()=>{
  const s=createMobilePuzzleState();collect(s);s.inspect();s.cut(0);assert.equal(s.update(.25,true),'cut');assert.equal(s.update(.5,true),null);s.restring(1);s.close(true);assert.equal(s.active,false);assert.equal(s.phase,'cut');s.reset();assert.equal(s.phase,'tangled');s.inspect();assert.equal(s.cut(2),false);
 });
-test('keypad limits input and stays locked while the future ordering clue is unassigned',()=>{
+test('an unconfigured keypad limits input and cannot accidentally unlock',()=>{
  const k=createDoorKeypadState();assert.equal(k.configured,false);k.press('7',{locked:true});assert.equal(k.entry,'');
  for(const digit of'73821')k.press(digit);assert.equal(k.entry,'7382');assert.match(k.press('enter'),/animal order/);assert.equal(k.unlocked,false);assert.equal(k.entry,'');k.press('3');k.press('back');assert.equal(k.entry,'');assert.match(k.press('enter'),/four/);
 });
@@ -70,3 +70,11 @@ test('portrait inspection stays inside the room and a forced interruption restor
  const camera=createMobileCamera({position,state,getTarget:out=>out.copy(target),aspect:()=>.48});camera.view('under',0);camera.update(0,true);assert.ok(position.y>=.159);assert.ok(position.z<4.2);assert.equal(camera.underneath,true);camera.drag(100,20,1);camera.update(2.2);assert.ok(position.distanceTo(target)>2);
  camera.restore(3,true);assert.ok(position.equals(home));assert.equal(camera.active,false);camera.reset();camera.update(4);assert.ok(position.equals(home));
 });
+
+test('a new game repaints the same rear patches and hides them again without replacing the animals',()=>withCanvas(()=>{
+ const puzzle=createEscapePuzzle(()=>.31),mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11),()=>.012,puzzle),state=createMobilePuzzleState(),inspection=createMobileInspection({mobile,state});
+ const patches=mobile.animals.map(a=>a.patch),maps=patches.map(p=>p.material.map),versions=maps.map(m=>m.version);
+ state.inspect();collect(state);state.cut(0);inspection.update(.3,true);state.restring(.4);inspection.update(.7,true);assert.ok(patches.every(p=>p.visible));
+ puzzle.reset();mobile.refreshDigits();state.reset();inspection.reset();
+ mobile.animals.forEach((a,i)=>{assert.strictEqual(a.patch,patches[i]);assert.strictEqual(a.patch.material.map,maps[i]);assert.ok(maps[i].version>versions[i]);assert.equal(a.patch.name,`Stitched ${puzzle.digits[a.kind]} under ${a.kind}`);assert.equal(a.patch.visible,false);});
+}));

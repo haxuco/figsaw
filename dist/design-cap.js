@@ -5,7 +5,7 @@ import {settleOnFloor} from './floor-contact.js';
 
 // A six-panel cotton cap, with the reference's irregular three-line embroidery.
 // The small procedural textures keep this floor prop cheap to load on phones.
-export function createDesignCap(viewer,floorSupport){
+export function createDesignCap(viewer,floorSupport,{worn=false}={}){
  const group=new THREE.Group();group.name='Black DESIGN IS DEAD embroidered cap';
  const [cloth,ctx]=artCanvas(128);ctx.fillStyle='#292a29';ctx.fillRect(0,0,128,128);
  for(let i=-128;i<256;i+=3){ctx.strokeStyle=i%2?'#343534':'#202120';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i+128,128);ctx.stroke();}
@@ -62,6 +62,7 @@ export function createDesignCap(viewer,floorSupport){
  const lettering=new THREE.CanvasTexture(letterCanvas);lettering.colorSpace=THREE.SRGBColorSpace;lettering.anisotropy=quality.mobile?2:4;
  const embroidery=new THREE.MeshStandardMaterial({map:lettering,transparent:true,alphaTest:.15,emissive:0xffffff,emissiveMap:lettering,emissiveIntensity:.10,roughness:.95,bumpMap:quality.mobile?null:lettering,bumpScale:.0008,side:THREE.DoubleSide,depthWrite:false});
  add(surface(14,32,(u,v)=>crown((u-.5)*1.68,.49+v*1.00,.0018)),embroidery).name='White DESIGN / IS / DEAD embroidery with quotation marks';
+ if(worn)return group;
  group.position.set(-.80,0,-.65);group.rotation.set(-.04,Math.atan2(viewer.x-group.position.x,viewer.z-group.position.z)-.91,0,'YXZ');
  settleOnFloor(group,floorSupport);
  // A soft contact footprint also grounds the bill with mobile shadows disabled.

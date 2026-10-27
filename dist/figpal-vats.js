@@ -1,3 +1,5 @@
+import {createDesignCap} from './design-cap.js';
+import {createFishSkullClue} from './fish-skull-clue.js';
 import {createTankBreakage} from './tank-breakage.js';
 import {batchStaticScenery} from './static-batching.js';
 import {useMobileMaterials} from './scene-budget.js';
@@ -11,7 +13,7 @@ import { createTankDecalFactory } from './tank-decal.js';
 
 // The three little captives are modeled from the supplied Figpals illustration.
 // Shapes, glass, liquid and wear are procedural; the supplied tank decal is bundled.
-export function createFigpalVats({floorSupport}={}){
+export function createFigpalVats({floorSupport,puzzle}={}){
  function batchRigid(root,options={}){useMobileMaterials(root);return batchStaticScenery(root,{...options,palette:quality.mobile});}
  const group=new THREE.Group();group.name='Three suspended Figpals over bubbling green canisters';
  const TAU=Math.PI*2;
@@ -83,7 +85,7 @@ export function createFigpalVats({floorSupport}={}){
   return {object:g};
  }
  function pufferfish(){
-  const g=new THREE.Group();g.name='Propeller-hat pufferfish Figpal';
+  const g=new THREE.Group();g.name='Product Manager pufferfish in DESIGN IS DEAD hat';
   ball([0,0,0],[.335,.33,.25],fishBlue,g,true);
   const tail=new THREE.Shape();tail.moveTo(.26,.03);tail.quadraticCurveTo(.34,.06,.40,.16);tail.quadraticCurveTo(.49,.23,.50,.06);tail.quadraticCurveTo(.51,-.11,.43,-.13);tail.lineTo(.33,-.05);tail.closePath();extrude(tail,.11,fishBlue,g,.02);
   for(let i=0;i<3;i++)line([[.38,-.025+i*.04,.078],[.465,-.075+i*.085,.078]],.012,finBlue,g);
@@ -91,13 +93,8 @@ export function createFigpalVats({floorSupport}={}){
   face(g,.015,.252,.09,'worried');
   for(let i=0;i<11;i++){const a=Math.PI*1.03+i/10*Math.PI*.90,x=Math.cos(a)*.26,y=Math.sin(a)*.25;const z=.25*Math.sqrt(Math.max(.04,1-(x/.335)**2-(y/.33)**2))+.008;line([[x,y,z],[x+.008,y-.027,z]],.011,finBlue,g);}
   for(let i=0;i<7;i++){const a=.15+i/6*Math.PI*.88;rod([Math.cos(a)*.31,Math.sin(a)*.31,0],[Math.cos(a)*.37,Math.sin(a)*.37,0],.012,finBlue,g);}
-  const hat=new THREE.Group();hat.position.set(0,.275,0);g.add(hat);
-  const panels=[material(0xf04615),yellow,material(0x4946e9),yellow];
-  for(let i=0;i<4;i++){const dome=mesh(new THREE.SphereGeometry(1,12,12,i*TAU/4,TAU/4,0,Math.PI/2),panels[i],hat);dome.scale.set(.215,.20,.215);}
-  ring(.218,.011,0,ink,hat);rod([0,.20,0],[0,.27,0],.012,rice,hat);
-  const propeller=new THREE.Group();propeller.position.y=.275;hat.add(propeller);
-  ball([0,0,0],[.025,.018,.025],rice,propeller);for(const side of[-1,1])ball([side*.066,0,0],[.083,.012,.029],rice,propeller);
-  return {object:g,propeller};
+  const hat=createDesignCap(null,null,{worn:true});hat.position.set(0,.25,-.015);hat.scale.set(1.12,.92,1.10);hat.rotation.z=-.08;g.add(hat);
+  return {object:g};
  }
 
  const steel=weatheredMetal(0xe1ddd0),darkMetal=weatheredMetal(0x92958c),fastener=weatheredMetal(0xe5e0d4),chainMetal=weatheredMetal(0xd5d0c6);
@@ -216,8 +213,16 @@ export function createFigpalVats({floorSupport}={}){
   const hanger=new THREE.Group();hanger.name=`Suspended Figpal ${i+1}`;hanger.position.y=height;rig.add(hanger);
   const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
   const transformation=createFigpalTransformation(captive.object,i);
+  const skullClue=i===2&&puzzle?createFishSkullClue(puzzle):null;
+  if(skullClue){transformation.skeleton.add(skullClue.mesh);transformation.skeleton.userData.fishClue=true;}
+  if(i===2){
+   const c=document.createElement('canvas');c.width=512;c.height=144;const p=c.getContext('2d');p.fillStyle='#c0b68f';p.fillRect(0,0,512,144);p.strokeStyle='#655e43';p.strokeRect(8,8,496,128);p.textAlign='center';p.fillStyle='#30392d';p.font='bold 32px Arial';p.fillText('PUFF',256,46);p.font='bold 37px Arial';p.fillText('PRODUCT MANAGER',256,101);
+   const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
+   const tag=mesh(new THREE.PlaneGeometry(.49,.138),new THREE.MeshStandardMaterial({map,roughness:.95}),hanger);tag.position.set(0,-.31,.10);tag.name='Puff — Product Manager identification';
+   for(const side of[-1,1])rod([side*.14,-.18,.07],[side*.14,-.248,.10],.003,steel,hanger);
+  }
   batchRigid(captive.object,{exclude:[captive.propeller],minObjects:2,dispose:false});
-  transformation.skeleton.visible=true;batchRigid(transformation.skeleton,{minObjects:2,dispose:false});transformation.skeleton.visible=false;
+  transformation.skeleton.visible=true;batchRigid(transformation.skeleton,{exclude:[skullClue?.mesh],minObjects:2,dispose:false});transformation.skeleton.visible=false;
   const speechAnchor=new THREE.Object3D();speechAnchor.position.set(0,.50,0);hanger.add(speechAnchor);speechAnchors.push(speechAnchor);
   // A spreader and two linked chain slings support the body, leaving its face clear.
   rod([-.22,.45,0],[.22,.45,0],.019,steel,hanger);
@@ -235,7 +240,7 @@ export function createFigpalVats({floorSupport}={}){
   batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
   batchRigid(vat,{exclude:[shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
-  rigs.push({rig,hanger,transformation,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
+  rigs.push({rig,hanger,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
  const movingIndex=()=>{const index=rigs.findIndex(rig=>Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
@@ -259,7 +264,7 @@ export function createFigpalVats({floorSupport}={}){
    rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
    rig.hanger.position.set(0,rig.homeHeight,0);rig.hanger.rotation.z=0;
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[0,rig.homeHeight+.52,0]);
-   rig.drum.rotation.y=rig.crank.rotation.x=0;rig.transformation.reset();
+   rig.drum.rotation.y=rig.crank.rotation.x=0;rig.transformation.reset();rig.skullClue?.refresh();rig.vat.userData.fishClue=false;
   }
  }
  let lastTime=0;const swayPose={};
@@ -273,6 +278,7 @@ export function createFigpalVats({floorSupport}={}){
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
    rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
    rig.transformation.update(1.086);
+   if(rig.skullClue){rig.skullClue.mesh.visible=rig.transformation.transformed;rig.vat.userData.fishClue=rig.transformation.transformed;if(rig.transformation.transformed)puzzle.revealFish();}
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
   for(const vat of vats){
@@ -299,5 +305,5 @@ export function createFigpalVats({floorSupport}={}){
  return {group,update,tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
-  canSpeak,isHanging,reset,speechAnchors,setEnvironment};
+  canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[2].transformation.transformed;}};
 }

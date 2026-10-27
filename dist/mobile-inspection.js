@@ -5,7 +5,7 @@ import {ANIMAL_DIGITS} from './mobile-puzzle-state.js';
 export function createMobileInspection({mobile,state}){
  const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.visible=false;group.userData.ignoreAcid=true;group.userData.mobilePuzzle=true;mobile.group.getWorldPosition(group.position);group.position.y=1.90;
  const assembly=new THREE.Group();group.add(assembly);let hung=false;
- const cord=new THREE.MeshStandardMaterial({color:0xb8ae92,roughness:1}),metal=new THREE.MeshStandardMaterial({color:0x8a8d7e,metalness:.45,roughness:.6}),ivory=new THREE.MeshStandardMaterial({color:0xb8b398,roughness:.8});
+ const cord=new THREE.MeshStandardMaterial({color:0xc0b59b,roughness:1}),metal=new THREE.MeshStandardMaterial({color:0x8a8d7e,metalness:.45,roughness:.6}),ivory=new THREE.MeshStandardMaterial({color:0xb8b398,roughness:.8});
  function tube(points,r,material,parent=assembly){const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),Math.max(10,points.length*4),r,5,false);const m=new THREE.Mesh(g,material);parent.add(m);return m;}
  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.07,24),ivory);hub.position.y=.30;assembly.add(hub);
  const targets=[[-.36,-.22,.25],[.36,-.22,.25],[-.36,-.22,-.25],[.36,-.22,-.25]];
@@ -19,12 +19,22 @@ export function createMobileInspection({mobile,state}){
   const end=target.clone().add(animal.tab.position.clone().multiplyScalar(1.08).applyQuaternion(targetQ));
   const arm=[end.x,.28,end.z];tube([[0,.30,0],arm],.008,metal);
   tube([arm,[end.x+.004,.06,end.z],end.toArray()],.0028,cord,cleanStrings);
-  tube([[0,.27,0],[.23*Math.sin(i+1),.14,.23*Math.cos(i)],[.02,.04,-.12],start.clone().add(new THREE.Vector3(0,.17,-.06)).toArray()],.003,cord,knots);
-  return {object,home,headPose:animal.headPose,patch:object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`),start,target,targetQ,startQ:new THREE.Quaternion().setFromEuler(new THREE.Euler((i-1.5)*.39,i*.66,(i%2?1:-1)*.48))};
+  const startQ=new THREE.Quaternion().setFromEuler(new THREE.Euler((i-1.5)*.39,i*.66,(i%2?1:-1)*.48));
+  const tiedEnd=start.clone().add(animal.tab.position.clone().multiplyScalar(1.08).applyQuaternion(startQ));
+  // Each tangled cord still runs from a real spreader arm to a sewn suspension tab.
+  const path=[arm,[arm[0]*.72,.12,arm[2]*.65],[.035*Math.sin(i),-.025,.03*Math.cos(i)]];
+  for(let j=0;j<=32;j++){const a=j/32*Math.PI*3.4+i*.7;path.push([Math.sin(a)*(.065+i*.012),.024+Math.cos(a*2)*.018-i*.008,Math.sin(a*2)*.045+.014*Math.cos(a)]);}
+  path.push([tiedEnd.x*.8,tiedEnd.y-.035,tiedEnd.z],tiedEnd.toArray());tube(path,.0035,cord,knots);
+  const bow=[];for(let j=0;j<=20;j++){const a=j/20*Math.PI*2;bow.push([tiedEnd.x+Math.sin(a)*.018,tiedEnd.y+Math.cos(a)*.012,tiedEnd.z+.004*Math.sin(a*2)]);}tube(bow,.0027,cord,knots);
+  return {object,home,headPose:animal.headPose,patch:animal.patch,start,target,targetQ,startQ:new THREE.Quaternion().setFromEuler(new THREE.Euler((i-1.5)*.39,i*.66,(i%2?1:-1)*.48))};
  });
- for(let j=0;j<5;j++){
-  const points=[];for(let i=0;i<=24;i++){const a=i/24*Math.PI*3+j*.8;points.push([Math.cos(a)*(.10+j*.018),.10+Math.sin(a*1.7)*.055,Math.sin(a)*(.09+j*.019)]);}
-  tube(points,.003,cord,knots);
+ // Tight overhand knot and two hanging, frayed tails instead of floating circular loops.
+ for(let j=0;j<3;j++){
+  const points=[];for(let i=0;i<=30;i++){const a=i/30*Math.PI*3;points.push([Math.sin(a)*.021,.025+Math.cos(a)*.014+j*.006,Math.sin(a*2)*.015+j*.004]);}tube(points,.0032,cord,knots);
+ }
+ for(const side of[-1,1]){
+  tube([[0,.02,0],[side*.055,-.035,.03],[side*.065,-.12,.05],[side*.074,-.19,.048]],.003,cord,knots);
+  for(let j=0;j<3;j++)tube([[side*.074,-.178,.048],[side*.074+(j-1)*.004,-.20-j*.003,.05+(j-1)*.003]],.0006,cord,knots);
  }
  const scissors=createScissors();scissors.group.scale.setScalar(1.7);assembly.add(scissors.group);scissors.group.visible=false;
  const ceilingY=3.20-group.position.y;
@@ -51,7 +61,7 @@ export function createMobileInspection({mobile,state}){
  return {group,update,getTarget,reset,get hung(){return hung;}};
 }
 
-export function createMobileInspectionUI({state,inspectionCamera,time,onClose,onFeedback}){
+export function createMobileInspectionUI({state,inspectionCamera,time,onClose,onFeedback,puzzle}){
  const panel=document.querySelector('#mobile-inspection'),status=panel.querySelector('[data-mobile-status]'),inventory=panel.querySelector('[data-mobile-inventory]'),digits=panel.querySelector('[data-mobile-digits]');
  const cut=panel.querySelector('[data-mobile="cut"]'),restring=panel.querySelector('[data-mobile="restring"]'),close=panel.querySelector('[data-mobile="close"]');
  let previous=null;
@@ -71,7 +81,7 @@ export function createMobileInspectionUI({state,inspectionCamera,time,onClose,on
   inventory.textContent=`Scissors ${state.has('scissors')?'✓':'—'}  ·  String ${state.has('string')?'✓':state.phase==='repaired'?'used':'—'}`;
   cut.hidden=state.phase!=='tangled';restring.hidden=state.phase!=='cut';
   cut.disabled=!!state.action;restring.disabled=!!state.action;close.disabled=!!state.action;
-  digits.textContent=state.phase==='repaired'&&inspectionCamera.underneath?Object.entries(ANIMAL_DIGITS).map(([animal,digit])=>`${animal}: ${digit}`).join('. '):'';
+  digits.textContent=state.phase==='repaired'&&inspectionCamera.underneath?Object.entries(puzzle?.digits??ANIMAL_DIGITS).map(([animal,digit])=>`${animal}: ${digit}`).join('. '):'';
  }
  return {sync};
 }

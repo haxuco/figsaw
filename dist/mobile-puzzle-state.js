@@ -1,6 +1,21 @@
 export const ANIMAL_DIGITS=Object.freeze({Pig:'7',Tiger:'3',Elephant:'8',Fox:'2'});
-// The animal-order clue is deliberately deferred. Set this when that puzzle is designed.
-export const EXIT_ANIMAL_ORDER=null;
+export const ANIMALS=Object.freeze(['Fox','Pig','Elephant','Tiger']);
+function shuffled(values,random){
+ const out=[...values];for(let i=out.length-1;i>0;i--){const j=Math.min(i,Math.floor(Math.max(0,random())*(i+1)));[out[i],out[j]]=[out[j],out[i]];}return out;
+}
+// A single source of truth for embroidery, the etched skull, and the exit keypad.
+export function createEscapePuzzle(random=Math.random){
+ let digits,order,revision=0,fishRevealed=false;
+ function reset(){
+  const previous=digits&&order.map(k=>digits[k]).join(''),oldDigits=digits,oldOrder=order;
+  order=shuffled(ANIMALS,random);if(oldOrder&&order.every((k,i)=>k===oldOrder[i]))order.push(order.shift());const pool=shuffled(['1','2','3','4','5','6','7','8','9'],random);
+  digits=Object.fromEntries(ANIMALS.map((kind,i)=>[kind,pool[i]]));
+  if(oldDigits&&ANIMALS.every(k=>digits[k]===oldDigits[k]))[digits.Fox,digits.Pig]=[digits.Pig,digits.Fox];
+  if(order.map(k=>digits[k]).join('')===previous)[digits[order[0]],digits[order[1]]]=[digits[order[1]],digits[order[0]]];
+  digits=Object.freeze(digits);order=Object.freeze(order);fishRevealed=false;revision++;
+ }
+ reset();return {reset,revealFish(){fishRevealed=true;},get digits(){return digits;},get order(){return order;},get letters(){return order.map(k=>k[0]).join('');},get code(){return order.map(k=>digits[k]).join('');},get revision(){return revision;},get fishRevealed(){return fishRevealed;}};
+}
 export function createMobilePuzzleState(){
  const inventory=new Set();let phase='tangled',active=false,action=null,started=0,progress=0;
  return {
@@ -14,9 +29,9 @@ export function createMobilePuzzleState(){
   has:item=>inventory.has(item),get phase(){return phase;},get active(){return active;},get action(){return action;},get progress(){return progress;}
  };
 }
-export function createDoorKeypadState({order=EXIT_ANIMAL_ORDER}={}){
+export function createDoorKeypadState({order=null,digits=ANIMAL_DIGITS,puzzle=null}={}){
  let entry='',unlocked=false;
- const code=Array.isArray(order)&&order.length===4&&new Set(order).size===4&&order.every(k=>k in ANIMAL_DIGITS)?order.map(k=>ANIMAL_DIGITS[k]).join(''):null;
+ const fixedCode=Array.isArray(order)&&order.length===4&&new Set(order).size===4&&order.every(k=>k in digits)?order.map(k=>digits[k]).join(''):null;
  return {press(key,{locked=false}={}){
   if(locked)return 'Free your wrist first.';if(unlocked)return 'Door unlocked.';
   if(key==='clear'){entry='';return '';}
@@ -24,8 +39,9 @@ export function createDoorKeypadState({order=EXIT_ANIMAL_ORDER}={}){
   if(/^\d$/.test(key)){if(entry.length<4)entry+=key;return '';}
   if(key!=='enter')return '';
   if(entry.length!==4)return 'Enter four numbers.';
+  const code=puzzle?.code??fixedCode;
   if(!code){entry='';return 'Locked. You still need the animal order.';}
   if(entry===code){unlocked=true;return 'Door unlocked.';}
   entry='';return 'Incorrect order.';
- },reset(){entry='';unlocked=false;},get entry(){return entry;},get unlocked(){return unlocked;},get configured(){return code!==null;}};
+ },reset(){entry='';unlocked=false;},get entry(){return entry;},get unlocked(){return unlocked;},get configured(){return (puzzle?.code??fixedCode)!==null;}};
 }

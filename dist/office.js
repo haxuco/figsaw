@@ -11,7 +11,7 @@ import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
 import { createFloorSupport, settleOnFloor, drapeFloorCable } from './floor-contact.js';
 import { drawFigmaMark } from './figma-mark.js';
 import { createFloorHandsaw } from './floor-handsaw.js';
-import { createDesignCap } from './design-cap.js';
+import {createWallDocuments} from './wall-documents.js';
 import { createLightInsects } from './light-insects.js?v=visible-swarms';
 import { createFloorRodents } from './floor-rodents.js';
 import { createChargingKit } from './charging-kit.js';
@@ -24,8 +24,9 @@ import {createDoorKeypad} from './door-keypad.js';
 import { createFireAxe } from './fire-axe.js';
 import { createFireAlarm } from './fire-alarm.js';
 
-export async function createOffice(renderer,viewerPosition,onProgress=async()=>{}){
+export async function createOffice(renderer,viewerPosition,onProgress=async()=>{},puzzle=null){
  const office=new THREE.Group();office.name='Abandoned technology office';
+ const documents=await createWallDocuments();
  const floorProps=[],floorCables=[];
  const onFloor=object=>{floorProps.push(object);return object;};
  let seed=87021;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -388,59 +389,21 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(let i=0;i<14;i++){const p=box([range(.3,.7),.012,range(.3,.8)],[range(-3.4,3.4),.007,range(-3.5,3.7)],material(i%2?0x888c7c:0x9b9a85,.98,fabricMap));p.rotation.y=range(-.15,.15);carpetPatches.push(p);}
  const floorSupport=createFloorSupport(carpetPatches);
 
- // Product-design whiteboards: screen layouts, mobile flows, notes and erased marker smears.
- // Uneven eraser passes leave ghost lines; dirt and drips collect around the frames.
- function wearWhiteboard(ctx,base,patches){
-  ctx.save();ctx.lineCap='round';
-  for(const[x,y,w,h]of patches){
-   for(let row=0;row<13;row++){
-    const yy=y+row*h/12;
-    ctx.strokeStyle=base;ctx.globalAlpha=range(.65,.94);ctx.lineWidth=range(12,27);
-    ctx.beginPath();ctx.moveTo(x+range(-18,35),yy);ctx.quadraticCurveTo(x+w*.45,yy+range(-12,12),x+w+range(-35,18),yy+range(-8,8));ctx.stroke();
-   }
-   ctx.globalAlpha=1;
-   for(let i=0;i<8;i++)cloud(ctx,x+random()*w,y+random()*h,range(13,43),'54,66,61',range(.035,.09));
-  }
-  ctx.globalAlpha=1;
-  for(let i=0;i<95;i++){
-   const x=random()*1024,y=random()<.55?range(800,1045):random()*1024;
-   cloud(ctx,x,y,range(14,95),i%3?'44,49,38':'103,77,42',range(.045,.16));
-  }
-  const grime=ctx.createLinearGradient(0,0,0,1024);grime.addColorStop(0,'rgba(43,44,32,.30)');grime.addColorStop(.13,'rgba(43,44,32,0)');grime.addColorStop(.77,'rgba(43,44,32,0)');grime.addColorStop(1,'rgba(44,40,27,.38)');ctx.fillStyle=grime;ctx.fillRect(0,0,1024,1024);
-  for(let i=0;i<23;i++){const x=random()*1024,y=range(8,105);ctx.strokeStyle=`rgba(86,67,38,${range(.06,.17)})`;ctx.lineWidth=range(1.5,6);ctx.beginPath();ctx.moveTo(x,y);ctx.bezierCurveTo(x+4,y+60,x-3,y+125,x+range(-5,5),y+range(130,460));ctx.stroke();}
-  speckle(ctx,1024,12000,'36,42,30',.21);
-  ctx.restore();
- }
- function wireframeMap(mobile){
-  const[c,ctx]=canvas(1024);ctx.fillStyle='#bfc4b6';ctx.fillRect(0,0,1024,1024);
-  ctx.strokeStyle='#304a4d';ctx.fillStyle='#304a4d';ctx.lineWidth=4;ctx.font='28px sans-serif';ctx.fillText(mobile?'ONBOARDING / FIRST RUN':'WORKSPACE / DASHBOARD',45,67);
-  function arrow(x,y){ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+50,y);ctx.lineTo(x+37,y-11);ctx.moveTo(x+50,y);ctx.lineTo(x+37,y+11);ctx.stroke();}
-  if(mobile){
-   for(let i=0;i<3;i++){
-    const x=48+i*330;ctx.strokeRect(x,154,253,593);ctx.strokeRect(x+14,174,225,544);ctx.fillRect(x+80,187,91,5);
-    ctx.strokeRect(x+32,225,189,130);ctx.beginPath();ctx.moveTo(x+32,225);ctx.lineTo(x+221,355);ctx.moveTo(x+221,225);ctx.lineTo(x+32,355);ctx.stroke();
-    for(let j=0;j<4;j++)ctx.fillRect(x+31,397+j*25,170-(j%2)*41,4);
-    ctx.strokeRect(x+32,524,188,54);ctx.strokeRect(x+32,602,188,54);if(i<2)arrow(x+266,451);
-    ctx.font='23px sans-serif';ctx.fillText(['01 / welcome','02 / connect','03 / explore'][i],x+23,803);
-   }
-  }else{
-   for(let i=0;i<2;i++){
-    const x=45+i*498;ctx.strokeRect(x,165,436,525);ctx.strokeRect(x,165,436,44);ctx.strokeRect(x+14,223,87,448);
-    for(let row=0;row<5;row++)ctx.fillRect(x+25,246+row*40,59-row%2*17,4);
-    ctx.strokeRect(x+118,230,297,133);ctx.beginPath();ctx.moveTo(x+135,343);ctx.lineTo(x+171,300);ctx.lineTo(x+212,325);ctx.lineTo(x+270,265);ctx.lineTo(x+328,293);ctx.lineTo(x+397,248);ctx.stroke();
-    for(let row=0;row<2;row++)for(let col=0;col<2;col++){ctx.strokeRect(x+118+col*154,385+row*145,139,124);ctx.fillRect(x+131+col*154,404+row*145,92,5);for(let j=0;j<3;j++)ctx.fillRect(x+131+col*154,431+row*145+j*18,103-j*13,3);}
-   }
-  }
-  ctx.strokeStyle='#7d453b';ctx.lineWidth=3;ctx.beginPath();ctx.ellipse(510,905,357,48,-.02,0,Math.PI*2);ctx.stroke();ctx.font='25px sans-serif';ctx.fillStyle='#7d453b';ctx.fillText(mobile?'simplify the first step / test again':'less noise — keep the primary action visible',180,915);
-  wearWhiteboard(ctx,'#bfc4b6',mobile?[[345,225,290,290],[65,570,220,170],[660,765,280,130]]:[[570,215,350,235],[145,500,280,200],[220,855,430,95]]);return texture(c);
- }
+ // Inspectable design documents share their vector source with the close-up viewer.
+ function wireframeMap(mobile){return documents.map(mobile?'onboarding':'workspace');}
+
  for(let i=0;i<2;i++){
   const g=new THREE.Group();g.name='Whiteboard with interface wireframes';g.position.set(i?2.25:.12,2.20,-3.94);g.rotation.z=i?-.025:.012;office.add(g);
   box([1.78,1.12,.04],[0,0,0],silver,g);const map=wireframeMap(!i);
-  const face=mesh(new THREE.PlaneGeometry(1.70,1.04),new THREE.MeshStandardMaterial({map,roughness:.75,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.024;
+  const face=mesh(new THREE.PlaneGeometry(1.70,1.04),new THREE.MeshStandardMaterial({map,roughness:.75,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.024;documents.tag(face,i?'workspace':'onboarding');
   box([1.70,.023,.09],[0,-.57,.025],silver,g);
   for(let j=0;j<3;j++)rod([-.58+j*.18,-.546,.057],[-.46+j*.18,-.546,.057],.013,j?black:material(0x394e6a,.7),g);
  }
+
+ const orgPoster=new THREE.Group();orgPoster.name='Figpal Labs organization chart';orgPoster.position.set(-2.15,2.18,-3.94);orgPoster.rotation.z=-.018;office.add(orgPoster);
+ box([1.95,1.37,.045],[0,0,0],silver,orgPoster);
+ const orgMap=documents.map('org-chart'),orgFace=mesh(new THREE.PlaneGeometry(1.87,1.286),new THREE.MeshStandardMaterial({map:orgMap,roughness:.98,emissive:0xffffff,emissiveMap:orgMap,emissiveIntensity:.045}),orgPoster);orgFace.position.z=.026;documents.tag(orgFace,'org-chart');
+ for(const x of[-.86,.86]){const tape=box([.17,.06,.002],[x,.60,.029],material(0xb8b08c,.96),orgPoster);tape.rotation.z=x*.1;}
 
  // Freestanding planning whiteboard with curled sticky notes and old interface sketches.
  const partition=new THREE.Group();partition.name='Planning whiteboard covered in sticky notes';partition.position.set(1.90,0,-3.0);partition.rotation.y=0;office.add(partition);
@@ -450,36 +413,14 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }
  box([2.68,1.94,.05],[0,1.85,0],silver,partition);
  const missingNotes=new Set([1,4,7,9,13,17,20,22,24]);
- const[cPlanning,planning]=canvas(1024);planning.fillStyle='#c2c7ba';planning.fillRect(0,0,1024,1024);
- for(let i=0;i<65;i++)cloud(planning,random()*1024,random()*1024,range(15,110),'60,69,55',.065);
- planning.strokeStyle='rgba(38,62,63,.65)';planning.fillStyle='rgba(38,62,63,.65)';planning.lineWidth=3;
- for(let i=0;i<3;i++){
-  const x=170+i*245;planning.strokeRect(x,560,190,335);planning.strokeRect(x+12,579,166,28);
-  planning.strokeRect(x+12,625,166,102);planning.beginPath();planning.moveTo(x+12,625);planning.lineTo(x+178,727);planning.moveTo(x+178,625);planning.lineTo(x+12,727);planning.stroke();
-  for(let j=0;j<4;j++)planning.fillRect(x+15,753+j*19,137-j%2*39,3);planning.strokeRect(x+15,843,160,28);
-  if(i<2){planning.beginPath();planning.moveTo(x+198,727);planning.lineTo(x+235,727);planning.lineTo(x+222,717);planning.moveTo(x+235,727);planning.lineTo(x+222,737);planning.stroke();}
- }
- wearWhiteboard(planning,'#c2c7ba',[[130,620,285,170],[407,735,280,165],[685,530,190,150]]);
- // Pale paper-shaped ghosts and old adhesive remain where notes have fallen away.
- for(const index of missingNotes){
-  const x=(-1.10+(index%9)*.273)/2.60*1024+512;
-  const y=(.5-(2.63-Math.floor(index/9)*.28-1.85)/1.86)*1024;
-  planning.fillStyle='rgba(203,203,175,.20)';planning.fillRect(x-40,y-59,80,118);
-  planning.fillStyle='rgba(111,96,51,.17)';planning.fillRect(x-34,y-56,68,8);
-  for(let j=0;j<9;j++){planning.fillStyle='rgba(77,67,39,.15)';planning.fillRect(x+range(-33,33),y-53+range(-2,6),range(1,3),range(2,5));}
- }
- const planningMap=texture(cPlanning),planningSurface=mesh(new THREE.PlaneGeometry(2.60,1.86),new THREE.MeshStandardMaterial({map:planningMap,roughness:.75,emissive:0xffffff,emissiveMap:planningMap,emissiveIntensity:.025}),partition);planningSurface.position.set(0,1.85,.027);
+ const planningMap=documents.map('planning'),planningSurface=mesh(new THREE.PlaneGeometry(2.60,1.86),new THREE.MeshStandardMaterial({map:planningMap,roughness:.75,emissive:0xffffff,emissiveMap:planningMap,emissiveIntensity:.025}),partition);planningSurface.position.set(0,1.85,.027);documents.tag(planningSurface,'planning');
  box([2.58,.025,.13],[0,.87,.045],silver,partition);
  for(let i=0;i<3;i++)rod([-.63+i*.23,.899,.09],[-.48+i*.23,.899,.09],.017,i===0?material(0x344f65,.75):black,partition);
  box([.18,.045,.07],[.62,.906,.075],black,partition);
- const noteColors=['#c3b25e','#b38488','#7faaa9','#a4b081'];
  function sticky(parent,x,y,z,index){
-  const[c,ctx]=canvas(128);ctx.fillStyle=noteColors[index%4];ctx.fillRect(0,0,128,128);ctx.fillStyle='rgba(42,49,37,.16)';ctx.fillRect(0,0,128,14);ctx.strokeStyle='rgba(39,52,47,.68)';ctx.lineWidth=2.6;
-  for(let row=0;row<3+(index%3);row++){ctx.beginPath();const yy=30+row*16;ctx.moveTo(16,yy);for(let j=1;j<8;j++)ctx.lineTo(16+j*range(8,12),yy+range(-2.4,2.4));ctx.stroke();}
-  if(index%4===0){ctx.strokeRect(19,75,35,27);ctx.strokeRect(72,75,35,27);}
   const geo=new THREE.PlaneGeometry(.205,.215,3,5),pos=geo.attributes.position;
   for(let i=0;i<pos.count;i++){const yy=pos.getY(i);pos.setZ(i,Math.max(0,-yy-.015)**2*3.3);}geo.computeVertexNormals();
-  const map=texture(c),m=mesh(geo,new THREE.MeshStandardMaterial({map,roughness:.96,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),parent);m.position.set(x,y,z);m.rotation.z=range(-.13,.13);return m;
+  const map=documents.map(`note-${index%8}`),m=mesh(geo,new THREE.MeshStandardMaterial({map,roughness:.96,side:THREE.DoubleSide,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),parent);m.position.set(x,y,z);m.rotation.z=range(-.13,.13);documents.tag(m,`note-${index%8}`);return m;
  }
  for(let row=0;row<3;row++)for(let col=0;col<9;col++){if(missingNotes.has(row*9+col))continue;sticky(partition,-1.10+col*.273+range(-.018,.018),2.63-row*.28+range(-.014,.014),.040,row*9+col);}
  for(let i=0;i<5;i++){if(i===1||i===4)continue;sticky(partition,i<3?-1.10:1.09,1.75-(i%3)*.29,.040,28+i);}
@@ -609,7 +550,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(const[z,y,w,h,mobile]of[[-2.53,2.13,1.52,1.08,true],[-.62,2.13,1.78,1.10,false]]){
   const g=new THREE.Group();g.name='Left-wall design whiteboard';g.position.set(-3.86,y,z);g.rotation.y=Math.PI/2;office.add(g);
   box([w,h,.045],[0,0,0],silver,g);const map=wireframeMap(mobile);
-  const face=mesh(new THREE.PlaneGeometry(w-.07,h-.07),new THREE.MeshStandardMaterial({map,roughness:.85,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.026;
+  const face=mesh(new THREE.PlaneGeometry(w-.07,h-.07),new THREE.MeshStandardMaterial({map,roughness:.85,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.026;documents.tag(face,mobile?'onboarding':'workspace');
   box([w-.07,.025,.10],[0,-h/2,.035],silver,g);
   rod([-.4,-h/2+.025,.06],[-.23,-h/2+.025,.06],.011,black,g);
   box([.13,.035,.065],[w*.29,-h/2+.029,.045],fabric,g);
@@ -727,7 +668,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(const y of[-.64,.64])box([1.91,.035,.055],[0,y,.01],steel,notices);
  for(let i=0;i<7;i++){
   const x=-.68+(i%4)*.44,y=i<4?.28:-.26,map=wireframeMap(i%2===0),print=mesh(new THREE.PlaneGeometry(.35,.43),new THREE.MeshStandardMaterial({map,color:i%2?0xb9b4a0:0xc6c6b4,roughness:1,side:THREE.DoubleSide}),notices);
-  print.position.set(x,y,.028+i%3*.001);print.rotation.z=range(-.10,.10);print.castShadow=false;
+  print.position.set(x,y,.028+i%3*.001);print.rotation.z=range(-.10,.10);print.castShadow=false;documents.tag(print,i%2===0?'onboarding':'workspace');
   sphere([.008,.008,.005],[x,y+.195,.039],i%2?black:material(0x773f33,.8),notices);
   const tape=box([.11,.033,.001],[x-.06,y+.20,.031],material(0x989a73,.98),notices);tape.rotation.z=range(-.2,.2);
  }
@@ -775,11 +716,10 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   wire.userData.ignoreFloorContact=true;wire.userData.anchorStart=true;
  }
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
- const fallenMobile=createFallenMobile(viewerPosition,floorSupport);office.add(fallenMobile.group);
+ const fallenMobile=createFallenMobile(viewerPosition,floorSupport,puzzle);office.add(fallenMobile.group);
  const stuffedAnimals=fallenMobile.animals,plushCut=createPlushCut({saw:handsaw.group,animals:stuffedAnimals,floorSupport});office.add(plushCut.group);
- office.add(createDesignCap(viewerPosition,floorSupport));
  await onProgress('Preparing the tanks…');
- const figpalVats=createFigpalVats({floorSupport});figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
+ const figpalVats=createFigpalVats({floorSupport,puzzle});figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const mobileSupplies=createMobileSupplies(chargingKit.drawer);
@@ -796,5 +736,5 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,documents,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

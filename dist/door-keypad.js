@@ -22,8 +22,8 @@ export function createDoorKeypad(){
  let last='';function setDisplay(value='LOCKED'){if(last===value)return;last=value;p.fillStyle='#17211c';p.fillRect(0,0,256,96);p.fillStyle=value==='OPEN'?'#8eac7e':'#ba8b68';p.font='bold 40px monospace';p.textAlign='center';p.textBaseline='middle';p.fillText(value,128,51,240);map.needsUpdate=true;}
  setDisplay();batchStaticScenery(group,{exclude:[display],minObjects:2});return {group,setDisplay};
 }
-export function createDoorKeypadUI({keypad,locked,onUnlock,onFeedback}){
- const state=createDoorKeypadState(),dialog=document.querySelector('#door-keypad'),display=dialog.querySelector('output'),status=dialog.querySelector('[data-keypad-status]'),canvas=document.querySelector('#scene');
+export function createDoorKeypadUI({keypad,locked,onUnlock,onFeedback,puzzle}){
+ const state=createDoorKeypadState({puzzle}),dialog=document.querySelector('#door-keypad'),display=dialog.querySelector('output'),status=dialog.querySelector('[data-keypad-status]'),canvas=document.querySelector('#scene');
  function paint(message=''){display.textContent=state.entry.padEnd(4,'—');status.textContent=message;keypad.setDisplay(state.unlocked?'OPEN':state.entry||'LOCKED');}
  function press(key){const message=state.press(key,{locked:locked()});paint(message);if(state.unlocked){onUnlock();hide();onFeedback(message);}}
  function show(){if(locked()){onFeedback('Unlock your shackle before using the keypad.');return;}paint();dialog.showModal();dialog.querySelector('button[data-key="1"]').focus({preventScroll:true});}
