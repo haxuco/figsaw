@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=e37bb5e9352f">
-  <link rel="modulepreload" href="./game.bundle.js?v=45d686cf3a10">
+  <link rel="stylesheet" href="./style.css?v=68825d34b48c">
+  <link rel="modulepreload" href="./game.bundle.js?v=9797df979e62">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -80,6 +80,7 @@
   <section id="escaped" role="dialog" aria-modal="true" aria-labelledby="escaped-title" hidden>
     <div class="escaped-content">
       <h1 id="escaped-title">You escaped.</h1>
+      <div class="escaped-results">
       <div id="victory-share">
         <p class="game-over-attempt" data-attempt></p>
         <canvas class="game-over-graphic victory-graphic" role="img" aria-label="Your Figsaw victory" width="1080" height="1080"></canvas>
@@ -89,6 +90,8 @@
           <button id="new-game" type="button">Play again</button>
         </div>
         <p class="game-over-share-status" data-share-status role="status" aria-live="polite"></p>
+      </div>
+      <section id="victory-leaderboard" aria-label="Your top 10 result"></section>
       </div>
     </div>
   </section>
@@ -112,6 +115,7 @@
   <output id="countdown-warning" aria-hidden="true" hidden>00:05</output>
   <p id="hoist-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <div class="view-tools">
+    <button id="top10-button" type="button" aria-haspopup="dialog">Top 10</button>
     <button id="copy-view" type="button" title="Copy the current camera view as a prompt">
       <svg width="12" height="12" viewBox="0 0 16 16" fill="none" aria-hidden="true"><rect x="5" y="5" width="8" height="8" rx="1.5" stroke="currentColor"/><path d="M10 3H4a1 1 0 0 0-1 1v6" stroke="currentColor" stroke-linecap="round"/></svg>
       <span>Copy view</span>
@@ -123,6 +127,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=45d686cf3a10"></script>
+  <script type="module" src="./boot.js?v=9797df979e62"></script>
 </body>
 </html>

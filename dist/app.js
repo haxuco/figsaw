@@ -1,3 +1,5 @@
+import {createLocalLeaderboard,captureRankedEscape} from './leaderboard.js';
+import {createLeaderboardUI} from './leaderboard-ui.js';
 import {createDiagnostics,createDiagnosticUI} from './diagnostics.js';
 import {createDiagnosticActions} from './diagnostic-actions.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
@@ -21,7 +23,6 @@ import {createCountdownHUD} from './countdown-hud.js';
 import {createSceneRaycaster} from './scene-picking.js';
 import {createAttemptTracker} from './attempts.js';
 import {createGameOverShare,createVictoryShare} from './game-over-share.js';
-import {captureVictoryResult} from './victory-result.js';
 import {createLaptopProgram} from './laptop-program.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -485,10 +486,12 @@ const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
 const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
 const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
 const escapeScreen=document.querySelector('#escaped');
+let diagnosticRunUsed=false;
 const victoryShare=createVictoryShare(document.querySelector('#victory-share'));
+const leaderboardUI=createLeaderboardUI({repository:createLocalLeaderboard(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},onClose(){canvas.focus({preventScroll:true});},getCountdown:()=>countdown.status==='waiting'?null:lastCountdownSeconds,onRank:result=>victoryShare.prepare(result)});
 for(const dialog of[gameOver,escapeScreen])dialog.addEventListener('keydown',event=>{
  if(event.key!=='Tab')return;
- const buttons=[...dialog.querySelectorAll('button:not([hidden]):not(:disabled)')],index=buttons.indexOf(document.activeElement);
+ const buttons=[...dialog.querySelectorAll('button,input,select,textarea')].filter(control=>!control.disabled&&!control.closest('[hidden]')),index=buttons.indexOf(document.activeElement);
  event.preventDefault();event.stopPropagation();buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();
 });
 let gameEnded=false,gameWon=false,escapedAt=0;
@@ -596,13 +599,13 @@ function inspectDocument(hit){
 function escapeRoom(){
  laptopProgram.cancel();
  if(gameEnded||gameWon)return;
- const result=captureVictoryResult({attempt:attempts.count,remainingSeconds:countdown.update(),rescue:rescueChairs.state});
+ const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs,assisted:diagnosticRunUsed});
  testingMode.update({hidden:true});testingHighlights.group.visible=false;equippedModel.group.visible=false;exitDoor.unlock();gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;escapedAt=state.time;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  const target=exitDoor.object.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,1.1,0)),direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=1;
  camera.position.copy(cameraPosition);camera.lookAt(cameraPosition.clone().add(direction));camera.fov=homeCamera.fov;camera.updateProjectionMatrix();
  restraintStatus.textContent='The code works. The door opens. You escaped.';
- victoryShare.prepare(result);
+ victoryShare.prepare(result);leaderboardUI.close();leaderboardUI.showResult(result);
 }
 function inspectMobile(){
  if(sawBusy()||mobilePuzzle.active)return;
@@ -855,7 +858,7 @@ function updateFigpalRound(time){
  }
  const event=figpalRounds.update(time,rescueChairs.state.pulling||chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying,diagnostics.invulnerable);
  if(event?.type==='lower'){
-  laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
+  leaderboardUI.close();laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
   figpalCamera.start(event.index,time);loweringDialogue.reset();const line=loweringDialogue.show(event.index,time);
   const destination=figpalHoists.safeDescent(event.index)?'prepared rescue route':'green liquid';
   countdownAnnouncement.textContent=`Time is up. Figpal ${event.index+1} is lowering into the ${destination}.${line?' '+line:''}`;
@@ -873,7 +876,7 @@ function updateFigpalRound(time){
 
 function endGame(cause='objective'){
  if(diagnostics.invulnerable){diagnostics.report(`Invulnerability prevented: ${gameOverReason(cause)}`);return;}
- if(gameEnded)return;laptopProgram.cancel();gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
+ if(gameEnded)return;leaderboardUI.close();laptopProgram.cancel();gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;loweringDialogue.reset();
@@ -900,7 +903,7 @@ let chairDragCandidate=null;
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
- diagnostics.clearHistory();laptopProgram.reset();
+ diagnostics.clearHistory();diagnosticRunUsed=diagnostics.enabled;leaderboardUI.reset();laptopProgram.reset();
  attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
@@ -936,7 +939,7 @@ const diagnosticProps={capture:()=>({saw:handsaw.visible,axe:fireAxe.object.visi
 const prepareDiagnosticTimer=()=>{countdownStartTime=null;};prepareDiagnosticTimer.capture=()=>({delay:countdownStartTime===null?null:countdownStartTime-state.time,announcement:countdownAnnouncement.textContent});
 const diagnosticActions=createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
 const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
- onActivate(){previousTestingMode=testingMode.enabled;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
+ onActivate(){diagnosticRunUsed=true;previousTestingMode=testingMode.enabled;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
  onExit(){testingMode.setEnabled(previousTestingMode);canvas.focus({preventScroll:true});},
  onInvulnerability(value){
   acidLeaks.setInvulnerable(value);fireHazard.setInvulnerable(value);fireAlarm.setInvulnerable(value);
@@ -952,7 +955,7 @@ const diagnosticUI=createDiagnosticUI({mode:diagnostics,clock:countdown,actions:
 function releaseControls(){state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
- if(event.target.closest('#diagnostic-tools'))return;
+ if(leaderboardUI.active||event.target.closest('#diagnostic-tools,#victory-leaderboard form'))return;
  // A browser refresh starts its own attempt on load; do not also restart here.
  if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
@@ -1126,7 +1129,7 @@ function render(){
  const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(gameWon){
   exitDoor.update(reducedMotion);renderer.render(scene,camera);frameRate.frame(performance.now());
-  if(t-escapedAt>1.5){escapeScreen.hidden=false;document.querySelector('#new-game').focus({preventScroll:true});frameRate.reset();return;}
+  if(t-escapedAt>1.5){escapeScreen.hidden=false;if(!leaderboardUI.focusResult())document.querySelector('#new-game').focus({preventScroll:true});frameRate.reset();return;}
   scheduleFrame();return;
  }
  // Once the trap finishes, only animate the lightweight screen overlay.
@@ -1194,7 +1197,7 @@ function render(){
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
  if(chairSeat.seated&&!documentViewer.active&&!mobilePuzzle.active&&!drawerCamera.active)cameraPosition.add(rescueChairs.playerOffset);
- inventoryUI.sync();syncRescueControls();diagnosticUI.sync();
+ inventoryUI.sync();syncRescueControls();diagnosticUI.sync();leaderboardUI.update();
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.

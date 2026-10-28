@@ -1,3 +1,4 @@
+import {validateDisplayName} from './display-name.js';
 import {formatCountdown} from './countdown-clock.js';
 import {victoryResult} from './victory-result.js';
 
@@ -29,7 +30,7 @@ export function drawShareGraphic(ctx,{attempt,artwork}){
  ctx.fillStyle='#a3968f';ctx.font='22px monospace';ctx.fillText('figsaw.haxuco.chatgpt.site',70,1008);
 }
 
-export function drawVictoryGraphic(ctx,{attempt,remainingSeconds,figpalsSaved,artwork}){
+export function drawVictoryGraphic(ctx,{attempt,remainingSeconds,figpalsSaved,artwork,rank,name}){
  ctx.clearRect(0,0,SHARE_WIDTH,SHARE_HEIGHT);ctx.fillStyle='#090f0c';ctx.fillRect(0,0,SHARE_WIDTH,SHARE_HEIGHT);
  const glow=ctx.createRadialGradient(710,540,10,710,540,570);glow.addColorStop(0,'#354935');glow.addColorStop(.55,'#17271c');glow.addColorStop(1,'#090f0c');ctx.fillStyle=glow;ctx.fillRect(0,0,SHARE_WIDTH,SHARE_HEIGHT);
  let seed=8521;for(let i=0;i<3000;i++){seed=(seed*1664525+1013904223)>>>0;const x=seed%SHARE_WIDTH;seed=(seed*1664525+1013904223)>>>0;ctx.fillStyle=i%3?'#d5debf08':'#00000022';ctx.fillRect(x,seed%SHARE_HEIGHT,1+(i%3),1);}
@@ -40,6 +41,7 @@ export function drawVictoryGraphic(ctx,{attempt,remainingSeconds,figpalsSaved,ar
  ctx.fillStyle='#c5e0af';ctx.font='500 60px "Grenze Gotisch",Georgia,serif';ctx.fillText('You escaped.',70,302);
  ctx.fillStyle='#0e160f';ctx.beginPath();ctx.ellipse(735,945,245,22,0,0,Math.PI*2);ctx.fill();
  if(artwork)ctx.drawImage(artwork,355,235,690,690);
+ if(rank){ctx.strokeStyle='#c0a66b';ctx.strokeRect(775,84,230,132);ctx.fillStyle='#c9ad73';ctx.font='19px monospace';ctx.fillText('TOP 10 ESCAPE',798,117);ctx.font='500 86px "Grenze Gotisch",Georgia,serif';ctx.fillText(`#${rank}`,798,197);if(name){ctx.fillStyle='#d6c497';fittedText(ctx,name,72,353,'24px monospace',570);}}
  const metrics=[['TIME REMAINING',formatCountdown(remainingSeconds)],['FIGPALS SAVED',`${figpalsSaved} / 2`],['ESCAPE ATTEMPTS',String(attempt).padStart(2,'0')]];
  metrics.forEach(([label,value],index)=>{const y=403+index*197;ctx.fillStyle='#aebfa8';ctx.font='19px monospace';ctx.fillText(label,72,y);ctx.fillStyle='#e0e8d1';fittedText(ctx,value,65,y+103,'500 94px monospace',325);});
  ctx.fillStyle='#94a38c';ctx.font='22px monospace';ctx.fillText('figsaw.haxuco.chatgpt.site',70,1008);
@@ -56,11 +58,11 @@ export function createGameOverShare(root){
 }
 export function createVictoryShare(root){
  return createResultShare(root,{
-  normalize:victoryResult,draw:drawVictoryGraphic,
-  describe:result=>`You escaped. ${formatCountdown(result.remainingSeconds)} remaining. ${result.figpalsSaved} of 2 Figpals saved. ${result.attempt} escape attempt${result.attempt===1?'':'s'}.`,
+  normalize:value=>{const result=victoryResult(value),name=validateDisplayName(value?.name);return Number.isInteger(value?.rank)&&value.rank>=1&&value.rank<=10&&name.ok?{...result,rank:value.rank,name:name.name}:result;},draw:drawVictoryGraphic,
+  describe:result=>`${result.rank?`Top 10 escape, number ${result.rank}. ${result.name}. `:''}You escaped. ${formatCountdown(result.remainingSeconds)} remaining. ${result.figpalsSaved} of 2 Figpals saved. ${result.attempt} escape attempt${result.attempt===1?'':'s'}.`,
   filename:result=>`figsaw-escaped-attempt-${result.attempt}.png`,
   title:()=> 'Figsaw — You escaped',
-  text:result=>`I escaped Figsaw with ${formatCountdown(result.remainingSeconds)} remaining, ${result.figpalsSaved} of 2 Figpals saved, and ${result.attempt} escape attempt${result.attempt===1?'':'s'}. Can you escape? ${SHARE_URL}`
+  text:result=>`${result.rank?`Top 10 escape — #${result.rank}! `:''}I escaped Figsaw with ${formatCountdown(result.remainingSeconds)} remaining, ${result.figpalsSaved} of 2 Figpals saved, and ${result.attempt} escape attempt${result.attempt===1?'':'s'}. Can you escape? ${SHARE_URL}`
  });
 }
 

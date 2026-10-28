@@ -26,6 +26,11 @@ test('the square victory export draws all three statistics and a distinct victor
  assert.equal(ctx.text.includes("Let's play a game"),false);
 });
 
+test('a ranked victory adds a top 10 badge and the approved winner name to the share artwork',()=>{
+ const ctx=context();drawVictoryGraphic(ctx,{attempt:3,remainingSeconds:984,figpalsSaved:2,rank:3,name:'Maya Chen'});
+ for(const value of ['TOP 10 ESCAPE','#3','Maya Chen','16:24','2 / 2'])assert.ok(ctx.text.includes(value),value);
+});
+
 function root(){
  const ctx=context(),exports=[],nodes={};
  for(const selector of ['canvas','[data-save-graphic]','[data-share-graphic]','[data-share-status]','[data-attempt]'])nodes[selector]={hidden:false,disabled:false,textContent:'',listeners:{},attributes:{},addEventListener(type,fn){this.listeners[type]=fn;},setAttribute(key,value){this.attributes[key]=value;}};
