@@ -44,15 +44,23 @@ export function screenHomography(points,width,height){
 }
 export function laptopProgramDistance(aspect,fov=48){return Math.max(.525,.823/aspect)/(2*Math.tan(THREE.MathUtils.degToRad(fov/2)))*1.10;}
 
-export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn=()=>{},getPowerStatus=()=>''}){
+export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn=()=>{},getPowerStatus=()=>'',isDiagnostic=()=>false}){
  const root=document.querySelector('#laptop-program'),screenMap=laptop.screen.material.map;
- const challenge=createLaptopChallenge(measureKerningLayouts(screenMap.image.getContext('2d')));
+ const layouts=measureKerningLayouts(screenMap.image.getContext('2d')),challenge=createLaptopChallenge(layouts);
  const play=root.querySelector('[data-play]'),result=root.querySelector('[data-result]'),status=root.querySelector('[data-status]'),check=root.querySelector('[data-check]');
  const wordArea=root.querySelector('[data-word]'),roundLabel=root.querySelector('[data-round]'),typeLabel=root.querySelector('[data-typeface]'),progress=[...root.querySelectorAll('[data-progress]')];
  const returnButton=root.querySelector('[data-return]'),power=root.querySelector('[data-power]'),nudgeButtons=[...root.querySelectorAll('[data-nudge]')];
+ const answer=root.querySelector('[data-answer]'),answerLabel=root.querySelector('[data-answer-label]');
  const center=new THREE.Vector3(),normal=new THREE.Vector3(),up=new THREE.Vector3(),rotation=new THREE.Quaternion(),startRotation=new THREE.Quaternion(),targetRotation=new THREE.Quaternion(),startPosition=new THREE.Vector3(),destination=new THREE.Vector3(),lookMatrix=new THREE.Matrix4();
  const corners=[[-.823/2,.525/2],[.823/2,.525/2],[.823/2,-.525/2],[-.823/2,-.525/2]].map(([x,y])=>new THREE.Vector3(x,y,0));
- let phase='closed',elapsed=0,startFov=62,selected=1,drawnRound=-1,letters=[],drag=null;
+ let phase='closed',elapsed=0,startFov=62,selected=1,drawnRound=-1,letters=[],drag=null,answerRound=-1,answerVisible=false;
+ function syncAnswer(show=false){
+  if(show&&answerRound!==challenge.round){
+   const layout=layouts[challenge.round];answerRound=challenge.round;answer.replaceChildren();answer.style.font=layout.font;
+   [...layout.word].forEach((letter,i)=>{const node=document.createElement('span');node.className='kern-letter fixed kern-answer-letter';node.textContent=letter;node.style.left=`${layout.positions[i]}px`;node.style.width=`${layout.widths[i]}px`;answer.append(node);});
+  }
+  answer.hidden=answerLabel.hidden=!show;answerVisible=show;
+ }
  function paint(){paintProgram(screenMap.image,challenge);screenMap.needsUpdate=true;}
  function selection(){letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&!challenge.accepted));}
  function sync({texture=true}={}){
@@ -72,6 +80,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   play.hidden=challenge.completed;result.hidden=!challenge.completed;check.hidden=challenge.completed;
   nudgeButtons.forEach(button=>button.disabled=challenge.accepted);status.textContent=challenge.message;status.classList.toggle('accepted',challenge.accepted);
   check.textContent=challenge.accepted?'Next word →':'Submit spacing';
+  syncAnswer(answerVisible&&!challenge.completed);
   if(texture)paint();
  }
  function endDrag(){if(drag&&wordArea.hasPointerCapture?.(drag.id))wordArea.releasePointerCapture(drag.id);drag=null;}
@@ -103,7 +112,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  });
  function cancel(){
   if(phase==='closed')return;endDrag();paint();
-  phase='closed';root.hidden=true;document.body.classList.remove('entering-laptop');
+  phase='closed';root.hidden=true;syncAnswer();document.body.classList.remove('entering-laptop');
   laptop.close(false);
   camera.position.copy(startPosition);camera.quaternion.copy(startRotation);camera.fov=startFov;camera.updateProjectionMatrix();camera.updateMatrixWorld(true);onReturn();canvas.focus({preventScroll:true});
  }
@@ -127,6 +136,8 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   if(phase==='playing'&&!laptop.isPowered){endDrag();phase='unpowered';}
   else if(phase==='unpowered'&&laptop.isPowered){phase='playing';(challenge.completed?returnButton:letters[selected]).focus({preventScroll:true});}
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
+  const showAnswer=phase==='playing'&&isDiagnostic()&&!challenge.completed;
+  if(showAnswer!==answerVisible)syncAnswer(showAnswer);
   if(phase!=='playing'){root.hidden=true;return;}
   const rect=canvas.getBoundingClientRect(),points=corners.map(corner=>{const point=laptop.screen.localToWorld(corner.clone()).project(camera);return{x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2};});
   const matrix=screenHomography(points,WIDTH,HEIGHT);root.hidden=!matrix||!matrix.every(Number.isFinite);

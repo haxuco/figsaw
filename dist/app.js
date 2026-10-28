@@ -758,7 +758,7 @@ function useCharging(action){
   else if((action==='drawer'&&wasOpen&&!chargingKit.drawerOpen)||(previousPhase==='drawer'&&chargingKit.phase==='carrying')){releaseControls();drawerCamera.restore(state.time);}
  }
 }
-const laptopProgram=createLaptopProgram({camera,canvas,laptop,onLock(){prepareSawAction();inventoryUI.close();arrivalDialogue.hidden=true;},onReturn(){releaseControls();restraintStatus.textContent='You close the laptop.';canvas.classList.remove('over-laptop');canvas.setAttribute('aria-label',initialCanvasDescription);},getPowerStatus(){return chargingKit.phase==='charging'?'⚡ 0% · External power':`${Math.ceil(chargingKit.battery)}% · Connect charger: ${formatCountdown(chargingKit.battery/8*60)}`;}});
+const laptopProgram=createLaptopProgram({camera,canvas,laptop,isDiagnostic:()=>diagnostics.enabled,onLock(){prepareSawAction();inventoryUI.close();arrivalDialogue.hidden=true;},onReturn(){releaseControls();restraintStatus.textContent='You close the laptop.';canvas.classList.remove('over-laptop');canvas.setAttribute('aria-label',initialCanvasDescription);},getPowerStatus(){return chargingKit.phase==='charging'?'⚡ 0% · External power':`${Math.ceil(chargingKit.battery)}% · Connect charger: ${formatCountdown(chargingKit.battery/8*60)}`;}});
 function openLaptop(){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){

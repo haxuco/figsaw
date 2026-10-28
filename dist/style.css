@@ -34,6 +34,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 .kern-round,.kern-details{display:flex;align-items:center;justify-content:space-between;gap:16px}.kern-round>span{font-size:15px;color:#a3b29c}
 .kern-word{position:absolute;left:0;right:0;top:181px;height:174px;touch-action:none}
 .kern-word::before{content:"";position:absolute;left:48px;right:48px;top:149px;border-top:1px solid #ffffff16;pointer-events:none}
+.kern-answer{z-index:1;pointer-events:none}.kern-answer::before{display:none}#laptop-program .kern-answer .kern-letter.kern-answer-letter{color:transparent;-webkit-text-stroke:1.5px #67e1c4;cursor:default}#laptop-program .kern-answer-label{position:absolute;left:48px;top:348px;color:#67e1c4;font:12px/1.3 Arial,sans-serif}
 #laptop-program .kern-letter{position:absolute;top:0;height:166px;box-sizing:content-box;padding:0;border:0;margin:0;background:none;color:#f1f1e9;font:inherit;line-height:1;text-align:left;white-space:pre;cursor:ew-resize;touch-action:none}
 #laptop-program .kern-letter.fixed{color:#7d9296;cursor:default;display:flex;align-items:center}
 #laptop-program button.kern-letter::after{content:"";position:absolute;left:50%;bottom:0;width:13px;height:3px;background:#adb99f;opacity:0;transform:translateX(-50%)}

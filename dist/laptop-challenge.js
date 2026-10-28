@@ -6,8 +6,8 @@ export const KERNING_WORDS=Object.freeze([
 ]);
 
 // Score only movable glyph origins, normalized to the actual rendered type size.
-// This stays internal to the challenge: failed attempts never reveal a score or
-// the reference positions in the UI, canvas texture, or accessible labels.
+// During ordinary play, failed attempts never reveal a score or reference
+// positions in the UI, canvas texture, or accessible labels.
 export function scoreKerning(positions,layout){
  if(!Array.isArray(positions)||positions.length!==layout.positions.length||positions.some(x=>!Number.isFinite(x)))return 0;
  let squared=0;for(let i=1;i<positions.length-1;i++)squared+=(positions[i]-layout.positions[i])**2;

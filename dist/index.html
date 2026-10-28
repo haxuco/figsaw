@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=bb799fe322f4">
-  <link rel="modulepreload" href="./game.bundle.js?v=8a26da45d5a2">
+  <link rel="stylesheet" href="./style.css?v=adfff857aa9f">
+  <link rel="modulepreload" href="./game.bundle.js?v=d2d8ca2e6103">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -48,6 +48,8 @@
       <h1>Fix the spacing.</h1>
       <p class="program-instruction">Drag the inner letters. First and last stay fixed.</p>
       <div class="kern-word" data-word role="group" aria-label="Adjust letter spacing"></div>
+      <div class="kern-word kern-answer" data-answer hidden aria-hidden="true"></div>
+      <p class="kern-answer-label" data-answer-label hidden>Diagnostic answer · match the teal outlines</p>
       <div class="kern-details"><span data-typeface></span><span>Tab to select · ← → to nudge · Shift for 10px</span></div>
       <div class="kern-progress" aria-label="Word progress"><span data-progress></span><span data-progress></span><span data-progress></span></div>
     </main>
@@ -125,6 +127,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=8a26da45d5a2"></script>
+  <script type="module" src="./boot.js?v=d2d8ca2e6103"></script>
 </body>
 </html>
