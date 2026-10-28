@@ -866,7 +866,7 @@ function updateFigpalRound(time){
  }else if(event?.type==='return'){
   loweringDialogue.reset();figpalCamera.restore(time);
  }else if(event?.type==='restart'){
-  countdownAnnouncement.textContent=`The timer resets to ten minutes. ${event.remaining} Figpal${event.remaining===1?' remains':'s remain'}.`;
+  countdownAnnouncement.textContent=event.remaining===1?'The final ten-minute countdown has started.':'The timer resets to ten minutes.';
  }else if(event?.type==='ending'){
   releaseControls();chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;
   countdownAnnouncement.textContent='The second deadline has passed. Your time is up.';

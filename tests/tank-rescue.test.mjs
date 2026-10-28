@@ -46,6 +46,7 @@ test('real hoists retain acid, require preparation before descent, and swing bot
    assert.ok(f.vats.rigs[i].hanger.getWorldPosition(new THREE.Vector3()).distanceTo(from)>.04);assert.equal(f.vats.rigs[i].transformation.damaged,false);
    for(let frame=0;frame<55;frame++)f.update(.1);
    assert.equal(f.vats.isSettled(i),true);assert.equal(f.vats.rigs[i].rescued,true);assert.equal(f.vats.rigs[i].hanger.parent,f.rescue.objects[i]);assert.equal(f.vats.rigs[i].transformation.damaged,false);assert.equal(f.vats.rigs[i].captive.visible,true);
+   const seatedPosition=f.vats.rigs[i].hanger.position.clone();assert.equal(f.vats.isRescued(i),true);assert.equal(f.vats.lower(i),false);assert.ok(f.vats.rigs[i].hanger.position.equals(seatedPosition),'a rescued Figpal cannot be lowered from the chair');
   }
   assert.equal(f.rescue.state.ready,true);assert.equal(f.rescue.pull(),true);f.update(10,true);assert.equal(f.rescue.state.safe,true);
   f.rescue.reset();f.vats.reset();assert.ok(f.vats.rigs.every(r=>!r.rescued&&!r.escaping&&!r.rescuePlanned&&!r.transformation.damaged&&r.hanger.parent===r.rig));

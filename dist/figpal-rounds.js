@@ -1,5 +1,6 @@
 // The PM is last in the schedule, but the second expired deadline ends the game.
-// Manual hoist operations never advance this deadline counter.
+// Manual hoist operations never advance this deadline counter. A rescued
+// Figpal still consumes its scheduled clock, but never starts another descent.
 export function createFigpalRounds(hoists,countdown,puzzle){
  let phase='waiting',index=null,phaseAt=0,settledAt=null,scheduledDrops=0;
  function update(time,blocked=false,invulnerable=false){
@@ -24,6 +25,12 @@ export function createFigpalRounds(hoists,countdown,puzzle){
   if(scheduledDrops>=2){if(invulnerable||blocked||countdown.status!=='finished')return null;phase='ending';phaseAt=time;return {type:'ending'};}
   if(blocked||countdown.status!=='finished'||hoists.movingIndex!==null)return null;
   index=(puzzle?.dropOrder??[0,1,2])[scheduledDrops];
+  if(hoists.isRescued?.(index)){
+   scheduledDrops++;phaseAt=time;
+   if(scheduledDrops>=2&&!invulnerable){phase='ending';return {type:'ending'};}
+   countdown.reset();countdown.start();index=null;
+   return {type:'restart',remaining:Math.max(0,2-scheduledDrops)};
+  }
   if(!hoists.lower(index)){index=null;return null;}
   phase='lowering';phaseAt=time;settledAt=null;return {type:'lower',index};
  }
