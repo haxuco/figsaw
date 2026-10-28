@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=436b81804f01">
-  <link rel="modulepreload" href="./game.bundle.js?v=b575a3785b97">
+  <link rel="stylesheet" href="./style.css?v=9580606f8a06">
+  <link rel="modulepreload" href="./game.bundle.js?v=982e6959e312">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -41,24 +41,22 @@
       </div>
     </div>
   </section>
-  <section id="laptop-program" hidden role="region" aria-label="Laptop design challenge">
-    <header><span class="program-file">design-challenge.fig</span><span data-power></span></header>
+  <section id="laptop-program" hidden role="region" aria-label="Laptop kerning challenge">
+    <header><span class="program-file">kerning.fig</span><span data-power></span></header>
     <main data-play>
-      <p class="program-eyebrow">01 / ALIGNMENT</p>
-      <h1>Restore the layout.</h1>
-      <p class="program-instruction">Click a component to change its alignment.</p>
-      <div class="program-components">
-        <button type="button" data-component="0"><span class="program-guide"></span><span class="program-tile"></span><span class="program-number">01</span></button>
-        <button type="button" data-component="1"><span class="program-guide"></span><span class="program-tile"></span><span class="program-number">02</span></button>
-        <button type="button" data-component="2"><span class="program-guide"></span><span class="program-tile"></span><span class="program-number">03</span></button>
-      </div>
+      <div class="kern-round"><p class="program-eyebrow" data-round>WORD 01 / 03</p><span>90 points to pass</span></div>
+      <h1>Fix the spacing.</h1>
+      <p class="program-instruction">Drag the inner letters. First and last stay fixed.</p>
+      <div class="kern-word" data-word role="group" aria-label="Adjust letter spacing"></div>
+      <div class="kern-details"><span data-typeface></span><span>Tab to select · ← → to nudge · Shift for 10px</span></div>
+      <div class="kern-progress" aria-label="Word progress"><span data-progress></span><span data-progress></span><span data-progress></span></div>
     </main>
     <main data-result hidden>
-      <div class="program-check" aria-hidden="true">✓</div><p class="program-eyebrow">CHECK PASSED</p>
-      <h1>Challenge complete.</h1><p>Your design has passed the check.</p>
+      <div class="program-check" aria-hidden="true">✓</div><p class="program-eyebrow">03 / 03 ACCEPTED</p>
+      <h1>Spacing approved.</h1><p>All three words passed.</p>
       <button type="button" data-return>Return to room</button>
     </main>
-    <footer><p data-status role="status" aria-live="polite"></p><button type="button" data-check>Run check ↗</button></footer>
+    <footer><div class="kern-nudge"><button type="button" data-nudge="-1" aria-label="Nudge selected letter left">←</button><button type="button" data-nudge="1" aria-label="Nudge selected letter right">→</button></div><p data-status role="status" aria-live="polite"></p><button type="button" data-check>Submit spacing</button></footer>
   </section>
   <div id="figsaw-dialogue" hidden aria-hidden="true">
     <div class="dialogue-bubble"><strong>Figsaw</strong> <span>I want to play a game...</span></div>
@@ -127,6 +125,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=b575a3785b97"></script>
+  <script type="module" src="./boot.js?v=982e6959e312"></script>
 </body>
 </html>
