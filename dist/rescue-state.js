@@ -16,7 +16,8 @@ export function createRescueState(puzzle={pmIndex:2}){
   c.step++;if(c.step<REPAIRS[index].steps.length)return `Secured. Find and equip a replacement ${REPAIRS[index].steps[c.step].part} next.`;
   c.repaired=true;return 'Chair repaired. Put away the tool, then move the chair in front of a tank.';
  }
- function place(index,tank){const c=chairs[index];if(!c?.repaired||c.passenger!==null||chairs.some(c=>c.reservation!==null)||pulling||safe||!Number.isInteger(tank)||tank<0||tank>2||chairs.some((o,i)=>i!==index&&o.tank===tank))return false;c.tank=tank;return true;}
+ function canPlace(index,tank){const c=chairs[index];return !!c?.repaired&&c.passenger===null&&!chairs.some(c=>c.reservation!==null)&&!pulling&&!safe&&Number.isInteger(tank)&&tank>=0&&tank<3&&!chairs.some((o,i)=>i!==index&&o.tank===tank);}
+ function place(index,tank){if(!canPlace(index,tank))return false;chairs[index].tank=tank;return true;}
  // Both chairs and their towing chains must be arranged before a descent starts.
  const arranged=()=>links.length===PLAYER_CHAIR&&chairs.every((c,i)=>c.repaired&&c.tank!==null&&c.tank!==puzzle.pmIndex&&connected(i,PLAYER_CHAIR));
  function canBoard(tank,figpal,{alive=true}={}){return alive&&figpal!==puzzle.pmIndex&&Number.isInteger(figpal)&&figpal>=0&&figpal<3&&!pulling&&!safe&&arranged()&&!chairs.some(c=>c.passenger===figpal)&&chairs.some(c=>c.tank===tank&&c.passenger===null&&(c.reservation===null||c.reservation===figpal));}
@@ -33,5 +34,5 @@ export function createRescueState(puzzle={pmIndex:2}){
   links.push({a,b,chain});usedChains.add(chain);return true;
  }
  const ready=()=>links.length===PLAYER_CHAIR&&chairs.every((c,i)=>c.repaired&&c.passenger!==null&&c.passenger!==puzzle.pmIndex&&connected(i,PLAYER_CHAIR));
- return {reset,use,place,board,reserve,cancelReservation,canBoard,connect,canStartLink,canConnect,get arranged(){return arranged();},get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
+ return {reset,use,canPlace,place,board,reserve,cancelReservation,canBoard,connect,canStartLink,canConnect,get arranged(){return arranged();},get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
 }

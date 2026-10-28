@@ -60,3 +60,26 @@ test('repair chairs accept clicks in frame gaps, retain furniture occlusion and 
  const panel=new THREE.Mesh(new THREE.BoxGeometry(.7,1.3,.08),material);panel.position.set(0,.65,.8);room.add(panel);room.updateMatrixWorld(true);assert.equal(hitAt(.08),panel,'the target must not select chairs through a desk or wall');
  room.remove(panel);chairs[0].position.x=-1;room.updateMatrixWorld(true);assert.equal(hitAt(.08),undefined);assert.equal(hitAt(-.92),pick,'the target stays attached during chair movement');
 });
+
+test('a repaired chair offers large clickable destinations and rolls to the chosen tank',()=>{
+ const room=new THREE.Group(),objects=[0,1].map(i=>{
+  const o=new THREE.Group();o.position.set(i*2,0,2);o.chairParts={base:new THREE.Group(),seat:new THREE.Group(),caster:new THREE.Group()};o.add(o.chairParts.base,o.chairParts.seat);room.add(o);return o;
+ });
+ const tanks=[0,1,2].map(i=>{const o=new THREE.Group();o.position.set(i*2,0,-2);room.add(o);return o;});
+ const rescue=createRescueChairs({objects,parts:{},player:new THREE.Group(),tanks,floorSupport:()=>.003});room.add(rescue.group);
+ const inventory=createInventory();inventory.add('caster');inventory.add('ratchet');
+ assert.equal(rescue.select(0),false,'broken chairs cannot be moved');
+ rescue.use(0,'caster',inventory);rescue.use(0,'ratchet',inventory);
+ assert.equal(rescue.canMove(0),false,'finish the repair settling animation first');
+ rescue.update(2);assert.equal(rescue.canMove(0),true);assert.equal(rescue.select(0),true);
+ assert.deepEqual(rescue.availableSlots(),[0,1,2]);room.updateMatrixWorld(true);
+ const ray=createSceneRaycaster();ray.set(new THREE.Vector3(0,.85,1),new THREE.Vector3(0,0,-1));
+ assert.equal(ray.intersectObject(rescue.group,true).find(h=>h.object.parent.visible&&h.object.visible)?.object.userData.rescueSlot,0,'the silhouette is clickable above the floor ring');
+ assert.equal(rescue.place(0),true);assert.equal(rescue.moving,null);assert.deepEqual(rescue.availableSlots(),[]);
+ for(const o of rescue.group.children.filter(o=>o.name.startsWith('Chair destination')))assert.equal(o.visible,false);
+ rescue.update(4);assert.ok(objects[0].position.distanceTo(new THREE.Vector3(0,.003,-1.08))<1e-9);
+ rescue.state.chairs[1].repaired=true;assert.equal(rescue.select(1),true);
+ assert.deepEqual(rescue.availableSlots(),[1,2],'an occupied destination is disabled, without revealing the randomized PM');
+ assert.equal(rescue.place(0),false);assert.equal(rescue.moving,1,'an invalid placement keeps the selection');
+ rescue.cancelMove();assert.equal(rescue.moving,null);rescue.reset();assert.equal(rescue.canMove(0),false);
+});

@@ -646,13 +646,34 @@ function updateTestingMode(time){
  testingMode.update({hidden:gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
  equippedModel.update(inventory.equipped,time,!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.action);
 }
-const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;rescueControls.innerHTML='<button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button>';document.body.append(rescueControls);
-rescueControls.querySelector('[data-cancel]').onclick=()=>rescueChairs.cancelMove();
+let movePromptChair=null;
+const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;
+rescueControls.innerHTML='<p data-move-label role="status"></p><div class="rescue-actions"><button type="button" data-move>Move chair</button><div data-destinations aria-label="Chair destinations"><button type="button" data-tank="0">Tank 01</button><button type="button" data-tank="1">Tank 02</button><button type="button" data-tank="2">Tank 03</button></div><button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button></div><small data-pan>Drag to look around · Esc to cancel</small>';document.body.append(rescueControls);
+const moveLabel=rescueControls.querySelector('[data-move-label]'),moveButton=rescueControls.querySelector('[data-move]'),destinations=rescueControls.querySelector('[data-destinations]'),panLabel=rescueControls.querySelector('[data-pan]');
+function beginChairMove(index){
+ if(!rescueChairs.canMove(index))return false;
+ putEquipmentAway();state.space=false;arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
+ movePromptChair=index;return rescueChairs.select(index);
+}
+function placeRescueChair(tank){if(rescueChairs.place(tank)){movePromptChair=null;canvas.focus({preventScroll:true});return true;}return false;}
+moveButton.onclick=()=>beginChairMove(movePromptChair);
+for(const button of destinations.children)button.onclick=()=>placeRescueChair(Number(button.dataset.tank));
+rescueControls.querySelector('[data-cancel]').onclick=()=>{rescueChairs.cancelMove();canvas.focus({preventScroll:true});};
 rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){return;}rescueChairs.pull();};
-function syncRescueControls(){const cancel=rescueChairs.moving!==null,pull=rescueChairs.state.ready&&!rescueChairs.busy&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||(!cancel&&!pull);rescueControls.querySelector('[data-cancel]').hidden=!cancel;rescueControls.querySelector('[data-pull]').hidden=!pull;}
+function syncRescueControls(){
+ const moving=rescueChairs.moving!==null,c=movePromptChair===null?null:rescueChairs.state.chairs[movePromptChair];
+ const prompt=!moving&&c?.repaired&&c.passenger===null&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;
+ const pull=rescueChairs.state.ready&&!rescueChairs.busy&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;
+ rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||sawBusy()||documentViewer.active||mobilePuzzle.active||laptopProgram.active||drawerCamera.active||(!moving&&!prompt&&!pull);
+ const label=moving?'Choose a spot in front of a tank.':prompt?'Chair repaired.':'';if(moveLabel.textContent!==label)moveLabel.textContent=label;moveLabel.hidden=!moving&&!prompt;
+ moveButton.hidden=!prompt;moveButton.disabled=prompt&&!rescueChairs.canMove(movePromptChair);
+ destinations.hidden=panLabel.hidden=!moving;
+ const available=rescueChairs.availableSlots();for(const button of destinations.children)button.disabled=!available.includes(Number(button.dataset.tank));
+ rescueControls.querySelector('[data-cancel]').hidden=!moving;rescueControls.querySelector('[data-pull]').hidden=!pull;
+}
 function putEquipmentAway(){putAxeBack();clearSawSelection();sawMenu.hide();rescueChairs.cancelHook();inventory.putAway();if(inventory.has('saw')&&!sawTrap.active&&!plushCut.active)handsaw.visible=false;canvas.focus({preventScroll:true});}
 function equipItem(id){
- putEquipmentAway();rescueChairs.cancelMove();if(!inventory.equip(id))return;
+ putEquipmentAway();rescueChairs.cancelMove();movePromptChair=null;if(!inventory.equip(id))return;
  if(id==='axe'){fireAxe.object.visible=true;axeInteraction.pickUp(state.time);}
  if(id==='saw'){grabSaw();}
  if(id==='key'&&restraint.locked)restraint.requestReach(state.time);
@@ -669,9 +690,12 @@ function useRescueObject(hit){
  let index=data.chairSeat?PLAYER_CHAIR:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
  if(inventory.equipped?.startsWith('chain')){testingMode.report(rescueChairs.hook(index,inventory.equipped,inventory));return true;}
  if(index===PLAYER_CHAIR){sitOnChair();return true;}
- if(inventory.equipped){testingMode.report(rescueChairs.use(index,inventory.equipped,inventory));return true;}
- if(rescueChairs.state.chairs[index].passenger!==null){return true;}
- rescueChairs.select(index);
+ if(rescueChairs.state.chairs[index].repaired){beginChairMove(index);return true;}
+ if(inventory.equipped){
+  testingMode.report(rescueChairs.use(index,inventory.equipped,inventory));
+  if(rescueChairs.state.chairs[index].repaired){drawerCamera.cancel();movePromptChair=index;}
+  return true;
+ }
  return true;
 }
 function takeMobileSupply(item){
@@ -877,7 +901,7 @@ function resetView({skipIntro=false}={}){
  attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
- inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
+ inventory.reset();movePromptChair=null;inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
  gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';fireWarning.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
@@ -976,24 +1000,24 @@ canvas.addEventListener('pointerdown',event=>{
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
  lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
- const chairHit=interactionAt(event);chairDragCandidate=!inventory.equipped&&!restraint.locked&&Number.isInteger(chairHit?.userData.rescueChair)?chairHit.userData.rescueChair:null;
+ const chairHit=interactionAt(event);chairDragCandidate=rescueChairs.moving===null&&!inventory.equipped&&!restraint.locked&&Number.isInteger(chairHit?.userData.rescueChair)?chairHit.userData.rescueChair:null;
 });
 canvas.addEventListener('pointermove',event=>{
  if(rescueChairs.state.pulling||chairSeat.moving||laptopProgram.active||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(documentViewer.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);documentViewer.drag(dx,dy);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
- if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair||Number.isInteger(hit?.userData.rescueChair)||Number.isInteger(hit?.userData.chainAnchor));hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad||!!hit?.userData.salvagePart);canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
+ if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);if(Number.isInteger(hit?.userData.rescueChair)&&rescueChairs.canMove(hit.userData.rescueChair)&&!inventory.equipped)movePromptChair=hit.userData.rescueChair;hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair||Number.isInteger(hit?.userData.rescueChair)||Number.isInteger(hit?.userData.chainAnchor));hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad||!!hit?.userData.salvagePart||Number.isInteger(hit?.userData.rescueSlot));canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
- if(pointerDistance>=6&&chairDragCandidate!==null&&rescueChairs.moving===null)rescueChairs.select(chairDragCandidate);
- if(rescueChairs.moving!==null){lastPointer={x:event.clientX,y:event.clientY};return;}
+ if(pointerDistance>=6&&chairDragCandidate!==null&&rescueChairs.moving===null)beginChairMove(chairDragCandidate);
+ if(rescueChairs.moving!==null&&chairDragCandidate!==null){lastPointer={x:event.clientX,y:event.clientY};return;}
  if(pointerDistance>=6){arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();}
  state.yaw=wrapAngle(state.yaw+dx*.004);state.pitch=THREE.MathUtils.clamp(state.pitch+dy*.003,-1.40,1.40);lastPointer={x:event.clientX,y:event.clientY};
 });
 canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
- dragPointer=null;chairDragCandidate=null;
- if(rescueChairs.moving!==null){const hit=interactionAt(event);if(Number.isInteger(hit?.userData.rescueSlot))rescueChairs.place(hit.userData.rescueSlot);return;}
+ const draggedChair=chairDragCandidate!==null;dragPointer=null;chairDragCandidate=null;
+ if(rescueChairs.moving!==null){if(pointerDistance<6||draggedChair){const hit=interactionAt(event);if(Number.isInteger(hit?.userData.rescueSlot))placeRescueChair(hit.userData.rescueSlot);}return;}
  if(documentViewer.active){if(!documentViewer.returning&&pointerDistance<6){const hit=interactionAt(event);if(doorKeypadUI.active&&hit?.userData.keypadKey)doorKeypadUI.press(hit.userData.keypadKey);else if(!doorKeypadUI.active&&hit?.userData.wallDocument&&hit!==documentViewer.target)inspectDocument(hit);}return;}
  if(mobilePuzzle.active){
   if(pointerDistance<6){const hit=interactionAt(event);if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)mobileUI.activate();}
