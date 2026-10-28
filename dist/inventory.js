@@ -30,7 +30,7 @@ export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=(
   if(last===inventory.revision)return;last=inventory.revision;previews.clearPending();
   if(lastPickup!==inventory.lastPickup){
    lastPickup=inventory.lastPickup;hidePickupNotice();
-   if(lastPickup&&!active&&!button.hidden){pickupNotice.textContent='To use it, equip it from the inventory menu.';pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,4500);}
+   if(lastPickup&&!active&&!button.hidden){pickupNotice.textContent=`${ITEMS[lastPickup.id].name} collected.\nEquip it from the inventory menu to use it.`;pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,4500);}
   }
   const grid=panel.querySelector('.inventory-grid');grid.replaceChildren();
   for(const id of inventory.items){const b=document.createElement('button');b.type='button';b.innerHTML=`<span class="inventory-model" aria-hidden="true"></span><span>${ITEMS[id].name}</span>`;b.setAttribute('aria-pressed',String(id===inventory.equipped));b.onclick=()=>{close();onEquip(id);sync();};grid.append(b);previews.attach(id,b.querySelector('.inventory-model'));}
