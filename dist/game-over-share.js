@@ -17,7 +17,7 @@ export function drawShareGraphic(ctx,{attempt,artwork}){
  ctx.strokeStyle='#6b393a';ctx.lineWidth=1;ctx.strokeRect(24.5,24.5,1031,1031);ctx.strokeStyle='#82373540';ctx.beginPath();ctx.arc(670,610,290,0,Math.PI*2);ctx.stroke();
  ctx.fillStyle='#e64045';ctx.fillRect(68,74,33,3);ctx.fillStyle='#b9aaa1';ctx.font='19px monospace';ctx.fillText('A DESIGN ESCAPE GAME',116,82);
  ctx.fillStyle='#f3eee2';ctx.font='600 148px "Grenze Gotisch",Georgia,serif';ctx.fillText('Figsaw',64,229);
- ctx.fillStyle='#e1d9ca';ctx.font='500 48px "Grenze Gotisch",Georgia,serif';ctx.fillText('I didn’t make it out.',70,290);
+ ctx.fillStyle='#e1d9ca';ctx.font='500 48px "Grenze Gotisch",Georgia,serif';ctx.fillText("Let's play a game",70,290);
  ctx.fillStyle='#b9aaa1';ctx.font='18px monospace';ctx.fillText('ESCAPE ATTEMPT',72,389);
  ctx.fillStyle='#ff454b';fittedText(ctx,String(attemptLabel(attempt).slice(8)).padStart(2,'0'),65,502,'500 112px monospace',230);
  ctx.fillStyle='#141510';ctx.beginPath();ctx.ellipse(670,1004,280,24,0,0,Math.PI*2);ctx.fill();
@@ -34,7 +34,7 @@ export function createGameOverShare(root){
  async function prepare(attempt){
   if(!ctx){canvas.width=SHARE_WIDTH;canvas.height=SHARE_HEIGHT;ctx=canvas.getContext('2d');}
   const ticket=++revision;currentAttempt=attempt;blob=null;save.disabled=true;share.hidden=true;status.textContent='';
-  canvas.setAttribute('aria-label',`${attemptLabel(attempt)}. Figsaw on his tricycle. I didn’t make it out.`);
+  canvas.setAttribute('aria-label',`${attemptLabel(attempt)}. Figsaw on his tricycle. Let's play a game.`);
   root.querySelector('[data-attempt]').textContent=attemptLabel(attempt);
   drawShareGraphic(ctx,{attempt});
   try{
@@ -54,7 +54,7 @@ export function createGameOverShare(root){
  share.addEventListener('click',async()=>{
   if(!blob)return;
   const file=new File([blob],`figsaw-attempt-${currentAttempt}.png`,{type:'image/png'});
-  try{await navigator.share({files:[file],title:`Figsaw — ${attemptLabel(currentAttempt)}`,text:'I didn’t make it out. Can you escape? '+SHARE_URL});status.textContent='Graphic shared.';}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable here. Save the graphic instead.';}
+  try{await navigator.share({files:[file],title:`Figsaw — ${attemptLabel(currentAttempt)}`,text:"Let's play a game. Can you escape? "+SHARE_URL});status.textContent='Graphic shared.';}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable here. Save the graphic instead.';}
  });
  return{prepare,reset(){revision++;blob=null;save.disabled=true;share.hidden=true;status.textContent='';}};
 }
