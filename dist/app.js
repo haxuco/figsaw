@@ -768,11 +768,9 @@ function openLaptop(){
  chargingKit.syncPower();
  if(laptop.isMoving)return;
  if(laptop.isOpen){
-  if(!laptop.isPowered){laptop.close(false);restraintStatus.textContent='You close the laptop.';canvas.classList.remove('over-laptop');canvas.setAttribute('aria-label',initialCanvasDescription);}
-  else laptopProgram.start();
+  laptopProgram.start();
   return;
  }
- if(!laptop.isPowered)return;
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
  if(laptopOpening.start(state.time)){
   releaseControls();arrivalCameraMove.cancel();resetting=false;
@@ -781,7 +779,6 @@ function openLaptop(){
 }
 function finishOpeningLaptop(fromHand=false){
  chargingKit.syncPower();
- if(!laptop.isPowered){return;}
  if(!fromHand&&!laptop.open())return;
  restraintStatus.textContent='You lift the lid and let go. The laptop is open.';
  canvas.classList.remove('over-laptop');

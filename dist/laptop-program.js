@@ -109,12 +109,12 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  }
  returnButton.onclick=cancel;
  function start(){
-  if(phase!=='closed'||!laptop.isReady||!laptop.isPowered)return false;
+  if(phase!=='closed'||!laptop.isReady)return false;
   startPosition.copy(camera.position);startRotation.copy(camera.quaternion);startFov=camera.fov;elapsed=0;phase='zooming';onLock();document.body.classList.add('entering-laptop');sync();return true;
  }
  function update(dt,time,reducedMotion=false){
   if(phase==='closed')return;
-  if(!laptop.isPowered||!laptop.isOpen){cancel();return;}
+  if(!laptop.isOpen){cancel();return;}
   const powerText=getPowerStatus();if(power&&power.textContent!==powerText)power.textContent=powerText;
   laptop.screen.updateWorldMatrix(true,false);laptop.screen.getWorldPosition(center);laptop.screen.getWorldQuaternion(rotation);
   normal.set(0,0,1).applyQuaternion(rotation);up.set(0,1,0).applyQuaternion(rotation);
@@ -122,8 +122,10 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   if(phase==='zooming'){
    elapsed+=dt;const fraction=reducedMotion?1:THREE.MathUtils.smootherstep(elapsed,0,1.15);
    camera.position.lerpVectors(startPosition,destination,fraction);camera.quaternion.slerpQuaternions(startRotation,targetRotation,fraction);camera.fov=THREE.MathUtils.lerp(startFov,48,fraction);
-   if(fraction===1){phase='playing';(challenge.completed?returnButton:letters[1]).focus({preventScroll:true});}
+   if(fraction===1){phase=laptop.isPowered?'playing':'unpowered';if(phase==='playing')(challenge.completed?returnButton:letters[1]).focus({preventScroll:true});}
   }else{camera.position.copy(destination);camera.quaternion.copy(targetRotation);camera.fov=48;}
+  if(phase==='playing'&&!laptop.isPowered){endDrag();phase='unpowered';}
+  else if(phase==='unpowered'&&laptop.isPowered){phase='playing';(challenge.completed?returnButton:letters[selected]).focus({preventScroll:true});}
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
   if(phase!=='playing'){root.hidden=true;return;}
   const rect=canvas.getBoundingClientRect(),points=corners.map(corner=>{const point=laptop.screen.localToWorld(corner.clone()).project(camera);return{x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2};});

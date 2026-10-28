@@ -24,6 +24,15 @@ test('closing works without power and does not erase water or battery damage',()
  laptop.setPower(true);laptop.damageWater(1);laptop.open();laptop.update(1);assert.equal(laptop.isPowered,false);assert.equal(screenSpill.intensity,0);
 });
 
+test('an empty battery does not stop the hinge and shows its own symbol only on an open, undamaged display',()=>{
+ const {laptop,screenSpill}=lidFixture(),indicator=laptop.screen.getObjectByName('Empty MacBook battery indicator');
+ assert.equal(indicator.visible,false);laptop.setPower(false);assert.equal(indicator.visible,false);
+ assert.equal(laptop.open(),true);laptop.update(1);assert.equal(laptop.isReady,true);assert.equal(laptop.isPowered,false);assert.equal(indicator.visible,true);assert.equal(screenSpill.intensity,0);assert.equal(laptop.screen.material.color.getHex(),0);
+ laptop.close(false);laptop.update(1);assert.equal(indicator.visible,false);laptop.open();laptop.update(1);assert.equal(indicator.visible,true);
+ const checkpoint=laptop.capture();laptop.setPower(true);assert.equal(indicator.visible,false);assert.ok(screenSpill.intensity>0);
+ laptop.restore(checkpoint);assert.equal(indicator.visible,true);laptop.damageWater(1);assert.equal(indicator.visible,false,'water damage is not an empty battery');
+});
+
 test('the actual screen and its input projection fit both portrait and landscape cameras',()=>{
  for(const aspect of [.46,.75,1,1.78,2.4]){
   const camera=new THREE.PerspectiveCamera(48,aspect,.01,100);camera.position.z=laptopProgramDistance(aspect);camera.lookAt(0,0,0);camera.updateMatrixWorld(true);
@@ -69,6 +78,12 @@ test('leaving the laptop closes its lid, preserves kerning progress, and support
   assert.equal(result.hidden,false);back.onclick();assert.equal(program.active,false);assert.equal(laptop.isOpen,false);assert.equal(program.completed,true);
   laptop.update(1);assert.equal(laptop.openProgress,0);const finished=program.capture();reopen(3);assert.equal(result.hidden,false);assert.equal(back.focused,true);assert.deepEqual(program.capture(),finished);back.onclick();assert.equal(laptop.isOpen,false);
   program.reset();laptop.open();laptop.update(1);assert.equal(program.start(),true);program.update(1,3,true);assert.equal(program.completed,false);
-  laptop.setPower(false);program.update(.1,4);assert.equal(program.active,false);assert.equal(root.hidden,true);assert.equal(laptop.isOpen,false);assert.ok(camera.position.distanceTo(start)<1e-9);
+  const beforePowerLoss=program.capture(),screenView=camera.position.clone();
+  laptop.setPower(false);program.update(.1,4);assert.equal(program.active,true);assert.equal(root.hidden,true);assert.equal(laptop.isOpen,true);assert.ok(camera.position.distanceTo(screenView)<1e-9);
+  check.onclick();nudge[0].onclick();assert.deepEqual(program.capture(),beforePowerLoss,'the unpowered screen cannot advance or adjust the challenge');
+  program.cancel();assert.equal(laptop.isOpen,false);assert.ok(camera.position.distanceTo(start)<1e-9);laptop.update(1);
+  reopen(5);assert.equal(program.active,true);assert.equal(root.hidden,true);assert.equal(laptop.isOpen,true);assert.deepEqual(program.capture(),beforePowerLoss);
+  laptop.setPower(true);program.update(.1,6);assert.equal(root.hidden,false);assert.deepEqual(program.capture(),beforePowerLoss,'external power restores the same unfinished word');
+  program.cancel();assert.equal(laptop.isOpen,false);
  }finally{globalThis.document=previous;}
 });
