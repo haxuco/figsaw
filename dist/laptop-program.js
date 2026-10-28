@@ -104,11 +104,12 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  function cancel(){
   if(phase==='closed')return;endDrag();paint();
   phase='closed';root.hidden=true;document.body.classList.remove('entering-laptop');
+  laptop.close(false);
   camera.position.copy(startPosition);camera.quaternion.copy(startRotation);camera.fov=startFov;camera.updateProjectionMatrix();camera.updateMatrixWorld(true);onReturn();canvas.focus({preventScroll:true});
  }
  returnButton.onclick=cancel;
  function start(){
-  if(phase!=='closed'||challenge.completed||!laptop.isReady||!laptop.isPowered)return false;
+  if(phase!=='closed'||!laptop.isReady||!laptop.isPowered)return false;
   startPosition.copy(camera.position);startRotation.copy(camera.quaternion);startFov=camera.fov;elapsed=0;phase='zooming';onLock();document.body.classList.add('entering-laptop');sync();return true;
  }
  function update(dt,time,reducedMotion=false){
@@ -121,7 +122,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   if(phase==='zooming'){
    elapsed+=dt;const fraction=reducedMotion?1:THREE.MathUtils.smootherstep(elapsed,0,1.15);
    camera.position.lerpVectors(startPosition,destination,fraction);camera.quaternion.slerpQuaternions(startRotation,targetRotation,fraction);camera.fov=THREE.MathUtils.lerp(startFov,48,fraction);
-   if(fraction===1){phase='playing';letters[1].focus({preventScroll:true});}
+   if(fraction===1){phase='playing';(challenge.completed?returnButton:letters[1]).focus({preventScroll:true});}
   }else{camera.position.copy(destination);camera.quaternion.copy(targetRotation);camera.fov=48;}
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
   if(phase!=='playing'){root.hidden=true;return;}
