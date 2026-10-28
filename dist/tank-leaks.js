@@ -5,7 +5,7 @@ import {createAcidSurface,createDrainJet} from './acid-surface.js';
 export function createTankLeaks({valves,floorSupport}){
  const group=new THREE.Group();group.name='Corrosive green liquid, bubbles and contact smoke';group.userData.ignoreAcid=true;group.visible=false;
  const flow=createAcidFlow(),dummy=new THREE.Object3D(),cameraRotation=new THREE.Quaternion();
- const timeUniform={value:0},streams=new Map(),openedValves=new Set(),materialCopies=new Map(),contactBounds=[];let lastPaint=-Infinity;
+ const timeUniform={value:0},streams=new Map(),openedValves=new Set(),materialCopies=new Map(),contactBounds=[];let lastPaint=-Infinity,neutralizedAt=null;
  const burnCanvas=document.createElement('canvas');burnCanvas.width=burnCanvas.height=512;
  const burn=burnCanvas.getContext('2d');burn.fillStyle='#000';burn.fillRect(0,0,512,512);
  const burnMap=new THREE.CanvasTexture(burnCanvas);burnMap.generateMipmaps=false;burnMap.minFilter=THREE.LinearFilter;burnMap.flipY=false;
@@ -97,6 +97,7 @@ export function createTankLeaks({valves,floorSupport}){
   stream.mesh.name='Acid pouring through shattered tank glass';stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);group.visible=true;return true;
  }
  function paintBurn(time){
+  if(flow.neutralized)return;
   const lastGrowth=Math.max(...flow.leaks.map(l=>l.points.at(-1)?.born??time));
   if(time-lastPaint<.10||lastPaint>lastGrowth+10)return;lastPaint=time;
   for(const leak of flow.leaks)for(const p of leak.points){
@@ -108,12 +109,13 @@ export function createTankLeaks({valves,floorSupport}){
  function update(time,dt,viewer,camera,reducedMotion=false,options={}){
   if(!flow.leaks.length)return false;
   const finished=flow.update(time,dt,viewer,options),t=reducedMotion?0:time;timeUniform.value=t;camera.getWorldQuaternion(cameraRotation);
+  if(neutralizedAt!==null)surface.setNeutralized(reducedMotion?1:THREE.MathUtils.smoothstep(time-neutralizedAt,0,1.8));
   let bubbleCount=0,smokeCount=0,dropCount=0,rippleCount=0;
   for(const leak of flow.leaks){
    if(openedValves.has(leak.index))valves[leak.index].setOpen(reducedMotion?1:THREE.MathUtils.smootherstep(leak.progress,0,1));
    const stream=streams.get(leak.index);stream.mesh.visible=leak.points.length>0&&leak.pouring>0;stream.update(t,leak.pouring);
    if(!leak.points.length)continue;
-   for(let i=0;i<18;i++){
+   for(let i=0;i<(flow.neutralized?0:18);i++){
     const p=leak.points[(i*17+leak.index*5)%leak.points.length],life=(t*.9+i*.618)%1,a=i*2.399,rad=p.radius*.57;
     dummy.position.set(p.x+Math.cos(a)*rad,floorSupport(p.x,p.z)+.008+Math.sin(life*Math.PI)*.005,p.z+Math.sin(a)*rad);
     const size=(.005+(i%4)*.0025)*Math.sin(life*Math.PI);dummy.scale.set(size,size*.45,size);dummy.quaternion.identity();dummy.updateMatrix();bubbles.setMatrixAt(bubbleCount++,dummy.matrix);
@@ -127,7 +129,7 @@ export function createTankLeaks({valves,floorSupport}){
     const life=(t*1.6+i*.25)%1,r=.018+life*.16;
     dummy.position.set(leak.origin.x,floorSupport(leak.origin.x,leak.origin.z)+.010,leak.origin.z);dummy.quaternion.identity();dummy.scale.set(r,1,r*.92);dummy.updateMatrix();ripples.setMatrixAt(rippleCount,dummy.matrix);rippleAlpha.setX(rippleCount++,Math.sin(life*Math.PI)*(1-life));
    }
-   for(let i=0;i<16;i++){
+   for(let i=0;i<(flow.neutralized?0:16);i++){
     // Favor the moving edge and the newest contact patches, where corrosion is most active.
     const offset=(i*7)%Math.min(35,leak.points.length),p=leak.points[Math.max(0,leak.points.length-1-offset)];
     const life=(t*.46+i*.381)%1,a=i*2.4+leak.index,r=p.radius*(.45+life*.5),size=.075+life*.22;
@@ -140,10 +142,10 @@ export function createTankLeaks({valves,floorSupport}){
   surface.update(time,flow.leaks);paintBurn(time);return finished;
  }
  function reset(){
-  flow.reset();surface.reset();group.visible=false;bubbles.count=smoke.count=droplets.count=ripples.count=0;
+  flow.reset();surface.reset();neutralizedAt=null;group.visible=false;bubbles.count=smoke.count=droplets.count=ripples.count=0;rippleMaterial.color.setHex(0xb6c58b);
   for(const stream of streams.values()){group.remove(stream.mesh);stream.mesh.geometry.dispose();}streams.clear();openedValves.clear();
   for(const valve of valves)valve.setOpen(0);
   burn.clearRect(0,0,512,512);burn.fillStyle='#000';burn.fillRect(0,0,512,512);burnMap.needsUpdate=true;lastPaint=-Infinity;
  }
- return {group,open,breach,update,reset,bindTargets,remaining:flow.remaining,isDrained:index=>flow.remaining(index)<=.0001,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
+ return {group,open,breach,update,reset,bindTargets,neutralize(time){if(!flow.neutralize())return false;neutralizedAt=time;rippleMaterial.color.setHex(0xb3c5ce);bubbles.count=smoke.count=0;return true;},get neutralized(){return flow.neutralized;},remaining:flow.remaining,isDrained:index=>flow.remaining(index)<=.0001,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
 }

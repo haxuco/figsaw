@@ -4,6 +4,24 @@ import {renderQuality} from './render-quality.js';
 
 export function createCeilingSprinklers({floorSupport,pipeMaterial}){
  const group=new THREE.Group();group.name='Ceiling sprinkler pipework and automatic spray';group.userData.ignoreAcid=true;
+ const waterGeometry=new THREE.PlaneGeometry(8.2,8.8,24,24);waterGeometry.rotateX(-Math.PI/2);waterGeometry.translate(0,0,.2);
+ const waterPositions=waterGeometry.attributes.position;
+ for(let i=0;i<waterPositions.count;i++)waterPositions.setY(i,floorSupport(waterPositions.getX(i),waterPositions.getZ(i))+.004);
+ waterGeometry.computeVertexNormals();
+ const waterMaterial=new THREE.MeshPhysicalMaterial({color:0x829297,roughness:.17,metalness:.05,clearcoat:1,clearcoatRoughness:.10,transparent:true,opacity:0,depthWrite:false,envMapIntensity:1.2});
+ const waterTime={value:0};
+ waterMaterial.onBeforeCompile=shader=>{
+  shader.uniforms.wetFloorTime=waterTime;
+  shader.vertexShader='varying vec3 vStandingWater;\n'+shader.vertexShader;
+  shader.vertexShader=shader.vertexShader.replace('#include <worldpos_vertex>','#include <worldpos_vertex>\nvStandingWater=(modelMatrix*vec4(transformed,1.0)).xyz;');
+  shader.fragmentShader='varying vec3 vStandingWater;uniform float wetFloorTime;\n'+shader.fragmentShader;
+  shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',`#include <normal_fragment_begin>
+   float rippleX=.028*sin(vStandingWater.x*19.0+vStandingWater.z*11.0-wetFloorTime*1.3);
+   float rippleZ=.025*cos(vStandingWater.z*23.0-vStandingWater.x*9.0+wetFloorTime*1.1);
+   normal=normalize(normal+mat3(viewMatrix)*vec3(rippleX,0.0,rippleZ));`);
+ };
+ const standingWater=new THREE.Mesh(waterGeometry,waterMaterial);standingWater.name='Standing sprinkler water across the office floor';standingWater.visible=false;standingWater.renderOrder=2;standingWater.raycast=()=>{};standingWater.receiveShadow=true;group.add(standingWater);
+ let wetAt=null,wetness=0;
  const hardware=new THREE.Group();group.add(hardware);
  const iron=pipeMaterial.clone();iron.color.setHex(0x897767);iron.roughness=.87;iron.emissive.setHex(0x17130f);iron.emissiveIntensity=.18;
  const brass=new THREE.MeshStandardMaterial({color:0x927653,metalness:.72,roughness:.58,emissive:0x33251a,emissiveIntensity:.16});
@@ -36,6 +54,8 @@ export function createCeilingSprinklers({floorSupport,pipeMaterial}){
  const splashes=new THREE.InstancedMesh(mistGeometry,new THREE.MeshBasicMaterial({color:0x9db7bb,transparent:true,opacity:.38,side:THREE.DoubleSide,depthWrite:false}),renderQuality.mobile?80:144);splashes.name='Sprinkler splashes on the floor';splashes.visible=false;splashes.frustumCulled=false;splashes.raycast=()=>{};group.add(splashes);
  const dummy=new THREE.Object3D(),splashCount=splashes.instanceMatrix.count;
  function update(time,strength,reducedMotion=false){
+  if(strength>0){if(wetAt===null)wetAt=time;wetness=Math.max(wetness,Math.min(1,(time-wetAt+.25)/7));}
+  standingWater.visible=wetness>0;waterMaterial.opacity=.30*wetness;waterTime.value=reducedMotion?0:time;
   spray.visible=splashes.visible=strength>0;if(!strength)return;
   material.opacity=strength*(reducedMotion?.32:.68);
   const flowTime=reducedMotion?0:time;
@@ -53,5 +73,5 @@ export function createCeilingSprinklers({floorSupport,pipeMaterial}){
   }
   splashes.instanceMatrix.needsUpdate=true;
  }
- return {group,update,setEnvironment(map){for(const material of[iron,brass]){material.envMap=map;material.envMapIntensity=.7;material.needsUpdate=true;}},reset(){spray.visible=splashes.visible=false;}};
+ return {group,update,setEnvironment(map){for(const material of[iron,brass,waterMaterial]){material.envMap=map;material.envMapIntensity=material===waterMaterial?1.2:.7;material.needsUpdate=true;}},reset(){spray.visible=splashes.visible=standingWater.visible=false;wetAt=null;wetness=0;waterMaterial.opacity=0;}};
 }

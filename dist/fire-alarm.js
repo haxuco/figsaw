@@ -61,9 +61,10 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
  const wetPoint=new THREE.Vector3(),wetTail=new THREE.Vector3();
  const target=new THREE.Vector3(),dummy=new THREE.Object3D(),rotation=new THREE.Quaternion();
  function pull(time,locked=false){
-  const outcome=state.pull(time,{locked,fireActive:fireHazard.phase==='burning'||fireHazard.phase==='extinguishing',acidSpilled:acidLeaks.leaks.length>0});
+  if(fireHazard.dying)return false;
+  const outcome=state.pull(time,{locked,fireActive:fireHazard.phase==='burning'||fireHazard.phase==='extinguishing',acidSpilled:acidLeaks.leaks.length>0&&!acidLeaks.neutralized});
   if(!outcome)return false;
-  if(outcome==='fire')target.copy(fireHazard.origin);
+  if(outcome==='fire'){target.copy(fireHazard.origin);acidLeaks.neutralize(time+.18);}
   else if(outcome==='acid'){const leak=acidLeaks.leaks[0];target.set(leak.head.x,floorSupport(leak.head.x,leak.head.z),leak.head.z);}
   else {laptop.object.getWorldPosition(target);sizzle.play();}
   fireHazard.releaseSprinklers(time+.18);return outcome;

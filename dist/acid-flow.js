@@ -2,7 +2,7 @@ const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // Finite reservoirs spread across the floor independently of the player's view.
 // Deterministic concentric lobes overlap into broad, persistent pools.
 export function createAcidFlow({speed=.38,maxPoints=180}={}){
- const leaks=[];let hitAt=null,finished=false;
+ const leaks=[];let hitAt=null,finished=false,neutralized=false;
  function open(index,origin,time,locked=false,{breach=false}={}){
   if(locked||hitAt!==null||leaks.some(l=>l.index===index))return false;
   leaks.push({index,openedAt:time,drainStarted:time,drainInitial:1,duration:breach?14:25,progress:0,remaining:1,pouring:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
@@ -28,10 +28,10 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
    }
    for(const point of leak.points){
     point.radius=.13+.34*clamp((time-point.born)/4,0,1);
-    if(!protectedFromAcid&&hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
+    if(!neutralized&&!protectedFromAcid&&hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
    }
   }
   if(hitAt!==null&&time-hitAt>=.85){finished=true;return true;}return false;
  }
- return {open,breach,update,leaks,remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
+ return {open,breach,update,leaks,neutralize(){if(hitAt!==null||finished)return false;neutralized=true;return true;},get neutralized(){return neutralized;},remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;neutralized=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
 }

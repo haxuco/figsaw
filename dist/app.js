@@ -454,6 +454,7 @@ const axeInteraction=createAxeInteraction({axe:fireAxe,camera,tanks:figpalHoists
 const cancelAxeSelection=document.querySelector('#cancel-axe-selection');
 cancelAxeSelection.addEventListener('click',()=>{if(!axeInteraction.active){putAxeBack();canvas.focus({preventScroll:true});}});
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
+const fireWarning=document.querySelector('#fire-warning');
 const gameOverReasonText=document.querySelector('#game-over-reason');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
@@ -556,7 +557,7 @@ function inspectDocument(hit){
  else if(hit?.userData.fishClue&&figpalHoists.fishClueReady)documentViewer.show(figpalHoists.fishInspectionTarget);
 }
 function escapeRoom(){
- if(gameEnded||gameWon)return;exitDoor.unlock();gameWon=true;countdownHUD.hide();leaveChairButton.hidden=true;escapedAt=state.time;
+ if(gameEnded||gameWon)return;exitDoor.unlock();gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;escapedAt=state.time;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();figpalBubbles.hide();arrivalDialogue.hidden=true;canvas.inert=true;
  const target=exitDoor.object.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,1.1,0)),direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=1;
  camera.position.copy(cameraPosition);camera.lookAt(cameraPosition.clone().add(direction));camera.fov=homeCamera.fov;camera.updateProjectionMatrix();
@@ -784,7 +785,7 @@ function updateFigpalRound(time){
 }
 
 function endGame(cause='objective'){
- if(gameEnded)return;gameEnded=true;countdownHUD.hide();inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
+ if(gameEnded)return;gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
@@ -815,7 +816,7 @@ function resetView({skipIntro=false}={}){
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
  gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
- gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';
+ gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';fireWarning.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
@@ -1049,6 +1050,7 @@ function render(){
  const physicalPosition=chairSeat.occupied?chairSeat.hazardPosition:documentViewer.origin;
  const acidFinished=!fireAlarm.dying&&acidLeaks.update(t,dt,physicalPosition,camera,reducedMotion,{protectedFromAcid:chairSeat.protectedFromAcid});
  const fireFinished=fireHazard.update(t,dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
+ const fireWarningOpacity=fireHazard.warningOpacity(t,reducedMotion);fireWarning.hidden=fireWarningOpacity<=0;fireWarning.style.opacity=String(fireWarningOpacity);
  const alarmFinished=fireAlarm.update(t,camera,reducedMotion);
  if(acidLeaks.dying||fireHazard.dying||fireAlarm.dying)releaseControls();
  const mugFinished=mugTrap.update(t,reducedMotion);

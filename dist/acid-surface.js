@@ -4,11 +4,12 @@ import {renderQuality} from './render-quality.js';
 export function createAcidSurface(floorSupport,burnMap,timeUniform){
  const size=renderQuality.textureSize,canvas=document.createElement('canvas');canvas.width=canvas.height=size;
  const paint=canvas.getContext('2d'),wetMap=new THREE.CanvasTexture(canvas);wetMap.flipY=false;wetMap.generateMipmaps=false;wetMap.minFilter=THREE.LinearFilter;
- const wetUniform={value:wetMap};
+ const wetUniform={value:wetMap},neutralizedUniform={value:0};
+ const acidColor=new THREE.Color(0x637c23),waterColor=new THREE.Color(0x77878c),acidGlow=new THREE.Color(0x273e08),waterGlow=new THREE.Color(0x000000);
  function water(masked){
   const mat=new THREE.MeshPhysicalMaterial({color:0x637c23,roughness:.12,metalness:0,ior:1.333,clearcoat:1,clearcoatRoughness:.08,emissive:0x273e08,emissiveIntensity:.15,transparent:masked,opacity:masked?.92:1,depthWrite:!masked,side:THREE.DoubleSide,envMapIntensity:1.4});
   mat.onBeforeCompile=shader=>{
-   shader.uniforms.acidTime=timeUniform;shader.uniforms.acidWet=wetUniform;
+   shader.uniforms.acidTime=timeUniform;shader.uniforms.acidWet=wetUniform;shader.uniforms.acidNeutralized=neutralizedUniform;
    shader.vertexShader='varying vec3 vWetWorld;\n'+shader.vertexShader;
    shader.vertexShader=shader.vertexShader.replace('#include <worldpos_vertex>',`#include <worldpos_vertex>
     vec4 wetVertex=vec4(transformed,1.0);
@@ -16,7 +17,7 @@ export function createAcidSurface(floorSupport,burnMap,timeUniform){
      wetVertex=instanceMatrix*wetVertex;
     #endif
     vWetWorld=(modelMatrix*wetVertex).xyz;`);
-   shader.fragmentShader='uniform float acidTime;uniform sampler2D acidWet;varying vec3 vWetWorld;\n'+shader.fragmentShader;
+   shader.fragmentShader='uniform float acidTime;uniform sampler2D acidWet;uniform float acidNeutralized;varying vec3 vWetWorld;\n'+shader.fragmentShader;
    shader.fragmentShader=shader.fragmentShader.replace('#include <color_fragment>',`#include <color_fragment>
     vec2 flowUV=vWetWorld.xz;
     float eddy=sin(flowUV.x*14.0+sin(flowUV.y*9.0-acidTime*.7)+acidTime*.35)*sin(flowUV.y*17.0-acidTime*.8);
@@ -25,7 +26,7 @@ export function createAcidSurface(floorSupport,burnMap,timeUniform){
     wet-=.035*eddy+.018*fine;
     if(wet<.055)discard;
     float depth=smoothstep(.12,.95,wet);
-    diffuseColor.rgb=mix(vec3(.31,.42,.085),diffuseColor.rgb*.62,depth);
+    diffuseColor.rgb=mix(mix(vec3(.31,.42,.085),vec3(.25,.30,.32),acidNeutralized),diffuseColor.rgb*.62,depth);
     diffuseColor.a*=smoothstep(.055,.22,wet)*mix(.48,1.0,depth);`:''}
     diffuseColor.rgb*=.94+.07*eddy+.025*fine;`);
    shader.fragmentShader=shader.fragmentShader.replace('#include <normal_fragment_begin>',`#include <normal_fragment_begin>
@@ -54,7 +55,8 @@ export function createAcidSurface(floorSupport,burnMap,timeUniform){
   }
   wetMap.needsUpdate=true;
  }
- return {pool,scorch,jetMaterial,update,reset(){lastPaint=-Infinity;paint.globalCompositeOperation='source-over';paint.fillStyle='#000';paint.fillRect(0,0,size,size);wetMap.needsUpdate=true;},setEnvironment(map){for(const mat of[material,jetMaterial]){mat.envMap=map;mat.needsUpdate=true;}}};
+ function setNeutralized(amount){neutralizedUniform.value=amount;material.opacity=.92-.50*amount;for(const mat of[material,jetMaterial]){mat.color.lerpColors(acidColor,waterColor,amount);mat.emissive.lerpColors(acidGlow,waterGlow,amount);mat.emissiveIntensity=.15*(1-amount);}}
+ return {pool,scorch,jetMaterial,update,setNeutralized,reset(){setNeutralized(0);lastPaint=-Infinity;paint.globalCompositeOperation='source-over';paint.fillStyle='#000';paint.fillRect(0,0,size,size);wetMap.needsUpdate=true;},setEnvironment(map){for(const mat of[material,jetMaterial]){mat.envMap=map;mat.needsUpdate=true;}}};
 }
 
 export function createDrainJet(outlet,floorSupport,material,{width=1}={}){

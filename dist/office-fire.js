@@ -46,7 +46,7 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
   return target||undefined;
  }
  function wetCableContact(){
-  if(!chargingKit.energized)return null;
+  if(!chargingKit.energized||acidLeaks.neutralized)return null;
   for(const p of chargingKit.cablePoints)for(const leak of acidLeaks.leaks)for(const wet of leak.points){if(Math.hypot(p.x-wet.x,p.z-wet.z)<wet.radius+.006)return p;}
   return null;
  }
@@ -56,7 +56,7 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
   const finished=pauseHazards?false:state.update(time,dt,{live:chargingKit.energized,contact:state.phase==='idle'?wetCableContact():null,viewer});
   if(state.origin){point.set(state.origin.x,state.origin.y,state.origin.z);chargingKit.meltCable(point,state.melt);}
   if(lastPhase!==state.phase){
-   const messages={melting:'The acid is melting the plugged-in charger cable…',burning:'The damaged cable sparks. Fire is spreading across the floor! Pull the fire alarm by the door.',extinguishing:'The sprinklers release water. The flames are dying down.',extinguished:'The fire is out. The charger is ruined, and the spilled acid is still dangerous.'};
+   const messages={melting:'The acid is melting the plugged-in charger cable…',burning:'The damaged cable sparks. Fire is spreading across the floor.',extinguishing:'The sprinklers release water. The flames are dying down.',extinguished:'The fire is out.'};
    message=messages[state.phase]||'';lastPhase=state.phase;
   }
   clock.value=reducedMotion?0:time;power.value=state.intensity;
@@ -97,7 +97,7 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
  }
  return {group,update,flowTarget,setEnvironment:sprinklers.setEnvironment,activateSprinklers:state.activateSprinklers,releaseSprinklers:state.releaseSprinklers,
   get origin(){return state.origin;},
-  get phase(){return state.phase;},get dying(){return state.dying;},get sprinklersArmed(){return state.armed;},blackout:state.blackout,
+  get phase(){return state.phase;},get dying(){return state.dying;},get sprinklersArmed(){return state.armed;},blackout:state.blackout,warningOpacity:state.warningOpacity,
   takeMessage(){const text=message;message='';return text;},
   reset(){state.reset();sprinklers.reset();target=null;message='';lastPhase='idle';flames.count=smoke.count=ash.count=0;sparks.visible=false;light.intensity=frontLight.intensity=0;power.value=0;}
  };

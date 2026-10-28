@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createCableFireState} from '../dist/cable-fire-state.js';
+import {createCableFireState,FIRE_GRACE_SECONDS,SPRINKLER_SECONDS} from '../dist/cable-fire-state.js';
 import {createChargingState} from '../dist/charging-state.js';
 import {createAcidFlow} from '../dist/acid-flow.js';
 import {createOfficeFire} from '../dist/office-fire.js';
@@ -15,7 +15,7 @@ test('only live cable contact melts the insulation and starts a spreading fatal 
  run(state,6,{live:true,viewer},3);assert.equal(state.phase,'idle');
  state.update(6,1/60,{contact,live:true,viewer});assert.equal(state.phase,'melting');
  run(state,6.8,{live:true,viewer},6);assert.equal(state.phase,'melting');assert.ok(state.melt>0&&state.melt<1);
- assert.equal(run(state,20,{live:true,viewer},6.8),true);assert.equal(state.phase,'dead');assert.ok(state.patches.length>4);assert.equal(state.blackout(20),1);assert.equal(state.water(20),0);
+ assert.equal(run(state,50,{live:true,viewer},6.8),true);assert.equal(state.phase,'dead');assert.ok(state.patches.length>4);assert.equal(state.blackout(50),1);assert.equal(state.water(50),0);
 });
 
 test('armed sprinklers stay dry until fire, then suppress it before it reaches the player',()=>{
@@ -40,7 +40,7 @@ test('acid reaches the actual cable before ignition; existing acid contact remai
  const fire=createOfficeFire({chargingKit:charging,acidLeaks:acid,floorSupport:()=>0,pipeMaterial:new THREE.MeshStandardMaterial()}),camera=new THREE.PerspectiveCamera();camera.position.set(viewer.x,.8,viewer.z);
  flow.open(0,{x:-1,y:0,z:0},0);assert.equal(fire.flowTarget(),undefined);
  charging.energized=true;let ignited=false,ended=false;
- for(let tick=0;tick<1800;tick++){
+ for(let tick=0;tick<3600;tick++){
   const t=tick/60;
   const acidFinished=flow.update(t,1/60,viewer,{protectedFromAcid:true});
   ended=fire.update(t,1/60,viewer,camera)||ended;
@@ -56,6 +56,36 @@ test('acid reaches the actual cable before ignition; existing acid contact remai
 
 test('late sprinkler activation cannot undo an already fatal burn',()=>{
  const state=createCableFireState(),close={x:contact.x+.1,z:contact.z};
- run(state,4.5,{contact,live:true,viewer:close});assert.equal(state.dying,true);
- state.activateSprinklers();assert.equal(run(state,8,{viewer:close},4.5),true);assert.equal(state.phase,'dead');
+ run(state,31.5,{contact,live:true,viewer:close});assert.equal(state.dying,true);
+ assert.equal(state.releaseSprinklers(31.5),false);
+ state.activateSprinklers();assert.equal(run(state,34,{viewer:close},31.5),true);assert.equal(state.phase,'dead');
+});
+
+test('flames surround the player but cannot burn them during the full thirty-second grace period',()=>{
+ const state=createCableFireState(),close={x:contact.x,z:contact.z};
+ state.update(0,.016,{contact,live:true,viewer:close});state.update(1.4,.016,{viewer:close});assert.equal(state.phase,'burning');
+ run(state,31.38,{viewer:close},1.4);assert.equal(state.dying,false);assert.equal(state.blackout(31.38),0);
+ assert.ok(state.patches.some(p=>p.x<close.x-.4)&&state.patches.some(p=>p.x>close.x+.4));
+ const low=state.warningOpacity(1.4),high=state.warningOpacity(3);assert.ok(high>low&&high<.2);assert.ok(state.warningOpacity(3,true)>0);
+ state.update(1.4+FIRE_GRACE_SECONDS,.016,{viewer:close});assert.equal(state.dying,true);assert.equal(state.warningOpacity(31.4),0);
+ assert.equal(state.update(32.6,.016,{viewer:close}),true);
+});
+
+test('an alarm pulled just before the deadline saves the player and water stops after ten seconds',()=>{
+ const state=createCableFireState();state.update(0,.016,{contact,live:true,viewer});state.update(1.4,.016,{viewer});
+ const pullAt=1.4+FIRE_GRACE_SECONDS-.01;
+ assert.equal(state.releaseSprinklers(pullAt),true);
+ assert.equal(state.update(pullAt+3,.016,{viewer}),false);assert.equal(state.phase,'extinguished');assert.equal(state.dying,false);assert.equal(state.warningOpacity(pullAt+3),0);
+ assert.equal(state.water(pullAt+.5),1);assert.ok(state.water(pullAt+9.5)>0);
+ assert.equal(state.water(pullAt+SPRINKLER_SECONDS),0);assert.equal(state.water(pullAt+20),0);
+ state.reset();assert.equal(state.warningOpacity(100),0);assert.equal(state.water(100),0);
+});
+
+test('neutralized spilled acid stays wet and drains, but walking through it is safe until retry',()=>{
+ const flow=createAcidFlow(),near={x:0,z:0};flow.open(0,{x:0,y:0,z:0},0);
+ flow.update(2,.016,near,{protectedFromAcid:true});const before=flow.leaks[0].remaining;
+ assert.equal(flow.neutralize(),true);assert.equal(flow.neutralized,true);
+ for(let time=2;time<40;time+=.1)assert.equal(flow.update(time,.1,near),false);
+ assert.equal(flow.dying,false);assert.equal(flow.blackout(40),0);assert.ok(flow.leaks[0].points.length>0);assert.ok(flow.remaining(0)<before);
+ flow.reset();assert.equal(flow.neutralized,false);flow.open(0,{x:0,y:0,z:0},50);flow.update(51,.1,near);assert.equal(flow.dying,true);assert.equal(flow.neutralize(),false,'cannot reverse an already fatal acid injury');
 });
