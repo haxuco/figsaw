@@ -1,39 +1,37 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
-
-// A growing wet trail, not a delayed loss timer: contact is tested against the
-// actual puddles, including old ones the player can step back into.
+// Finite reservoirs spread across the floor independently of the player's view.
+// Deterministic concentric lobes overlap into broad, persistent pools.
 export function createAcidFlow({speed=.38,maxPoints=180}={}){
  const leaks=[];let hitAt=null,finished=false;
- function open(index,origin,time,locked=false){
-  if(locked||hitAt!==null||leaks.some(leak=>leak.index===index))return false;
-  leaks.push({index,openedAt:time,progress:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
+ function open(index,origin,time,locked=false,{breach=false}={}){
+  if(locked||hitAt!==null||leaks.some(l=>l.index===index))return false;
+  leaks.push({index,openedAt:time,drainStarted:time,drainInitial:1,duration:breach?14:25,progress:0,remaining:1,pouring:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
  }
- function update(time,dt,viewer,{target=viewer,protectedFromAcid=false}={}){
+ function breach(index,origin,time){
+  const leak=leaks.find(l=>l.index===index);if(!leak)return open(index,origin,time,false,{breach:true});
+  if(leak.remaining<=0)return false;
+  leak.origin={...origin};leak.drainInitial=leak.remaining;leak.drainStarted=time;leak.duration=14*leak.remaining;return true;
+ }
+ function update(time,dt,viewer,{protectedFromAcid=false}={}){
   if(finished)return false;
   for(const leak of leaks){
-   leak.progress=clamp((time-leak.openedAt)/1.35,0,1);
-   if(time-leak.openedAt<.48)continue;
-   if(!leak.points.length)leak.points.push({...leak.head,born:time,radius:.13});
-   const dx=target.x-leak.head.x,dz=target.z-leak.head.z,distance=Math.hypot(dx,dz),step=Math.min(distance,speed*clamp(dt,0,.08));
-   if(distance>.001){
-    // A gentle wandering front makes a rivulet while still creeping toward the player.
-    const side=.18*Math.sin((time-leak.openedAt)*.85+leak.index*1.9),length=Math.sqrt(1+side*side);
-    leak.head.x+=(dx/distance-dz/distance*side)*step/length;
-    leak.head.z+=(dz/distance+dx/distance*side)*step/length;
+   const age=Math.max(0,time-leak.openedAt),u=clamp((time-leak.drainStarted-.48)/leak.duration,0,1);
+   leak.progress=clamp(age/1.35,0,1);leak.remaining=Math.min(leak.remaining,leak.drainInitial*(1-u)**1.5);
+   leak.pouring=u>=1?0:leak.progress*Math.sqrt(leak.remaining);
+   if(age<.48)continue;
+   const spread=Math.min(1,(age-.48)/(30*.38/speed));
+   const desired=Math.min(maxPoints,1+Math.floor(spread*(maxPoints-1)));
+   while(leak.points.length<desired){
+    const n=leak.points.length,a=n*2.399963+leak.index*1.7;
+    const r=n===0?0:Math.sqrt(n/(maxPoints-1))*4.5*(.90+.10*Math.sin(a*3+leak.index));
+    leak.points.push({x:clamp(leak.origin.x+Math.cos(a)*r,-3.95,3.95),z:clamp(leak.origin.z+Math.sin(a)*r,-4.05,4.35),born:time,radius:.13});
    }
-   const tail=leak.points.at(-1);
-   if(Math.hypot(tail.x-leak.head.x,tail.z-leak.head.z)>.075){
-    leak.points.push({...leak.head,born:time,radius:.13});
-    if(leak.points.length>maxPoints)leak.points.splice(1,1);
-   }
-   for(const [index,point] of leak.points.entries()){
-    const age=clamp((time-point.born)/3,0,1);
-    point.radius=index===0?.16+.23*age:.12+(.13+.025*Math.sin(point.born*1.8+leak.index))*age;
+   for(const point of leak.points){
+    point.radius=.13+.34*clamp((time-point.born)/4,0,1);
     if(!protectedFromAcid&&hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
    }
   }
-  if(hitAt!==null&&time-hitAt>=.85){finished=true;return true;}
-  return false;
+  if(hitAt!==null&&time-hitAt>=.85){finished=true;return true;}return false;
  }
- return {open,update,leaks,reset(){leaks.length=0;hitAt=null;finished=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
+ return {open,breach,update,leaks,remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
 }

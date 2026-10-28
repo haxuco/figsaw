@@ -44,7 +44,8 @@ export function createAcidSurface(floorSupport,burnMap,timeUniform){
  const scorch=new THREE.Mesh(geo,new THREE.MeshBasicMaterial({color:0x101509,alphaMap:burnMap,transparent:true,opacity:.44,depthWrite:false,alphaTest:.01}));scorch.name='Damp corroded edge beneath acid';scorch.position.y=-.002;scorch.renderOrder=3;
  let lastPaint=-Infinity;
  function update(time,leaks){
-  if(time-lastPaint<.10)return;lastPaint=time;
+  const lastGrowth=Math.max(...leaks.map(l=>l.points.at(-1)?.born??time));
+  if(time-lastPaint<.10||lastPaint>lastGrowth+4.1)return;lastPaint=time;
   paint.globalCompositeOperation='source-over';paint.fillStyle='#000';paint.fillRect(0,0,size,size);paint.globalCompositeOperation='lighten';
   for(const leak of leaks)for(const point of leak.points){
    const x=(point.x+4.1)/8.2*size,y=(point.z+4.2)/8.8*size,r=point.radius*size/8.2;

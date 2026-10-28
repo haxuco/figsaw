@@ -34,7 +34,7 @@ test('locked wrist cannot take or swing the axe; unlocked strikes break only the
 test('the cut is a real hole in the glass, with the rear pane preserved and shards settled on the floor',()=>{
  const {tanks,floorSupport}=fixture(),tank=tanks[0],ray=new THREE.Raycaster();
  tank.break(0);tank.update(2);tank.vat.updateMatrixWorld(true);
- const glass=tank.group.children[0],start=tank.vat.localToWorld(new THREE.Vector3(0,.705,1)),dir=new THREE.Vector3(0,0,-1).transformDirection(tank.vat.matrixWorld);
+ const glass=tank.group.children[0],start=tank.vat.localToWorld(new THREE.Vector3(0,.40,1)),dir=new THREE.Vector3(0,0,-1).transformDirection(tank.vat.matrixWorld);
  ray.set(start,dir);const hits=ray.intersectObject(glass);assert.ok(hits.length>0);assert.ok(hits[0].distance>1.4,'ray passes through front breach and hits the rear pane');
  const shards=tank.group.getObjectByName('Fallen glass shards'),m=new THREE.Matrix4(),p=new THREE.Vector3(),q=new THREE.Quaternion(),scale=new THREE.Vector3();
  for(let i=0;i<shards.count;i++){

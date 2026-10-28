@@ -15,9 +15,9 @@ function fixture(){
  return {clock,rounds,hoists,calls,dead,under,lowered,setNow(value){now=value;},submerge(i){dead.add(i);under.add(i);hoists.movingIndex=null;}};
 }
 
-test('three complete five-minute rounds lower one unique captive each and only then end the game',()=>{
+test('two complete five-minute deadlines lower the non-PMs and end before the PM',()=>{
  const f=fixture();f.clock.start();
- for(let i=0;i<3;i++){
+ for(let i=0;i<2;i++){
   const start=i*320;f.setNow(start+299);
   assert.equal(f.rounds.update(start+299),null);assert.equal(f.clock.remainingSeconds,1);
   f.setNow(start+300);
@@ -27,10 +27,10 @@ test('three complete five-minute rounds lower one unique captive each and only t
   f.dead.add(i);assert.equal(f.rounds.update(start+306),null,'wait for the full descent, not just transformation');
   f.submerge(i);assert.equal(f.rounds.update(start+310),null);
   const event=f.rounds.update(start+312);
-  if(i<2){
+  if(i<1){
    assert.deepEqual(event,{type:'return',index:i});assert.equal(f.clock.remainingSeconds,0);
    assert.equal(f.rounds.update(start+312.5),null,'timer waits for camera return');
-   f.setNow(start+320);assert.deepEqual(f.rounds.update(start+320),{type:'restart',remaining:2-i});
+   f.setNow(start+320);assert.deepEqual(f.rounds.update(start+320),{type:'restart',remaining:1-i});
    assert.equal(f.clock.remainingSeconds,300);assert.equal(f.rounds.active,false);
   }else{
    assert.deepEqual(event,{type:'ending'});assert.equal(f.clock.remainingSeconds,0);
@@ -50,14 +50,11 @@ test('a hidden-tab deadline still selects just one survivor and never catches up
  assert.equal(f.clock.remainingSeconds,300);
 });
 
-test('manual sacrifices are skipped, an existing descent is adopted, and a raising hoist cannot overlap',()=>{
- const f=fixture();f.dead.add(0);f.under.add(0);f.lowered.add(0);f.clock.start();f.setNow(300);
- f.hoists.movingIndex=1;
- assert.equal(f.rounds.update(300),null,'wait while the player raises another hoist');
- f.lowered.add(1);
- assert.deepEqual(f.rounds.update(301),{type:'lower',index:1});assert.deepEqual(f.calls,[1]);
- f.submerge(1);f.rounds.update(310);f.rounds.update(312);f.rounds.update(314);
- f.setNow(600);assert.deepEqual(f.rounds.update(600),{type:'lower',index:2});
+test('manual operations never count as a deadline or override the randomized schedule',()=>{
+ const f=fixture();f.dead.add(2);f.under.add(2);f.lowered.add(2);f.clock.start();f.setNow(300);
+ f.hoists.movingIndex=2;assert.equal(f.rounds.update(300),null);
+ f.hoists.movingIndex=null;assert.deepEqual(f.rounds.update(301),{type:'lower',index:0});
+ assert.equal(f.rounds.scheduledDrops,0);f.submerge(0);f.rounds.update(310);f.rounds.update(312);assert.equal(f.rounds.scheduledDrops,1);
 });
 
 test('other camera actions defer the deadline; reset clears every victim and pending ending',()=>{
@@ -69,11 +66,18 @@ test('other camera actions defer the deadline; reset clears every victim and pen
  f.clock.start();f.setNow(600);assert.deepEqual(f.rounds.update(600),{type:'lower',index:0});
 });
 
-test('manually losing the final Figpal ends the game even before the countdown expires',()=>{
+test('manual transformations alone cannot trigger the scheduled game over',()=>{
  const f=fixture();for(let i=0;i<3;i++)f.submerge(i);
- f.hoists.movingIndex=2;assert.equal(f.rounds.update(.5),null,'manual final descent must settle before game over');f.hoists.movingIndex=null;
- assert.deepEqual(f.rounds.update(1),{type:'ending'});
- assert.deepEqual(f.rounds.update(3),{type:'gameover'});
+ assert.equal(f.rounds.update(1),null);assert.equal(f.rounds.scheduledDrops,0);
+});
+
+test('PM remains last and a safely lowered living captive still completes its scheduled round',()=>{
+ let finished=true,moving=null;const lowered=[];
+ const hoists={count:3,get movingIndex(){return moving;},lower(i){lowered.push(i);moving=i;return true;},isSettled:()=>moving===null,reset(){moving=null;}};
+ const clock={get status(){return finished?'finished':'running';},reset(){finished=false;},start(){}};
+ const rounds=createFigpalRounds(hoists,clock,{dropOrder:[2,0,1]});
+ assert.deepEqual(rounds.update(300),{type:'lower',index:2});moving=null;rounds.update(305);assert.equal(rounds.update(307).type,'return');rounds.update(309);finished=true;
+ assert.deepEqual(rounds.update(609),{type:'lower',index:0});moving=null;rounds.update(614);assert.equal(rounds.update(616).type,'ending');assert.deepEqual(lowered,[2,0]);
 });
 
 test('tank camera follows the descent, holds focus, and restores the exact previous player view',()=>{

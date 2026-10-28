@@ -33,7 +33,7 @@ test('lifting the camera does not delay acid contact or evade game over',()=>{
  const low=createAcidFlow(),high=createAcidFlow(),{position,state,camera}=fixture();
  const fixed=position.clone();low.open(0,source,0);high.open(0,source,0);camera.start(0,source,true);
  let lowEnd=null,highEnd=null;
- for(let tick=1;tick<500;tick++){
+ for(let tick=1;tick<1400;tick++){
   const time=tick/30;camera.update(time);
   if(low.update(time,1/30,fixed))lowEnd=tick;
   if(high.update(time,1/30,position))highEnd=tick;

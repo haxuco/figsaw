@@ -2,17 +2,31 @@ import * as THREE from './vendor/three.module.js';
 import {createObjectInspectionCamera} from './object-inspection-camera.js';
 import {renderQuality as quality} from './render-quality.js';
 const specs=[['org-chart','Figpal Labs — people & practice',1600,1100],['onboarding','Onboarding wireframes',1600,1000],['workspace','Workspace design review',1600,1000],['planning','Sprint planning whiteboard',1600,1020],...Array.from({length:8},(_,i)=>[`note-${i}`,['Research note','Product planning note','Design note','Engineering note','Review note','Sprint checklist','Retrospective note','Content note'][i],480,500])];
-export async function createWallDocuments(){
+export async function createWallDocuments(puzzle){
  const entries=new Map(),targets=[];
+ const orgTemplate=await (await fetch('./assets/documents/org-chart.svg?v=haunted-wear-2')).text();
+ let orgUrl=null,orgRevision=0;
+ function orgSource(){
+  const xml=new DOMParser().parseFromString(orgTemplate,'image/svg+xml'),names=['Pudding','Maki','Puff'];
+  const cards=names.map(name=>[...xml.querySelectorAll('text')].find(t=>t.textContent===name).parentElement);
+  const positions=Object.fromEntries(cards.map(card=>[[...card.children].find(n=>n.tagName==='text'&&n.getAttribute('y')==='101').textContent,card.getAttribute('transform')]));
+  cards.forEach((card,i)=>{const role=puzzle?.roles[i]??['Product Designer','Frontend Developer','Product Manager'][i];card.setAttribute('transform',positions[role]);[...card.children].find(n=>n.tagName==='text'&&n.getAttribute('y')==='101').textContent=role;});
+  const old=orgUrl;orgUrl=URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(xml)],{type:'image/svg+xml'}));if(old)URL.revokeObjectURL(old);return orgUrl;
+ }
+
  await Promise.all(specs.map(async([id,title,width,height])=>{
-  const src=`./assets/documents/${id}.svg?v=haunted-wear-2`,image=new Image();image.decoding='async';image.src=src;
+  const src=id==='org-chart'?orgSource():`./assets/documents/${id}.svg?v=haunted-wear-2`,image=new Image();image.decoding='async';image.src=src;
   await image.decode();const scale=Math.min(1,(quality.mobile?256:1024)/Math.max(width,height));
   const c=document.createElement('canvas');c.width=Math.round(width*scale);c.height=Math.round(height*scale);c.getContext('2d').drawImage(image,0,0,c.width,c.height);
   const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=quality.mobile?2:4;
-  entries.set(id,{id,title,src,width,height,map,description:id==='org-chart'?'Figpal Labs organization chart. Cappy the capybara is CEO. Byte the snake is CTO, with Stack the blocks as Engineering Lead and Maki the sushi as Frontend Developer. Pixel the cat is VP of Design, with Pudding as Product Designer and Page the book as UX Designer. Toast is Chief Product Officer, with Puff the fish in the black DESIGN IS DEAD hat as Product Manager and Bloom the sunflower in Product Operations.':title});
+  entries.set(id,{id,title,src,width,height,map,description:title});
  }));
  function tag(object,id){object.userData.wallDocument=id;object.name=entries.get(id).title;targets.push(object);return object;}
- return {entries,targets,tag,map:id=>entries.get(id).map};
+ async function refreshRoles(){
+  const request=++orgRevision,entry=entries.get('org-chart');entry.src=orgSource();const image=new Image();image.src=entry.src;await image.decode();if(request!==orgRevision)return;
+  const c=entry.map.image;c.getContext('2d').clearRect(0,0,c.width,c.height);c.getContext('2d').drawImage(image,0,0,c.width,c.height);entry.map.needsUpdate=true;
+ }
+ return {entries,targets,tag,refreshRoles,map:id=>entries.get(id).map};
 }
 
 // Only the inspected physical poster gets a high-resolution texture. Restore

@@ -1,3 +1,4 @@
+import {createRepairTools} from './repair-tools.js';
 import * as THREE from './vendor/three.module.js';
 
 export function createScissors(){
@@ -14,7 +15,7 @@ export function createScissors(){
  return {group,setOpen(value){blades.forEach((b,i)=>b.rotation.z=(i?1:-1)*(.06+value*.34));}};
 }
 export function createMobileSupplies(drawer){
- const objects={},group=new THREE.Group();group.name='Scissors and repair string in Supplies';drawer.add(group);
+ const objects=createRepairTools(drawer),group=new THREE.Group();group.name='Scissors and repair string in Supplies';drawer.add(group);
  const scissors=createScissors();scissors.group.rotation.set(-Math.PI/2,0,-.35);scissors.group.position.set(.23,-.129,-.015);scissors.group.scale.setScalar(.80);scissors.group.userData.supplyAction='scissors';group.add(scissors.group);objects.scissors=scissors.group;
  const string=new THREE.Group();string.name='Spool of cotton repair string';string.position.set(-.24,-.100,-.07);string.userData.supplyAction='string';group.add(string);objects.string=string;
  const wood=new THREE.MeshStandardMaterial({color:0x8e7253,roughness:.9}),cotton=new THREE.MeshStandardMaterial({color:0xc6bea1,roughness:1});

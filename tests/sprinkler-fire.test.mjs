@@ -42,15 +42,15 @@ test('acid reaches the actual cable before ignition; existing acid contact remai
  charging.energized=true;let ignited=false,ended=false;
  for(let tick=0;tick<1800;tick++){
   const t=tick/60;
-  const acidFinished=flow.update(t,1/60,viewer,{target:fire.flowTarget()});
+  const acidFinished=flow.update(t,1/60,viewer,{protectedFromAcid:true});
   ended=fire.update(t,1/60,viewer,camera)||ended;
   if(fire.phase!=='idle')ignited=true;
-  assert.equal(acidFinished,false,'pool around the cable must not preempt the fire outcome');
+  assert.equal(acidFinished,false,'sitting above acid still leaves the cable vulnerable');
  }
  assert.equal(ignited,true);assert.equal(ended,true);assert.equal(charging.energized,false);
  fire.reset();assert.equal(fire.phase,'idle');assert.equal(fire.sprinklersArmed,false);
  const lethal=createAcidFlow();lethal.open(0,{x:0,y:0,z:0},0);let acidDeath=false;
- for(let tick=0;tick<1200;tick++)acidDeath=lethal.update(tick/60,1/60,viewer)||acidDeath;
+ for(let tick=0;tick<2400;tick++)acidDeath=lethal.update(tick/60,1/60,viewer)||acidDeath;
  assert.equal(acidDeath,true,'without a live cable acid retains its original behavior');
 });
 

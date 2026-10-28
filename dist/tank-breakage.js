@@ -6,8 +6,8 @@ export function brokenGlassGeometry(radius){
  const g=new THREE.CylinderGeometry(radius,radius,1.02,48,26,true),pos=g.attributes.position,keep=[];
  for(let i=0;i<g.index.count;i+=3){
   let x=0,y=0,z=0;for(let k=0;k<3;k++){const j=g.index.getX(i+k);x+=pos.getX(j)/3;y+=pos.getY(j)/3;z+=pos.getZ(j)/3;}
-  const angle=Math.atan2(x,z),a=Math.atan2((y+.015)/.29,angle/.61),edge=1+.13*Math.sin(a*9)+.08*Math.cos(a*13);
-  if((angle/.61)**2+((y+.015)/.29)**2>edge**2)for(let k=0;k<3;k++)keep.push(g.index.getX(i+k));
+  const angle=Math.atan2(x,z),a=Math.atan2((y+.32)/.20,angle/.61),edge=1+.13*Math.sin(a*9)+.08*Math.cos(a*13);
+  if((angle/.61)**2+((y+.32)/.20)**2>edge**2)for(let k=0;k<3;k++)keep.push(g.index.getX(i+k));
  }
  g.setIndex(keep);g.computeBoundingSphere();return g;
 }
@@ -17,13 +17,13 @@ export function createTankBreakage({vat,shell,deposits,index=0,floorSupport=()=>
  for(const [original,radius]of[[shell,.485],[deposits,.487]]){
   const broken=new THREE.Mesh(brokenGlassGeometry(radius),original.material);broken.position.copy(original.position);broken.renderOrder=original.renderOrder;group.add(broken);
  }
- const impact=new THREE.Object3D(),outlet=new THREE.Object3D();impact.position.set(0,.705,.49);outlet.position.set(0,.49,.49);vat.add(impact,outlet);
+ const impact=new THREE.Object3D(),outlet=new THREE.Object3D();impact.position.set(0,.40,.49);outlet.position.set(0,.235,.49);vat.add(impact,outlet);
  // Bright chipped edges and hairline fractures radiate away from the missing pane.
  const edgeMaterial=new THREE.LineBasicMaterial({color:0xc0cfbc,transparent:true,opacity:.45});
  const chippedRim=new THREE.LineSegments(new THREE.EdgesGeometry(group.children[0].geometry,40),edgeMaterial);chippedRim.position.copy(shell.position);chippedRim.raycast=()=>{};group.add(chippedRim);
  const edges=[];for(let i=0;i<11;i++){
-  const a=i/11*Math.PI*2+Math.sin(i*13)*.13,r=.92+(i%3)*.07,theta=Math.cos(a)*.61*r,y=.705+Math.sin(a)*.29*r;
-  const length=1.12+(i%4)*.09,t2=theta*length,y2=.705+(y-.705)*length;
+  const a=i/11*Math.PI*2+Math.sin(i*13)*.13,r=.92+(i%3)*.07,theta=Math.cos(a)*.61*r,y=.40+Math.sin(a)*.20*r;
+  const length=1.12+(i%4)*.09,t2=theta*length,y2=.40+(y-.40)*length;
   edges.push(Math.sin(theta)*.489,y,Math.cos(theta)*.489,Math.sin(t2)*.489,Math.min(1.20,Math.max(.24,y2)),Math.cos(t2)*.489);
  }
  const cracks=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(edges,3)),new THREE.LineBasicMaterial({color:0xb5c5aa,transparent:true,opacity:.65}));cracks.raycast=()=>{};group.add(cracks);
@@ -36,7 +36,7 @@ export function createTankBreakage({vat,shell,deposits,index=0,floorSupport=()=>
   if(brokenAt!==null)return false;brokenAt=time;settled=false;shell.visible=deposits.visible=false;group.visible=true;
   vat.updateWorldMatrix(true,true);plans.length=0;
   for(let i=0;i<shards.instanceMatrix.count;i++){
-   const a=i*2.399+index,start=new THREE.Vector3(Math.cos(a)*.16,.70+Math.sin(a)*.21,.49);
+   const a=i*2.399+index,start=new THREE.Vector3(Math.cos(a)*.16,.40+Math.sin(a)*.16,.49);
    const end=new THREE.Vector3(Math.sin(a*1.7)*(.25+(i%5)*.09),0,.58+(i%7)*.075);
    world.copy(end);vat.localToWorld(world);world.y=floorSupport(world.x,world.z)+.004;vat.worldToLocal(world);end.copy(world);
    plans.push({start,end,size:.045+(i%5)*.022,spin:a,duration:.45+(i%6)*.075});

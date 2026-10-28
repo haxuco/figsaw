@@ -23,13 +23,13 @@ export function createFloatingBones(index){
   const object=makers[pose.kind]();object.scale.multiplyScalar(pose.scale);group.add(object);
   return {...pose,object,phase:index*1.91+i*2.3};
  });
- function update(time,reducedMotion=false){
+ function update(time,reducedMotion=false,remaining=1){
   const t=reducedMotion?0:time;
   for(const bone of bones){
    const phase=bone.phase;
-   const drift=.022,turn=.46;
-   bone.object.position.set(bone.x+drift*Math.sin(t*.27+phase),bone.y+.014*Math.sin(t*.57+phase),bone.z+.018*Math.cos(t*.23+phase));
-   bone.object.rotation.set(.10*Math.sin(t*.19+phase),bone.yaw+turn*Math.sin(t*.17+phase),bone.tilt+.11*Math.sin(t*.31+phase),'YXZ');
+   const drift=.022*remaining,turn=.46*remaining;
+   bone.object.position.set(bone.x+drift*Math.sin(t*.27+phase),.29+(bone.y-.29)*remaining+.014*remaining*Math.sin(t*.57+phase),bone.z+.018*Math.cos(t*.23+phase));
+   bone.object.rotation.set(.10*Math.sin(t*.19+phase),bone.yaw+turn*Math.sin(t*.17+phase),bone.tilt+(Math.PI/2-bone.tilt)*(1-remaining)+.11*remaining*Math.sin(t*.31+phase),'YXZ');
   }
  }
  update(0);return {group,update};

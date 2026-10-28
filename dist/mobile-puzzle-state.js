@@ -5,16 +5,22 @@ function shuffled(values,random){
 }
 // A single source of truth for embroidery, the etched skull, and the exit keypad.
 export function createEscapePuzzle(random=Math.random){
- let digits,order,revision=0,fishRevealed=false;
+ let digits,order,roles,dropOrder,pmIndex,revision=0,fishRevealed=false;
  function reset(){
   const previous=digits&&order.map(k=>digits[k]).join(''),oldDigits=digits,oldOrder=order;
   order=shuffled(ANIMALS,random);if(oldOrder&&order.every((k,i)=>k===oldOrder[i]))order.push(order.shift());const pool=shuffled(['1','2','3','4','5','6','7','8','9'],random);
   digits=Object.fromEntries(ANIMALS.map((kind,i)=>[kind,pool[i]]));
   if(oldDigits&&ANIMALS.every(k=>digits[k]===oldDigits[k]))[digits.Fox,digits.Pig]=[digits.Pig,digits.Fox];
   if(order.map(k=>digits[k]).join('')===previous)[digits[order[0]],digits[order[1]]]=[digits[order[1]],digits[order[0]]];
+  const previousPM=pmIndex;
+  pmIndex=Math.min(2,Math.floor(Math.max(0,random())*3));
+  if(previousPM===pmIndex)pmIndex=(pmIndex+1+Math.floor(random()*2))%3;
+  const others=shuffled([0,1,2].filter(i=>i!==pmIndex),random);
+  roles=Array(3);roles[pmIndex]='Product Manager';roles[others[0]]='Product Designer';roles[others[1]]='Frontend Developer';
+  roles=Object.freeze(roles);dropOrder=Object.freeze([...others,pmIndex]);
   digits=Object.freeze(digits);order=Object.freeze(order);fishRevealed=false;revision++;
  }
- reset();return {reset,revealFish(){fishRevealed=true;},get digits(){return digits;},get order(){return order;},get letters(){return order.map(k=>k[0]).join('');},get code(){return order.map(k=>digits[k]).join('');},get revision(){return revision;},get fishRevealed(){return fishRevealed;}};
+ reset();return {reset,get roles(){return roles;},get pmIndex(){return pmIndex;},get dropOrder(){return dropOrder;},revealFish(){fishRevealed=true;},get digits(){return digits;},get order(){return order;},get letters(){return order.map(k=>k[0]).join('');},get code(){return order.map(k=>digits[k]).join('');},get revision(){return revision;},get fishRevealed(){return fishRevealed;}};
 }
 export function createMobilePuzzleState(){
  const inventory=new Set();let phase='tangled',active=false,action=null,started=0,progress=0;
@@ -44,4 +50,21 @@ export function createDoorKeypadState({order=null,digits=ANIMAL_DIGITS,puzzle=nu
   if(entry===code){unlocked=true;return 'Door unlocked.';}
   entry='';return 'Incorrect order.';
  },reset(){entry='';unlocked=false;},get entry(){return entry;},get unlocked(){return unlocked;},get configured(){return (puzzle?.code??fixedCode)!==null;}};
+}
+
+// Deliberately awkward four-slot control: digits can only change through arrows.
+export function createDirectionalKeypadState(puzzle){
+ let digits=[0,0,0,0],selected=0,unlocked=false;
+ return {press(key,{locked=false}={}){
+  if(locked)return 'Free your wrist first.';if(unlocked)return 'Door unlocked.';
+  if(key==='left')selected=(selected+3)%4;
+  else if(key==='right')selected=(selected+1)%4;
+  else if(key==='up')digits[selected]=(digits[selected]+1)%10;
+  else if(key==='down')digits[selected]=(digits[selected]+9)%10;
+  else if(key==='enter'){
+   if(puzzle?.code===digits.join('')){unlocked=true;return 'Door unlocked.';}
+   return 'Incorrect order.';
+  }
+  return '';
+ },reset(){digits=[0,0,0,0];selected=0;unlocked=false;},get entry(){return digits.join('');},get selected(){return selected;},get unlocked(){return unlocked;}};
 }

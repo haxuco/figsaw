@@ -21,13 +21,14 @@ import { createKetchupClosure } from './ketchup-closure.js';
 import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
 import {createMobileSupplies} from './mobile-supplies.js';
+import {createRescueChairs} from './rescue-chairs.js';
 import {createDoorKeypad} from './door-keypad.js';
 import { createFireAxe } from './fire-axe.js';
 import { createFireAlarm } from './fire-alarm.js';
 
 export async function createOffice(renderer,viewerPosition,onProgress=async()=>{},puzzle=null){
  const office=new THREE.Group();office.name='Abandoned technology office';
- const documents=await createWallDocuments();
+ const documents=await createWallDocuments(puzzle);
  const wallDecay=createWallDecay();
  const floorProps=[],floorCables=[];
  const onFloor=object=>{floorProps.push(object);return object;};
@@ -199,7 +200,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   rod([x,.68,-.085],[x,.734,.045],.019,chairEdge,arm);return arm;
  }
  function chairCaster(parent,x,y,z,angle=0){
-  const wheel=new THREE.Group();wheel.position.set(x,y,z);wheel.rotation.y=angle;parent.add(wheel);
+  const wheel=new THREE.Group();wheel.name='Twin caster';wheel.position.set(x,y,z);wheel.rotation.y=angle;parent.add(wheel);
   rod([0,.028,0],[0,.078,.015],.012,chairMetal,wheel);
   for(const side of[-1,1]){const tire=cylinder(.039,.022,[side*.021,0,0],rubber,wheel,16);tire.rotation.z=Math.PI/2;sphere([.002,.018,.018],[side*.033,0,0],chairEdge,wheel);}
   return wheel;
@@ -221,19 +222,19 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }
  function aeronChair(x,z,rotation,damage={}){
   const g=new THREE.Group();g.name='Broken Aeron-style mesh chair';office.add(g);
-  if(!damage.noBase)chairBase(g,damage.missingSpoke??-1);
+  const base=chairBase(g,damage.missingSpoke??-1);base.visible=!damage.noBase;
   // Tilt mechanism, adjustment paddles and a suspended waterfall seat.
   rounded([.24,.095,.27],[0,.405,-.035],chairEdge,g);
   cylinder(.045,.13,[0,.405,0],chairFrame,g,16);
   rod([-.14,.41,.015],[-.245,.405,.05],.012,chairMetal,g);sphere([.035,.016,.055],[-.25,.405,.055],chairArm,g);
   sphere([.055,.025,.04],[.18,.407,-.04],chairArm,g);
   const seatOutline=[[-.20,-.23],[-.26,-.16],[-.283,.08],[-.25,.22],[0,.25],[.25,.22],[.283,.08],[.26,-.16],[.20,-.23],[0,-.25]];
-  meshPanel(seatOutline,[0,0],(x,z,t)=>[x,.51-.035*(1-t*t)-.025*Math.max(0,z/.25),z],g,damage.seatTear??1);
+  const seat=new THREE.Group();g.add(seat);meshPanel(seatOutline,[0,0],(x,z,t)=>[x,.51-.035*(1-t*t)-.025*Math.max(0,z/.25),z],seat,damage.seatTear??1);g.chairParts={base,seat,caster:base.getObjectByName('Twin caster')};
   for(const side of[-1,1]){cable([[side*.12,.41,-.14],[side*.22,.46,-.20],[side*.24,.49,-.15]],.023,chairFrame,g);chairArmrest(g,side,side===damage.brokenArm);}
   if(!damage.noBack){const back=chairBack(g,damage.backTear??1);back.position.set(0,.55,-.22);back.rotation.set(damage.backLean??0,0,damage.backTwist??0);}
   return settleChairPart(g,x,z,rotation);
  }
- aeronChair(-2.85,-2.48,[0,.35,-.035],{brokenArm:1,backTear:2});
+ const rescueObjects=[];rescueObjects.push(aeronChair(-2.85,-2.48,[0,.35,-.08],{backTear:1,seatTear:0}));rescueObjects[0].chairParts.caster.visible=false;
  // The nearby left chair is worn but structurally sound enough to climb onto.
  const refugeChair=aeronChair(-.30,3.35,[0,Math.PI-.20,0],{seatTear:0,backTear:1,backLean:-.08});
  refugeChair.name='Usable Aeron chair';refugeChair.userData.chairSeat=true;
@@ -241,11 +242,13 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   refugeChair.updateWorldMatrix(true,false);refugeChair.localToWorld(eye.set(0,1.36,.025));
   target.set(.7,.12,1.25);
  }};
- aeronChair(2.75,3.30,[-.55,-.80,1.39],{brokenArm:-1,missingSpoke:2,backTwist:.20});
+ rescueObjects.push(aeronChair(2.75,3.30,[-.55,-.80,1.39],{seatTear:2,backTwist:.20}));
  aeronChair(-.55,-3.42,[1.65,.65,.32],{brokenArm:1,noBack:true});
  // A tipped chair and its detached base frame the right-hand aisle without covering the laptop.
- aeronChair(1.35,1.42,[-.30,-.50,-1.28],{noBase:true,brokenArm:-1,backTwist:-.14,backTear:2});
- const looseBase=chairBase(office,1);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
+ rescueObjects.push(aeronChair(1.35,1.42,[-.30,-.50,-1.28],{noBase:true,seatTear:0,backTwist:-.14,backTear:1}));
+ const looseBase=chairBase(office);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
+ const looseCaster=chairCaster(office,0,0,0);settleChairPart(looseCaster,-.32,-2.80,[0,.3,0]);
+ const looseSeat=new THREE.Group();office.add(looseSeat);meshPanel([[-.24,-.20],[-.28,.1],[-.22,.24],[.22,.24],[.28,.1],[.24,-.20]],[0,0],(x,z,t)=>[x,.02*(1-t*t),z],looseSeat,0);settleChairPart(looseSeat,-.80,-2.85,[.08,.5,.06]);
  const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-.75,2.30,[-1.60,.22,-.40]);
  const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
  onFloor(chairCaster(office,2.37,.045,2.84,.7));onFloor(chairCaster(office,-2.15,.045,.95,-.4));
@@ -736,6 +739,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const mobileSupplies=createMobileSupplies(chargingKit.drawer);
+ const rescueChairs=createRescueChairs({objects:rescueObjects,parts:{caster:looseCaster,seat:looseSeat,base:looseBase},player:refugeChair,tanks:figpalVats.rigs.map(r=>r.vat),floorSupport});office.add(rescueChairs.group);figpalVats.bindRescue(rescueChairs,acidLeaks);
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
  const fireAlarm=createFireAlarm({fireHazard,acidLeaks,laptop:laptopControl,floorSupport});
  fireAlarm.station.position.set(.40,1.22,.065);rear.add(fireAlarm.station);office.add(fireAlarm.effects);
@@ -745,9 +749,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  function setEnvironment(map){fireAxe.setEnvironment(map);glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
-  exitDoor.update(reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
+  rescueChairs.update(time,reducedMotion);doorKeypad.update(time);exitDoor.update(reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
- return {group:office,chairRefuge,documents,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
+ return {group:office,rescueChairs,chairRefuge,documents,laptop:laptopControl,catMug:mugPose,handsaw:handsaw.group,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment:setEnvironment,update,figpalHoists:figpalVats,toggleHoist:figpalVats.toggleHoist};
 }

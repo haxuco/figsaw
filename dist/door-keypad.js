@@ -1,6 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {artCanvas} from './texture-budget.js';
-import {createDoorKeypadState} from './mobile-puzzle-state.js';
+import {createDirectionalKeypadState} from './mobile-puzzle-state.js';
 import {batchStaticScenery} from './static-batching.js';
 
 export function createDoorKeypad(){
@@ -11,23 +11,29 @@ export function createDoorKeypad(){
  const[c,p]=artCanvas(256,96);const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
  const display=new THREE.Mesh(new THREE.PlaneGeometry(.183,.069),new THREE.MeshBasicMaterial({map,toneMapped:false}));display.position.set(0,.114,.039);group.add(display);
  const buttons=[];group.userData.inspectionFrame={width:.30,height:.46,center:[0,0,.045]};
- const keys=['1','2','3','4','5','6','7','8','9','×','0','↵'];
- const [labels,ink]=artCanvas(384,440);ink.fillStyle='#c7cab7';ink.font='bold 39px Arial';ink.textAlign='center';ink.textBaseline='middle';
- for(let i=0;i<keys.length;i++){
-  const x=(i%3-1)*.064,y=.035-Math.floor(i/3)*.055;const button=box(.049,.040,.013,x,y,.044,metal);button.userData.keypadKey=i===9?'clear':i===11?'enter':keys[i];buttons.push(button);
-  ink.fillText(keys[i],192+x*2000,(.0625-y)*2000);
+ const keys=[['up','↑',0,.035],['left','←',-.064,-.025],['enter','OK',0,-.025],['right','→',.064,-.025],['down','↓',0,-.085]];
+ for(const [id,text,x,y]of keys){
+  const button=box(.050,.045,.013,x,y,.044,metal);button.userData.keypadKey=id;buttons.push(button);
+  const [c,p]=artCanvas(96,80);p.fillStyle='#c7cab7';p.font=text==='OK'?'bold 32px Arial':'bold 55px Arial';p.textAlign='center';p.textBaseline='middle';p.fillText(text,48,40);
+  const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
+  const ink=new THREE.Mesh(new THREE.PlaneGeometry(.040,.034),new THREE.MeshStandardMaterial({map,transparent:true,roughness:.8}));ink.position.z=.007;ink.raycast=()=>{};button.add(ink);
  }
- const labelsMap=new THREE.CanvasTexture(labels);labelsMap.colorSpace=THREE.SRGBColorSpace;
- const label=new THREE.Mesh(new THREE.PlaneGeometry(.192,.220),new THREE.MeshStandardMaterial({map:labelsMap,transparent:true,roughness:.8}));label.position.set(0,-.0475,.052);group.add(label);label.raycast=()=>{};
+ let entry='0000',selected=0,message='',last='';
+ function paint(time=0){const blink=Math.floor(time*2)%2===0,key=[entry,selected,message,blink].join('|');if(last===key)return;last=key;
+  p.fillStyle='#17211c';p.fillRect(0,0,256,96);p.textAlign='center';p.textBaseline='middle';
+  if(message){p.fillStyle=message==='OPEN'?'#8eac7e':'#ba8b68';p.font='bold 38px monospace';p.fillText(message,128,49,240);}
+  else for(let i=0;i<4;i++){const x=13+i*61;p.fillStyle='#232e25';p.fillRect(x,13,48,69);p.strokeStyle=i===selected&&blink?'#c3c6a1':'#48503c';p.lineWidth=i===selected?3:1;p.strokeRect(x,13,48,69);p.fillStyle=i===selected&&blink?'#e0d5aa':'#a1af83';p.font='bold 48px monospace';p.fillText(entry[i],x+24,48);}
+  map.needsUpdate=true;
+ }
+ function setDisplay(value='0000',slot=0,status=''){entry=value;selected=slot;message=status;last='';paint();}
  for(const x of[-.099,.099])for(const y of[-.161,.161]){const screw=new THREE.Mesh(new THREE.CircleGeometry(.004,8),metal);screw.position.set(x,y,.038);group.add(screw);}
- let last='';function setDisplay(value='LOCKED'){if(last===value)return;last=value;p.fillStyle='#17211c';p.fillRect(0,0,256,96);p.fillStyle=value==='OPEN'?'#8eac7e':'#ba8b68';p.font='bold 40px monospace';p.textAlign='center';p.textBaseline='middle';p.fillText(value,128,51,240);map.needsUpdate=true;}
- setDisplay();batchStaticScenery(group,{exclude:[display,label,...buttons],minObjects:2});return {group,setDisplay};
+ setDisplay();batchStaticScenery(group,{exclude:[display,...buttons],minObjects:2});return {group,setDisplay,update:paint};
 }
 export function createDoorKeypadUI({keypad,locked,onUnlock,onFeedback,puzzle,onOpen,onClose}){
- const state=createDoorKeypadState({puzzle});let active=false;
- function paint(message=''){keypad.setDisplay(state.unlocked?'OPEN':message==='Incorrect order.'?'ERROR':message==='Enter four numbers.'?'4 DIGITS':state.entry||'LOCKED');}
- function press(key){if(!active)return;const message=state.press(key,{locked:locked()});paint(message);onFeedback(message||`Keypad: ${state.entry||'cleared'}.`);if(state.unlocked){hide();onUnlock();}}
- function show(){if(locked()){onFeedback('Unlock your shackle before using the keypad.');return;}active=true;paint();onOpen(keypad.group);onFeedback('Door keypad. Click the keys or type four numbers, then Enter.');}
+ const state=createDirectionalKeypadState(puzzle);let active=false;
+ function paint(message=''){keypad.setDisplay(state.entry,state.selected,state.unlocked?'OPEN':message==='Incorrect order.'?'ERROR':'');}
+ function press(key){if(!active)return;const message=state.press(key,{locked:locked()});paint(message);onFeedback(message||`Keypad: ${state.entry}.`);if(state.unlocked){hide();onUnlock();}}
+ function show(){if(locked()){onFeedback('Unlock your shackle before using the keypad.');return;}active=true;paint();onOpen(keypad.group);onFeedback('Door keypad. Left/right selects a digit. Up/down changes it. OK submits.');}
  function hide(immediate=true){if(!active)return;active=false;onClose(immediate);}
  return {show,hide,press,reset(){state.reset();hide();paint();},get active(){return active;},get unlocked(){return state.unlocked;}};
 }

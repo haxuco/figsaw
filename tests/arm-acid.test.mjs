@@ -64,7 +64,7 @@ test('acid contact, widening source pool and restart remain consistent',()=>{
  flow.open(0,{x:0,y:0,z:0},0);
  for(let tick=1;tick<=90;tick++)flow.update(tick/30,1/30,viewer);
  assert.equal(flow.dying,false);assert.ok(flow.leaks[0].points[0].radius>.30);
- assert.ok(Math.abs(flow.leaks[0].head.x)>.01,'the advancing front gently meanders');
+ assert.ok(flow.leaks[0].points.some(p=>p.x<-.3)&&flow.leaks[0].points.some(p=>p.x>.3),'pool spreads on both sides');
  let finished=false;for(let tick=91;tick<300;tick++)finished=flow.update(tick/30,1/30,viewer)||finished;
  assert.equal(finished,true);assert.equal(flow.finished,true);
  flow.reset();assert.equal(flow.leaks.length,0);assert.equal(flow.dying,false);assert.equal(flow.blackout(100),0);

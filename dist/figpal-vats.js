@@ -85,7 +85,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   return {object:g};
  }
  function pufferfish(){
-  const g=new THREE.Group();g.name='Product Manager pufferfish in DESIGN IS DEAD hat';
+  const g=new THREE.Group();g.name='Pufferfish in DESIGN IS DEAD hat';
   ball([0,0,0],[.335,.33,.25],fishBlue,g,true);
   const tail=new THREE.Shape();tail.moveTo(.26,.03);tail.quadraticCurveTo(.34,.06,.40,.16);tail.quadraticCurveTo(.49,.23,.50,.06);tail.quadraticCurveTo(.51,-.11,.43,-.13);tail.lineTo(.33,-.05);tail.closePath();extrude(tail,.11,fishBlue,g,.02);
   for(let i=0;i<3;i++)line([[.38,-.025+i*.04,.078],[.465,-.075+i*.085,.078]],.012,finBlue,g);
@@ -124,6 +124,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  const tankMaterials=createTankMaterials();
  const createTankDecal=createTankDecalFactory();
  const {glass,haze,fluid,liquidTop,foam:foamMat,bubble:bubbleMat,ripple:rippleMat,waterTime}=tankMaterials;
+ let leaks=null,rescue=null;
  const rigs=[],vats=[],valves=[],speechAnchors=[],dummy=new THREE.Object3D();
  // A staggered left-hand bay leaves Figsaw and his dialogue clear in the saved view.
  const stations=[{x:-3.05,z:-1.05,height:2.02,winchY:2.80},{x:-2.85,z:.30,height:1.84,winchY:2.65},{x:-2.15,z:1.45,height:1.60,winchY:2.38}];
@@ -148,7 +149,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   // A wet, uneven open meniscus, rather than a solid lid.
   const surfaceGeometry=new THREE.RingGeometry(0,.444,quality.mobile?32:48,quality.mobile?6:10);surfaceGeometry.rotateX(-Math.PI/2);
   const surface=mesh(surfaceGeometry,liquidTop,vat);surface.position.y=1.074;surface.castShadow=false;surface.renderOrder=4;
-  ring(.441,.006,1.075,liquidTop,vat).renderOrder=4;
+  const meniscus=ring(.441,.006,1.075,liquidTop,vat);meniscus.renderOrder=4;
   const bubbleData=Array.from({length:quality.mobile?18:48},()=>({x:(random()-.5)*.61,z:(random()-.5)*.61,r:.007+random()**2*.023,phase:random(),speed:.15+random()*.17}));
   const bubbles=new THREE.InstancedMesh(new THREE.SphereGeometry(1,12,8),bubbleMat,bubbleData.length);bubbles.name='Rising liquid bubbles';bubbles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);bubbles.frustumCulled=false;bubbles.renderOrder=3;vat.add(bubbles);
   const foam=[];for(let j=0;j<(quality.mobile?6:24);j++){const a=random()*TAU,r=j<18?.40+random()*.025:random()*.34,baseRadius=.006+random()*.016;const m=ball([Math.cos(a)*r,1.074,Math.sin(a)*r],[baseRadius,baseRadius*.65,baseRadius],foamMat,vat);m.castShadow=false;m.renderOrder=5;foam.push({mesh:m,baseRadius,phase:random()*TAU});}
@@ -175,7 +176,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const pick=mesh(new THREE.SphereGeometry(.102,12,8),new THREE.MeshBasicMaterial({transparent:true,opacity:0,depthWrite:false,colorWrite:false}),wheel);pick.castShadow=false;
   valves.push({object:drain,outlet,setOpen(progress){wheel.rotation.z=-progress*Math.PI*4;wheel.position.z=.12+progress*.018;}});
   const glow=new THREE.PointLight(0x6b9c25,.58,1.7,2);glow.position.set(0,.85,0);glow.userData.mobileEssential=i===1;vat.add(glow);if(quality.mobile)glow.visible=i===1;
-  vats.push({breakage,surface,bubbles,bubbleData,foam,ripples,floatingBones,phase:i*1.7});
+  vats.push({index:i,liquid,meniscus,glow,breakage,surface,bubbles,bubbleData,foam,ripples,floatingBones,phase:i*1.7});
 
   const facing=Math.atan2(1.85221-x,3.1149-tankZ);
   vat.rotation.y=facing;
@@ -213,12 +214,12 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const hanger=new THREE.Group();hanger.name=`Suspended Figpal ${i+1}`;hanger.position.y=height;rig.add(hanger);
   const captive=makers[i]();captive.object.scale.setScalar(.62);captive.object.rotation.z=(i-1)*.035;hanger.add(captive.object);
   const transformation=createFigpalTransformation(captive.object,i);
-  const skullClue=i===2&&puzzle?createFishSkullClue(puzzle):null;
-  if(skullClue){transformation.attachBoneDetail(skullClue.mesh);transformation.skeleton.userData.fishClue=true;transformation.skeleton.userData.inspectionFrame={center:[-.10,.055,.133],width:.60,height:.50,distance:.95,lift:.20};}
-  if(i===2){
-   const c=document.createElement('canvas');c.width=512;c.height=144;const p=c.getContext('2d');p.fillStyle='#c0b68f';p.fillRect(0,0,512,144);p.strokeStyle='#655e43';p.strokeRect(8,8,496,128);p.textAlign='center';p.fillStyle='#30392d';p.font='bold 32px Arial';p.fillText('PUFF',256,46);p.font='bold 37px Arial';p.fillText('PRODUCT MANAGER',256,101);
+  const skullClue=puzzle?createFishSkullClue(puzzle,i):null;
+  if(skullClue){skullClue.mesh.visible=i===puzzle.pmIndex;transformation.attachBoneDetail(skullClue.mesh);transformation.skeleton.userData.fishClue=i===puzzle.pmIndex;transformation.skeleton.userData.inspectionFrame={center:[-.10,.055,.133],width:.60,height:.50,distance:.95,lift:.20};}
+  {
+   const c=document.createElement('canvas');c.width=512;c.height=144;const p=c.getContext('2d');p.fillStyle='#c0b68f';p.fillRect(0,0,512,144);p.strokeStyle='#655e43';p.strokeRect(8,8,496,128);p.textAlign='center';p.fillStyle='#30392d';p.font='bold 32px Arial';p.font='bold 53px Arial';p.fillText(['PUDDING','MAKI','PUFF'][i],256,90);
    const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
-   const tag=mesh(new THREE.PlaneGeometry(.49,.138),new THREE.MeshStandardMaterial({map,roughness:.95}),hanger);tag.position.set(0,-.31,.10);tag.name='Puff — Product Manager identification';
+   const tag=mesh(new THREE.PlaneGeometry(.49,.138),new THREE.MeshStandardMaterial({map,roughness:.95}),hanger);tag.position.set(0,-.31,.10);tag.name='Character name tag';
    for(const side of[-1,1])rod([side*.14,-.18,.07],[side*.14,-.248,.10],.003,steel,hanger);
   }
   batchRigid(captive.object,{exclude:[captive.propeller],minObjects:2,dispose:false});
@@ -239,20 +240,24 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   for(const rigid of[drum,crank,control,wheel])batchRigid(rigid,{minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
-  batchRigid(vat,{exclude:[shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
-  rigs.push({rig,hanger,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,lowered:false});
+  batchRigid(vat,{exclude:[liquid,meniscus,shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
+  rigs.push({rig,hanger,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,chainDropped:false,payingOut:null});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
  const movingIndex=()=>{const index=rigs.findIndex(rig=>Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
  function lower(index){
   const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index))return false;
-  rig.lowered=true;rig.targetHeight=.65;return true;
+  if(rig.rescued)return true;rig.lowered=true;rig.targetHeight=leaks?.isDrained(index)?.43:.65;return true;
  }
  function toggleHoist(index){
   const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index))return null;
-  rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?.65:rig.homeHeight;
+  if(rig.chainDropped)return 'The chain has already been recovered.';
+  const supported=rig.rescued||(leaks?.isDrained(index)&&rig.lowered&&Math.abs(rig.height-rig.targetHeight)<.01);
+  if(supported){if(rig.payingOut===null)rig.payingOut=lastTime;return 'The winch pays out its remaining chain…';}
+  rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?(leaks?.isDrained(index)?.43:.65):rig.homeHeight;
   return `Figpal ${index+1}${rig.transformation.transformed?"'s bones":''} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;
  }
+
  function getFocusView(index,eye,target){
   const rig=rigs[index];
   rig.rig.localToWorld(eye.set(0,1.65,2.7));
@@ -261,10 +266,10 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function reset(){
   for(const vat of vats)vat.breakage.reset();
   for(const rig of rigs){
-   rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
+   rig.rescued=false;rig.chainDropped=false;rig.payingOut=null;rig.loadChain.object.visible=true;rig.rig.add(rig.hanger);rig.hanger.quaternion.identity();rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
    rig.hanger.position.set(0,rig.homeHeight,0);rig.hanger.rotation.z=0;
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[0,rig.homeHeight+.52,0]);
-   rig.drum.rotation.y=rig.crank.rotation.x=0;rig.transformation.reset();rig.skullClue?.refresh();rig.vat.userData.fishClue=false;
+   rig.drum.rotation.y=rig.crank.rotation.x=0;rig.transformation.reset();rig.skullClue?.refresh();if(rig.skullClue){rig.skullClue.mesh.visible=rig.index===puzzle.pmIndex;rig.transformation.skeleton.userData.fishClue=rig.index===puzzle.pmIndex;}rig.vat.userData.fishClue=false;
   }
  }
  let lastTime=0;const swayPose={};
@@ -272,18 +277,34 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const dt=Math.max(0,Math.min(.12,time-lastTime));lastTime=time;
   const t=reducedMotion?0:time;waterTime.value=t;
   for(const rig of rigs){
+   if(rig.payingOut!==null&&!rig.chainDropped){
+    const u=Math.min(1,(time-rig.payingOut)/1.7);rig.drum.rotation.y+=dt*5;rig.loadChain.setPoints([0,rig.winchY-.10,.025],[.12,.10+(1-u)*rig.height,0]);
+    if(u===1){rig.chainDropped=true;rig.loadChain.object.visible=false;rescue?.dropChain(rig.index);}
+   }
+   if(rig.rescued){rig.transformation.update(-100);continue;}
    const delta=rig.targetHeight-rig.height;rig.height=reducedMotion?rig.targetHeight:rig.height+Math.sign(delta)*Math.min(Math.abs(delta),dt*.15);
    figpalSwayPose(time,rig.height,rig.winchY,rig.phase,reducedMotion,swayPose);
    rig.hanger.position.set(swayPose.x,swayPose.y,0);rig.hanger.rotation.z=swayPose.angle;
-   rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
+   if(rig.payingOut===null&&!rig.chainDropped)rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
    rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
-   rig.transformation.update(1.086);
-   if(rig.skullClue){rig.vat.userData.fishClue=rig.transformation.cutHeight>.155;if(rig.transformation.cutHeight>.215)puzzle.revealFish();}
+   const remaining=leaks?.remaining(rig.index)??1;
+   if(remaining>.0001)rig.transformation.update(.227+.865*remaining);
+   if(remaining<=.0001&&rig.lowered){
+    rig.targetHeight=.43;
+    if(Math.abs(rig.height-.43)<.01&&vats[rig.index].breakage.broken&&rescue?.board(rig.index,rig.hanger)){
+     rig.rescued=true;if(rig.index===puzzle?.pmIndex&&!rig.transformation.transformed){puzzle.revealFish();rescue.revealClue(rig.index,puzzle.letters);}continue;
+    }
+   }
+   if(rig.skullClue){const pm=rig.index===puzzle.pmIndex;rig.skullClue.mesh.visible=pm;rig.vat.userData.fishClue=pm&&rig.transformation.cutHeight>.155;if(pm&&rig.transformation.cutHeight>.215)puzzle.revealFish();}
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
   for(const vat of vats){
    vat.breakage.update(time,reducedMotion);
-   vat.floatingBones.update(time,reducedMotion);
+   const remaining=leaks?.remaining(vat.index)??1,level=.215+.865*remaining,wet=remaining>.0001;
+   vat.liquid.scale.y=remaining;vat.liquid.position.y=.215+.4325*remaining;vat.liquid.visible=wet;
+   vat.surface.visible=vat.meniscus.visible=vat.bubbles.visible=wet;vat.surface.position.y=level;vat.meniscus.position.y=level+.001;
+   vat.glow.intensity=.12+.46*remaining;vat.floatingBones.group.position.y=0;
+   vat.floatingBones.update(time,reducedMotion,remaining);
    const positions=vat.surface.geometry.attributes.position;
    const normals=vat.surface.geometry.attributes.normal;
    for(let j=0;j<positions.count;j++){
@@ -293,17 +314,17 @@ export function createFigpalVats({floorSupport,puzzle}={}){
     const length=Math.hypot(dx,1,dz);normals.setXYZ(j,-dx/length,1/length,-dz/length);
    }
    positions.needsUpdate=true;normals.needsUpdate=true;
-   vat.bubbleData.forEach((bubble,j)=>{const life=(t*bubble.speed+bubble.phase)%1;dummy.position.set(bubble.x+Math.sin(t*1.3+j)*.012,.25+life*.84,bubble.z+Math.cos(t+j)*.009);dummy.scale.setScalar(bubble.r*(.65+life*.5));dummy.updateMatrix();vat.bubbles.setMatrixAt(j,dummy.matrix);});vat.bubbles.instanceMatrix.needsUpdate=true;
-   for(const foam of vat.foam){const pulse=(Math.sin(t*2.4+foam.phase)+1)*.5;foam.mesh.scale.set(foam.baseRadius,foam.baseRadius*(.12+pulse*.28),foam.baseRadius);}
-   for(const ripple of vat.ripples){const life=(t*.48+ripple.phase)%1;const size=.012+life*.075;ripple.mesh.scale.setScalar(size);ripple.mesh.visible=life<.88;ripple.mesh.material.opacity=(1-life)*.16;}
+   vat.bubbleData.forEach((bubble,j)=>{const life=(t*bubble.speed+bubble.phase)%1;dummy.position.set(bubble.x+Math.sin(t*1.3+j)*.012,.23+life*.84*remaining,bubble.z+Math.cos(t+j)*.009);dummy.scale.setScalar(bubble.r*(.65+life*.5));dummy.updateMatrix();vat.bubbles.setMatrixAt(j,dummy.matrix);});vat.bubbles.instanceMatrix.needsUpdate=true;
+   for(const foam of vat.foam){foam.mesh.visible=wet;foam.mesh.position.y=level;const pulse=(Math.sin(t*2.4+foam.phase)+1)*.5;foam.mesh.scale.set(foam.baseRadius,foam.baseRadius*(.12+pulse*.28),foam.baseRadius);}
+   for(const ripple of vat.ripples){const life=(t*.48+ripple.phase)%1;const size=.012+life*.075;ripple.mesh.scale.setScalar(size);ripple.mesh.position.y=level+.004;ripple.mesh.visible=wet&&life<.88;ripple.mesh.material.opacity=(1-life)*.16;}
   }
  }
  update(0);
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
- function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.transformation.transformed;}
+ function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.rescued&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
+ return {group,update,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
-  canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[2].transformation.skeleton;}};
+  canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[puzzle?.pmIndex??2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[puzzle?.pmIndex??2].transformation.skeleton;}};
 }

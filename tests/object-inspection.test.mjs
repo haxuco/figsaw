@@ -27,9 +27,16 @@ test('new skull lettering shares bone clipping while the fish is still partially
 });
 test('real keypad input respects the wrist lock and uses the same randomized exit code',()=>{
  const puzzle=createEscapePuzzle(()=>.2);let locked=true,opened=0,closed=0,escaped=0,display='';const ui=createDoorKeypadUI({keypad:{group:{},setDisplay:v=>display=v},puzzle,locked:()=>locked,onOpen:()=>opened++,onClose:()=>closed++,onUnlock:()=>escaped++,onFeedback(){}});
- ui.show();assert.equal(opened,0);ui.press('1');assert.equal(display,'');locked=false;ui.show();assert.equal(opened,1);for(const digit of puzzle.code)ui.press(digit);assert.equal(display,puzzle.code);ui.press('enter');assert.equal(escaped,1);assert.equal(closed,1);assert.equal(ui.active,false);assert.equal(display,'OPEN');
+ ui.show();assert.equal(opened,0);ui.press('1');assert.equal(display,'');locked=false;ui.show();assert.equal(opened,1);for(const digit of puzzle.code){for(let i=0;i<Number(digit);i++)ui.press('up');ui.press('right');}assert.equal(display,puzzle.code);ui.press('enter');assert.equal(escaped,1);assert.equal(closed,1);assert.equal(ui.active,false);assert.equal(display,puzzle.code);
 });
 
 test('wrinkled posters never sink into their frame and cover the printed clues',()=>{
  for(const [w,h]of[[1.87,1.286],[.35,.43],[.205,.215]])for(let i=0;i<12;i++){const geo=wornPaperGeometry(w,h,i);geo.computeBoundingBox();assert.ok(geo.boundingBox.min.z>=0);geo.dispose();}
+});
+
+test('rescued bodies and bones keep the same dissolution boundary after reparenting to a moving chair',()=>{
+ const parent=new THREE.Group(),captive=new THREE.Mesh(new THREE.BoxGeometry(.5,.5,.3),new THREE.MeshStandardMaterial());parent.add(captive);parent.position.y=2;
+ const transform=createFigpalTransformation(captive,0);transform.update(-100);const before=transform.cutHeight;
+ const chair=new THREE.Group();chair.position.set(1,.8,2);chair.attach(parent);parent.position.set(0,0,0);transform.update(-100);
+ assert.equal(transform.cutHeight,before);assert.equal(captive.visible,true);assert.ok(captive.material.clippingPlanes[0].distanceToPoint(captive.getWorldPosition(new THREE.Vector3()))>0,'the old world-space waterline cannot hide the rescued body');
 });
