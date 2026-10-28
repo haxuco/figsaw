@@ -21,22 +21,25 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   for(let j=0;j<count;j++){const t=j/(count-1);curve.getPoint(t,point);dummy.position.copy(point);dummy.quaternion.setFromUnitVectors(up,curve.getTangent(t));twist.setFromAxisAngle(up,j%2?Math.PI/2:0);dummy.quaternion.multiply(twist);dummy.scale.setScalar(1);dummy.updateMatrix();mesh.setMatrixAt(j,dummy.matrix);}mesh.instanceMatrix.needsUpdate=true;
  }
  for(const [id,object]of Object.entries(parts)){object.userData.salvagePart=id;object.userData.ignoreAcid=true;object.name=`Salvage ${id} from donor chair`;batchStaticScenery(object,{minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});}
- // Temporary discovery aid: lightweight markers stay outside the collectible
+ // Keep forgiving hit volumes and temporary markers outside the collectible
  // models, so inventory previews and installed replacements remain unchanged.
  const partHighlights=new THREE.Group();partHighlights.name='Temporary chair part highlights';group.add(partHighlights);
  const beaconGeometry=new THREE.OctahedronGeometry(.065),beaconMaterial=new THREE.MeshBasicMaterial({color:0xffdd44,transparent:true,opacity:.9,depthTest:false,depthWrite:false,toneMapped:false,fog:false});
- const highlightedParts=Object.values(parts).map(object=>{
+ const pickGeometry=new THREE.BoxGeometry(1,1,1);
+ const highlightedParts=Object.entries(parts).map(([id,object])=>{
   object.updateWorldMatrix(true,true);
-  const bounds=new THREE.Box3().setFromObject(object).applyMatrix4(object.parent.matrixWorld.clone().invert()).expandByScalar(.025);
+  const bounds=new THREE.Box3().setFromObject(object,true).applyMatrix4(object.parent.matrixWorld.clone().invert()).expandByScalar(.025);
+  const pick=new THREE.Mesh(pickGeometry,ghost);pick.name=`Chair ${id} pickup target`;pick.userData.salvagePart=id;
+  bounds.getCenter(pick.position);bounds.getSize(pick.scale).addScalar(.08).max(new THREE.Vector3(.22,.14,.22));group.add(pick);
   const outline=new THREE.Box3Helper(bounds,0xffdd44);outline.material.depthTest=false;outline.material.depthWrite=false;outline.material.transparent=true;outline.material.toneMapped=false;outline.material.fog=false;outline.renderOrder=90;outline.raycast=()=>{};
-  const beacon=new THREE.Mesh(beaconGeometry,beaconMaterial);bounds.getCenter(beacon.position);beacon.position.y=bounds.max.y+.18;beacon.renderOrder=91;beacon.raycast=()=>{};
-  partHighlights.add(outline,beacon);return {object,outline,beacon,height:beacon.position.y};
+  const beacon=new THREE.Mesh(beaconGeometry,beaconMaterial);bounds.getCenter(beacon.position);beacon.position.y=bounds.max.y+.18;beacon.renderOrder=91;beacon.userData.salvagePart=id;
+  partHighlights.add(outline,beacon);return {object,pick,outline,beacon,height:beacon.position.y};
  });
  function syncPartHighlights(time=0,reducedMotion=false){
   const pulse=reducedMotion?1:.8+.2*Math.sin(time*3);
   beaconMaterial.opacity=pulse;
-  for(const {object,outline,beacon,height}of highlightedParts){
-   outline.visible=beacon.visible=object.visible;
+  for(const {object,pick,outline,beacon,height}of highlightedParts){
+   pick.visible=outline.visible=beacon.visible=object.visible;
    if(!object.visible)continue;
    outline.material.opacity=pulse;beacon.position.y=height+(reducedMotion?0:Math.sin(time*3)*.025);beacon.rotation.y=reducedMotion?0:time*.8;
   }

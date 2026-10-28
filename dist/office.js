@@ -244,10 +244,11 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }};
  rescueObjects.push(aeronChair(2.75,3.30,[-.55,-.80,1.39],{noBase:true,seatTear:2,backTwist:.20}));
  aeronChair(-.55,-3.42,[1.65,.65,.32],{brokenArm:1,noBack:true});
- // The second rescue chair needs both its seat and base repaired.
- const looseBase=chairBase(office);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
- const looseCaster=chairCaster(office,0,0,0);settleChairPart(looseCaster,-.32,-2.80,[0,.3,0]);
- const looseSeat=new THREE.Group();office.add(looseSeat);meshPanel([[-.24,-.20],[-.28,.1],[-.22,.24],[.22,.24],[.28,.1],[.24,-.20]],[0,0],(x,z,t)=>[x,.02*(1-t*t),z],looseSeat,0);settleChairPart(looseSeat,-.80,-2.85,[.08,.5,.06]);
+ // Group the three repair parts on the open floor ahead of the laptop.
+ // This leaves the arrival/retreat corridor (ending at z=.10) clear.
+ const looseBase=chairBase(office);looseBase.name='Detached chair base';settleChairPart(looseBase,.95,1.20,[2.70,.36,.22]);
+ const looseCaster=chairCaster(office,0,0,0);settleChairPart(looseCaster,.30,1.38,[0,.3,0]);
+ const looseSeat=new THREE.Group();office.add(looseSeat);meshPanel([[-.24,-.20],[-.28,.1],[-.22,.24],[.22,.24],[.28,.1],[.24,-.20]],[0,0],(x,z,t)=>[x,.02*(1-t*t),z],looseSeat,0);settleChairPart(looseSeat,-.32,1.25,[.08,.5,.06]);
  const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-.75,2.30,[-1.60,.22,-.40]);
  const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
  onFloor(chairCaster(office,2.37,.045,2.84,.7));onFloor(chairCaster(office,-2.15,.045,.95,-.4));
