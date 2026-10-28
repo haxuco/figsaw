@@ -1,14 +1,30 @@
 const smooth=(time,start,end)=>{const t=Math.max(0,Math.min(1,(time-start)/(end-start)));return t*t*(3-2*t);};
 
+export function gameOverStyle(cause){return ['acid','saw','mug','fire','explosion'].includes(cause)?'injury':'objective';}
+export function resolveGameOverCause({alarm,deadline,saw,fire,acid,mug}={}){
+ if(alarm==='acid')return 'explosion';
+ if(alarm==='laptop')return 'laptop';
+ if(deadline)return 'deadline';
+ if(saw)return 'saw';
+ if(fire)return 'fire';
+ if(acid)return 'acid';
+ return mug?'mug':null;
+}
+
 export function createGameOverTimeline(){
- let startedAt=null,reduced=false;
- const frame={elapsed:0,visible:false,flow:0,red:0,blackout:0,finished:false,reduced:false};
- function reset(){startedAt=null;Object.assign(frame,{elapsed:0,visible:false,flow:0,red:0,blackout:0,finished:false,reduced:false});}
+ let startedAt=null,reduced=false,style=null;
+ const frame={elapsed:0,visible:false,flow:0,red:0,blackout:0,finished:false,reduced:false,style:null};
+ function reset(){startedAt=null;style=null;Object.assign(frame,{elapsed:0,visible:false,flow:0,red:0,blackout:0,finished:false,reduced:false,style:null});}
  return {
-  start(time,reducedMotion=false){if(startedAt!==null)return false;startedAt=time;reduced=reducedMotion;return true;},
+  start(time,reducedMotion=false,presentation='injury'){if(startedAt!==null)return false;startedAt=time;reduced=reducedMotion;style=presentation;return true;},
   update(time){
    if(startedAt===null)return frame;
-   const t=Math.max(0,time-startedAt);frame.elapsed=t;frame.reduced=reduced;
+   const t=Math.max(0,time-startedAt);frame.elapsed=t;frame.reduced=reduced;frame.style=style;
+   if(style==='objective'){
+    frame.flow=frame.red=0;frame.visible=false;
+    frame.blackout=smooth(t,0,reduced?.5:1.15);
+    frame.finished=t>=(reduced?.65:1.35);return frame;
+   }
    frame.flow=reduced?0:smooth(t,.45,2.7);
    frame.red=reduced?smooth(t,0,.4):smooth(t,1.65,2.7);
    frame.blackout=reduced?smooth(t,.75,1.35):smooth(t,3.15,4.25);
