@@ -14,13 +14,15 @@ export function createInventory(){
  reset(){collected.clear();equipped=null;lastPickup=null;revision++;},get lastPickup(){return lastPickup;},get equipped(){return equipped;},get items(){return [...collected];},get revision(){return revision;}};
 }
 export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=()=>{},canOpen=()=>true}){
- const button=document.createElement('button');button.id='inventory-button';button.type='button';button.textContent='Inventory';button.setAttribute('aria-haspopup','dialog');document.body.append(button);
+ const tools=document.createElement('div');tools.id='inventory-tools';document.body.append(tools);
+ const button=document.createElement('button');button.id='inventory-button';button.type='button';button.textContent='Inventory';button.setAttribute('aria-haspopup','dialog');tools.append(button);
  const panel=document.createElement('section');panel.id='inventory-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Inventory');
  panel.innerHTML='<header><button type="button" data-back>← Back</button><h2>Inventory</h2></header><div class="inventory-grid"></div><p data-empty>You haven’t collected anything yet.</p>';document.body.append(panel);
- const equipped=document.createElement('div');equipped.id='equipped-item';equipped.hidden=true;equipped.innerHTML='<span></span><button type="button">Put away</button>';document.body.append(equipped);
+ const equipped=document.createElement('div');equipped.id='equipped-item';equipped.hidden=true;equipped.innerHTML='<span></span><button type="button">Put away</button>';tools.append(equipped);
  const pickupNotice=document.createElement('p');pickupNotice.id='inventory-pickup-notice';pickupNotice.hidden=true;pickupNotice.setAttribute('role','status');pickupNotice.setAttribute('aria-live','polite');pickupNotice.setAttribute('aria-atomic','true');document.body.append(pickupNotice);
  let last=-1,active=false,lastFocus=null,lastPickup=null,pickupTimeout=null;
  function hidePickupNotice(){clearTimeout(pickupTimeout);pickupTimeout=null;pickupNotice.hidden=true;pickupNotice.textContent='';}
+ function notify(message){if(!message||button.hidden)return;hidePickupNotice();lastPickup=inventory.lastPickup;pickupNotice.textContent=message;pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,3000);}
  function close(){hidePickupNotice();panel.hidden=true;active=false;(lastFocus?.isConnected?lastFocus:button).focus({preventScroll:true});}
  function open(){if(!canOpen())return;hidePickupNotice();onOpen();lastFocus=document.activeElement;panel.hidden=false;active=true;sync();panel.querySelector('[data-back]').focus({preventScroll:true});}
  panel.querySelector('[data-back]').onclick=close;button.onclick=()=>active?close():open();
@@ -38,5 +40,5 @@ export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=(
   equipped.hidden=!inventory.equipped;equipped.querySelector('span').textContent=inventory.equipped?ITEMS[inventory.equipped].name:'';
   button.textContent=`Inventory${inventory.items.length?' · '+inventory.items.length:''}`;
  }
- return {open,close,sync,setHidden(value){button.hidden=value;if(value){hidePickupNotice();panel.hidden=true;active=false;equipped.hidden=true;}else equipped.hidden=!inventory.equipped;},get active(){return active;}};
+ return {open,close,sync,notify,setHidden(value){button.hidden=value;if(value){hidePickupNotice();panel.hidden=true;active=false;equipped.hidden=true;}else equipped.hidden=!inventory.equipped;},get active(){return active;}};
 }

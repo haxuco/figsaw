@@ -83,3 +83,22 @@ test('a repaired chair offers large clickable destinations and rolls to the chos
  assert.equal(rescue.place(0),false);assert.equal(rescue.moving,1,'an invalid placement keeps the selection');
  rescue.cancelMove();assert.equal(rescue.moving,null);rescue.reset();assert.equal(rescue.canMove(0),false);
 });
+
+test('the caster visibly fits its own chair, rejects the other chair without consuming it, and secures with the ratchet',()=>{
+ const room=new THREE.Group(),objects=[0,1].map(i=>{
+  const chair=new THREE.Group();chair.position.x=i*2;room.add(chair);
+  const base=new THREE.Group(),seat=new THREE.Group(),caster=new THREE.Group();base.add(caster);chair.add(base,seat);
+  caster.add(new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.06),new THREE.MeshStandardMaterial()));caster.position.set(.25,.05,.15);caster.visible=false;
+  seat.add(new THREE.Mesh(new THREE.BoxGeometry(.5,.04,.5),new THREE.MeshStandardMaterial()));seat.position.y=.5;
+  chair.chairParts={base,seat,caster};return chair;
+ });
+ const loose=new THREE.Group();loose.add(new THREE.Mesh(new THREE.BoxGeometry(.08,.08,.06),new THREE.MeshStandardMaterial()));room.add(loose);
+ const rescue=createRescueChairs({objects,parts:{caster:loose},player:new THREE.Group(),tanks:[],floorSupport:()=>.003}),inventory=createInventory();room.add(rescue.group);
+ rescue.collectPart('caster',inventory);inventory.add('ratchet');inventory.equip('caster');
+ assert.equal(rescue.use(1,'caster',inventory),'That item does not fit this chair.');assert.equal(inventory.equipped,'caster');assert.equal(objects[0].chairParts.caster.visible,false);
+ assert.equal(rescue.use(0,'caster',inventory),'Caster fitted.');assert.equal(inventory.has('caster'),false);assert.equal(inventory.equipped,null);
+ const caster=objects[0].chairParts.caster;assert.equal(caster.visible,true);assert.equal(caster.parent,objects[0].chairParts.base);assert.equal(caster.children.length,1,'the hidden wheel stays out of static batching so it can appear after fitting');
+ assert.equal(rescue.state.chairs[0].repaired,false);assert.equal(rescue.use(0,'caster',inventory),'Part already fitted.');
+ inventory.equip('ratchet');assert.equal(rescue.use(0,'ratchet',inventory),'Chair repaired.');assert.equal(rescue.state.chairs[0].repaired,true);assert.equal(inventory.has('ratchet'),true);
+ const saved=rescue.capture();rescue.reset();assert.equal(caster.visible,false);rescue.restore(saved);assert.equal(caster.visible,true);assert.equal(rescue.state.chairs[0].repaired,true);
+});

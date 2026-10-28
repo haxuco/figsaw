@@ -686,7 +686,8 @@ function equipItem(id){
 }
 function useRescueObject(hit){
  const data=hit?.userData;if(!data)return false;
- const isRescue=(data.chairSeat&&inventory.equipped?.startsWith('chain'))||data.salvagePart||Number.isInteger(data.rescueChair)||Number.isInteger(data.chainPickup)||Number.isInteger(data.chainAnchor);
+ const repairItem=['caster','seat','base','ratchet'].includes(inventory.equipped);
+ const isRescue=(data.chairSeat&&(repairItem||inventory.equipped?.startsWith('chain')))||data.salvagePart||Number.isInteger(data.rescueChair)||Number.isInteger(data.chainPickup)||Number.isInteger(data.chainAnchor);
  if(!isRescue)return false;
  if(sawBusy())return true;
  if(restraint.locked){restraint.requestReach(state.time);return true;}
@@ -694,10 +695,10 @@ function useRescueObject(hit){
  if(Number.isInteger(data.chainPickup)){rescueChairs.collectChain(data.chainPickup,inventory);return true;}
  let index=data.chairSeat?PLAYER_CHAIR:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
  if(inventory.equipped?.startsWith('chain')){testingMode.report(rescueChairs.hook(index,inventory.equipped,inventory));return true;}
- if(index===PLAYER_CHAIR){sitOnChair();return true;}
- if(rescueChairs.state.chairs[index].repaired){beginChairMove(index);return true;}
+ if(index===PLAYER_CHAIR){if(repairItem)inventoryUI.notify('This chair does not need repairs.');else sitOnChair();return true;}
+ if(rescueChairs.state.chairs[index].repaired){if(inventory.equipped)inventoryUI.notify('Chair already repaired.');else beginChairMove(index);return true;}
  if(inventory.equipped){
-  testingMode.report(rescueChairs.use(index,inventory.equipped,inventory));
+  const message=rescueChairs.use(index,inventory.equipped,inventory);testingMode.report(message);inventoryUI.notify(message);
   if(rescueChairs.state.chairs[index].repaired){drawerCamera.cancel();movePromptChair=index;}
   return true;
  }

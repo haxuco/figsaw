@@ -9,12 +9,13 @@ export function createRescueState(puzzle={pmIndex:2}){
  reset();
  function use(index,item,inventory){
   const c=chairs[index];if(!c||pulling||safe)return 'That chair cannot be repaired now.';
-  if(c.repaired)return 'Chair repaired. Put away the tool to move it.';
+  if(c.repaired)return 'Chair already repaired.';
   const r=REPAIRS[index].steps[c.step];
-  if(!c.installed.includes(r.part)){if(item!==r.part)return `Find and equip a replacement ${r.part}.`;if(!inventory.has(item))return 'Collect the replacement part first.';inventory.remove(item);c.installed.push(item);return `Replacement fitted. Secure it with the ${r.tool}.`;}
-  if(item!==r.tool||!inventory.has(item))return `Equip the ${r.tool} to secure the replacement.`;
-  c.step++;if(c.step<REPAIRS[index].steps.length)return `Secured. Find and equip a replacement ${REPAIRS[index].steps[c.step].part} next.`;
-  c.repaired=true;return 'Chair repaired. Put away the tool, then move the chair in front of a tank.';
+  if(!c.installed.includes(r.part)){if(item!==r.part)return 'That item does not fit this chair.';if(!inventory.has(item))return 'Item not in inventory.';inventory.remove(item);c.installed.push(item);return `${r.part[0].toUpperCase()+r.part.slice(1)} fitted.`;}
+  if(item===r.part)return 'Part already fitted.';
+  if(item!==r.tool||!inventory.has(item))return 'That item cannot secure this part.';
+  c.step++;if(c.step<REPAIRS[index].steps.length)return 'Part secured.';
+  c.repaired=true;return 'Chair repaired.';
  }
  function canPlace(index,tank){const c=chairs[index];return !!c?.repaired&&c.passenger===null&&!chairs.some(c=>c.reservation!==null)&&!pulling&&!safe&&Number.isInteger(tank)&&tank>=0&&tank<3&&!chairs.some((o,i)=>i!==index&&o.tank===tank);}
  function place(index,tank){if(!canPlace(index,tank))return false;chairs[index].tank=tank;return true;}
