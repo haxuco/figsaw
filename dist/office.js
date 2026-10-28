@@ -24,6 +24,7 @@ import { createTankLeaks } from './tank-leaks.js';
 import { createOfficeFire } from './office-fire.js';
 import {createMobileSupplies} from './mobile-supplies.js';
 import {createRescueChairs} from './rescue-chairs.js';
+import {createRuinedChairBack} from './ruined-chair-back.js';
 import {createDoorKeypad} from './door-keypad.js';
 import { createFireAxe } from './fire-axe.js';
 import { createFireAlarm } from './fire-alarm.js';
@@ -251,7 +252,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const looseBase=chairBase(office);looseBase.name='Detached chair base';settleChairPart(looseBase,.95,1.20,[2.70,.36,.22]);
  const looseCaster=chairCaster(office,0,0,0);settleChairPart(looseCaster,.30,1.38,[0,.3,0]);
  const looseSeat=new THREE.Group();office.add(looseSeat);meshPanel([[-.24,-.20],[-.28,.1],[-.22,.24],[.22,.24],[.28,.1],[.24,-.20]],[0,0],(x,z,t)=>[x,.02*(1-t*t),z],looseSeat,0);settleChairPart(looseSeat,-.32,1.25,[.08,.5,.06]);
- const looseBack=chairBack(office,2);looseBack.name='Snapped mesh backrest';settleChairPart(looseBack,-.75,2.30,[-1.60,.22,-.40]);
+ const looseBack=createRuinedChairBack({frame:chairFrame,edge:chairEdge,weave:chairMesh[2],fracture,padding:chairArm,mobile:quality.mobile});office.add(looseBack);looseBack.position.set(-.75,0,2.30);looseBack.rotation.set(-1.60,.22,-.40);looseBack.children.forEach(onFloor);
  const looseArm=chairArmrest(office,1);looseArm.name='Broken chair arm';settleChairPart(looseArm,1.40,2.62,[1.48,.71,.15]);
  onFloor(chairCaster(office,2.37,.045,2.84,.7));onFloor(chairCaster(office,-2.15,.045,.95,-.4));
  seed=roomSeed;
