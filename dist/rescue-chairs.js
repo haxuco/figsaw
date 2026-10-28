@@ -116,8 +116,13 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   group.attach(hanger);const toQ=group.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(object.getWorldQuaternion(new THREE.Quaternion()));
   transfers.set(tank,{hanger,object,index,source,path:createRescueSwingPath(from,to),q:hanger.quaternion.clone(),toQ,at:lastTime});return true;
  }
- function dropChain(index){const c=chains[index];if(c.dropped)return;c.dropped=true;c.mesh.visible=c.pick.visible=true;const p=coilHomes[index],points=[];for(let j=0;j<=32;j++){const a=j/32*Math.PI*4,r=.06+j*.0018;points.push(new THREE.Vector3(p.x+Math.cos(a)*r,p.y+j*.0002,p.z+Math.sin(a)*r));}chainPath(c.mesh,points);}
- function collectChain(index,inventory){const c=chains[index];if(!c?.dropped||c.collected)return false;c.collected=true;c.mesh.visible=c.pick.visible=false;inventory.add('chain'+index);return true;}
+ function prepareChain(index){const c=chains[index];if(c.dropped)return;c.dropped=true;const p=coilHomes[index],points=[];for(let j=0;j<=32;j++){const a=j/32*Math.PI*4,r=.06+j*.0018;points.push(new THREE.Vector3(p.x+Math.cos(a)*r,p.y+j*.0002,p.z+Math.sin(a)*r));}chainPath(c.mesh,points);}
+ function dropChain(index){prepareChain(index);const c=chains[index];c.mesh.visible=c.pick.visible=true;}
+ function collectChain(index,inventory,{fromHoist=false}={}){
+  const c=chains[index],id='chain'+index;if(!c||c.collected||(!c.dropped&&!fromHoist))return false;
+  if(!inventory.has(id)&&!inventory.add(id))return false;
+  prepareChain(index);c.collected=true;c.mesh.visible=c.pick.visible=false;return true;
+ }
  function hook(index,item,inventory){
   if(!/^chain[0-2]$/.test(item)||!inventory.has(item))return 'Equip a recovered hoist chain first.';
   if(index<PLAYER_CHAIR&&!state.chairs[index]?.repaired)return 'Repair that chair before linking it.';

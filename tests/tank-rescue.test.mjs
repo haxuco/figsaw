@@ -6,10 +6,11 @@ import {createRescueChairs} from '../dist/rescue-chairs.js';
 import {createAcidFlow,BREACHED_TANK_RESIDUAL} from '../dist/acid-flow.js';
 import {createInventory} from '../dist/inventory.js';
 import {CHAIR_RADIUS,CHAIR_GAP} from '../dist/chair-route.js';
+import {createEscapePuzzle} from '../dist/mobile-puzzle-state.js';
 
 function canvasMock(){const gradient={addColorStop(){}};const ctx=new Proxy({createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,measureText:()=>({width:50})},{get:(t,k)=>k in t?t[k]:()=>{}});return {width:0,height:0,getContext:()=>ctx};}
-function fixture(){
- const room=new THREE.Group(),vats=createFigpalVats({floorSupport:()=>0}),flow=createAcidFlow(),inventory=createInventory();room.add(vats.group);
+function fixture(puzzle=null){
+ const room=new THREE.Group(),vats=createFigpalVats({floorSupport:()=>0,puzzle}),flow=createAcidFlow(),inventory=createInventory();room.add(vats.group);
  const objects=[0,1].map(i=>{const o=new THREE.Group();o.position.set(...(i===0?[-1.85,0,-1.28]:[2.75,0,3.3]));o.chairParts={base:new THREE.Group(),seat:new THREE.Group(),caster:new THREE.Group()};o.add(o.chairParts.base,o.chairParts.seat);room.add(o);return o;});
  const parts=Object.fromEntries(['caster','seat','base'].map(id=>{const o=new THREE.Group();o.add(new THREE.Mesh(new THREE.BoxGeometry(.1,.1,.1),new THREE.MeshStandardMaterial()));room.add(o);return [id,o];}));
  const player=new THREE.Group();room.add(player);
@@ -24,7 +25,7 @@ function fixture(){
   for(const [a,b,id]of [[2,0,'chain0'],[0,1,'chain1']]){rescue.hook(a,id,inventory);rescue.hook(b,id,inventory);}
   assert.equal(rescue.state.arranged,true);
  }
- function collectChains(){for(let i=0;i<2;i++){assert.match(vats.toggleHoist(i),/spare return chain/);update(2);assert.equal(vats.rigs[i].lowered,false);assert.equal(vats.rigs[i].loadChain.object.visible,true);assert.equal(rescue.collectChain(i,inventory),true);}}
+ function collectChains(){for(let i=0;i<2;i++){assert.equal(vats.collectChain(i,inventory),true);assert.equal(vats.rigs[i].lowered,false);assert.equal(vats.rigs[i].loadChain.object.visible,true);assert.equal(inventory.has('chain'+i),true);}}
  return {room,vats,flow,rescue,inventory,update,breakTanks,prepareChairs,collectChains};
 }
 
@@ -48,6 +49,25 @@ test('real hoists retain acid, require preparation before descent, and swing bot
   }
   assert.equal(f.rescue.state.ready,true);assert.equal(f.rescue.pull(),true);f.update(10,true);assert.equal(f.rescue.state.safe,true);
   f.rescue.reset();f.vats.reset();assert.ok(f.vats.rigs.every(r=>!r.rescued&&!r.escaping&&!r.rescuePlanned&&!r.transformation.damaged&&r.hanger.parent===r.rig));
+ }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
+});
+
+test('available spare chains enter inventory immediately without falling, moving the captive, or leaving floor pickup targets',()=>{
+ const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
+ try{
+  const f=fixture(createEscapePuzzle(()=>.9));assert.equal(f.vats.collectChain(0,f.inventory),false);assert.equal(f.inventory.has('chain0'),false);
+  f.breakTanks();const savedHoists=f.vats.capture(20),savedChairs=f.rescue.capture(),savedInventory=f.inventory.capture();
+  const rig=f.vats.rigs[0],height=rig.height;assert.equal(f.vats.canCollectChain(0),true);
+  assert.equal(f.vats.collectChain(0,f.inventory),true);assert.equal(f.inventory.has('chain0'),true,'no update or falling animation is needed');
+  assert.equal(rig.height,height);assert.equal(rig.targetHeight,height);assert.equal(rig.lowered,false);assert.equal(f.vats.movingIndex,null);
+  assert.equal(rig.returnChain.object.visible,false);assert.equal(rig.loadChain.object.visible,true);
+  assert.ok(f.rescue.inventoryChain(0).count>0,'the collected chain still has a real model for inventory and equipment');
+  f.rescue.group.traverse(o=>{if(o.userData.chainPickup===0)assert.equal(o.visible,false);});
+  assert.equal(f.vats.collectChain(0,f.inventory),false);assert.deepEqual(f.inventory.items,['chain0']);
+  f.update(5);assert.equal(rig.height,height);assert.equal(rig.returnChain.object.visible,false);
+  f.inventory.restore(savedInventory);f.rescue.restore(savedChairs);f.vats.restore(savedHoists,25);
+  assert.equal(rig.returnChain.object.visible,true);assert.equal(f.inventory.has('chain0'),false);assert.equal(f.vats.canCollectChain(0),true);
+  assert.equal(f.vats.collectChain(0,f.inventory),true);assert.match(f.vats.toggleHoist(0),/lowering/,'after collection, the winch still operates normally');
  }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
 });
 
