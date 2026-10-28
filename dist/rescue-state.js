@@ -1,6 +1,6 @@
 export const REPAIRS=Object.freeze([
- {label:'missing caster',steps:[{part:'caster',tool:'hammer'}]},
- {label:'torn seat and broken base',steps:[{part:'seat',tool:'screwdriver'},{part:'base',tool:'ratchet',socket:'allen'}]}
+ {label:'missing caster',steps:[{part:'caster',tool:'ratchet'}]},
+ {label:'torn seat and broken base',steps:[{part:'seat',tool:'ratchet'},{part:'base',tool:'ratchet'}]}
 ]);
 export const PLAYER_CHAIR=REPAIRS.length;
 export function createRescueState(puzzle={pmIndex:2}){
@@ -11,9 +11,8 @@ export function createRescueState(puzzle={pmIndex:2}){
   const c=chairs[index];if(!c||pulling||safe)return 'That chair cannot be repaired now.';
   if(c.repaired)return 'Chair repaired. Put away the tool to move it.';
   const r=REPAIRS[index].steps[c.step];
-  if(!c.installed.includes(r.part)){if(item!==r.part)return `Find and equip a replacement ${r.part}.`;if(!inventory.has(item))return 'Collect the replacement part first.';inventory.remove(item);c.installed.push(item);return `Replacement fitted. Secure it with the ${r.tool}${r.socket?' and Allen sockets':''}.`;}
+  if(!c.installed.includes(r.part)){if(item!==r.part)return `Find and equip a replacement ${r.part}.`;if(!inventory.has(item))return 'Collect the replacement part first.';inventory.remove(item);c.installed.push(item);return `Replacement fitted. Secure it with the ${r.tool}.`;}
   if(item!==r.tool||!inventory.has(item))return `Equip the ${r.tool} to secure the replacement.`;
-  if(r.socket&&!inventory.has(r.socket))return 'The ratchet needs the Allen socket set from Supplies.';
   c.step++;if(c.step<REPAIRS[index].steps.length)return `Secured. Find and equip a replacement ${REPAIRS[index].steps[c.step].part} next.`;
   c.repaired=true;return 'Chair repaired. Put away the tool, then move the chair in front of a tank.';
  }

@@ -17,23 +17,26 @@ test('D-pad wraps values and slots; direct digits cannot bypass the awkward cont
  k.press('right');assert.equal(k.selected,0);k.press('left');assert.equal(k.selected,3);assert.equal(k.press('enter'),'Door unlocked.');k.reset();assert.equal(k.unlocked,false);assert.equal(k.entry,'0000');
 });
 test('inventory only equips collected objects, consumes installed parts and preserves reusable tools',()=>{
- const i=createInventory(),r=createRescueState();assert.equal(i.equip('hammer'),false);i.add('hammer');i.add('caster');i.equip('hammer');r.use(0,'hammer',i);assert.equal(r.chairs[0].repaired,false);assert.equal(i.has('hammer'),true);
- i.equip('caster');r.use(0,'caster',i);assert.equal(i.has('caster'),false);assert.equal(i.equipped,null);r.use(0,'hammer',i);assert.equal(r.chairs[0].repaired,true);assert.equal(i.has('hammer'),true);i.putAway();assert.equal(i.has('hammer'),true);
+ const i=createInventory(),r=createRescueState();
+ for(const removed of['hammer','screwdriver','allen']){assert.equal(i.add(removed),false);assert.equal(i.equip(removed),false);}
+ assert.equal(i.equip('ratchet'),false);i.add('ratchet');i.add('caster');i.equip('ratchet');r.use(0,'ratchet',i);assert.equal(r.chairs[0].repaired,false);assert.equal(i.has('ratchet'),true);
+ i.equip('caster');r.use(0,'caster',i);assert.equal(i.has('caster'),false);assert.equal(i.equipped,null);r.use(0,'ratchet',i);assert.equal(r.chairs[0].repaired,true);assert.equal(i.has('ratchet'),true);i.putAway();assert.equal(i.has('ratchet'),true);
  i.reset();r.reset();assert.equal(i.items.length,0);assert.equal(r.chairs[0].repaired,false);
 });
 function repairedChairs(puzzle={pmIndex:2}){
  const inventory=createInventory(),state=createRescueState(puzzle);
- for(const item of ['caster','seat','base','hammer','screwdriver','ratchet','allen'])inventory.add(item);
- for(const [chair,part,tool]of [[0,'caster','hammer'],[1,'seat','screwdriver'],[1,'base','ratchet']]){state.use(chair,part,inventory);state.use(chair,tool,inventory);}
+ for(const item of ['caster','seat','base','ratchet'])inventory.add(item);
+ for(const [chair,part,tool]of [[0,'caster','ratchet'],[1,'seat','ratchet'],[1,'base','ratchet']]){state.use(chair,part,inventory);state.use(chair,tool,inventory);}
  return {inventory,state};
 }
-test('two repairable chairs retain all repairs; the base needs the ratchet and Allen sockets',()=>{
+test('both chairs require their salvaged parts, with the ratchet as the only repair tool',()=>{
  const i=createInventory(),r=createRescueState();assert.equal(r.chairs.length,2);assert.equal(PLAYER_CHAIR,2);
- for(const id of['seat','base','screwdriver','ratchet'])i.add(id);
+ for(const id of['seat','base','ratchet'])i.add(id);
  r.use(1,'base',i);assert.equal(i.has('base'),true,'seat must be repaired before the base');
- r.use(1,'seat',i);r.use(1,'screwdriver',i);assert.equal(r.chairs[1].repaired,false);
- r.use(1,'base',i);r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,false);
- i.add('allen');r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,true);
+ r.use(1,'seat',i);r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,false);
+ r.use(1,'base',i);assert.equal(r.chairs[1].repaired,false,'fitting a base still needs the ratchet');
+ i.remove('ratchet');r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,false,'the wrench must be collected');
+ i.add('ratchet');r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,true);
  assert.equal(i.has('seat'),false);assert.equal(i.has('base'),false);assert.equal(i.has('ratchet'),true);
 });
 test('exactly two survivors and two chains complete the train for every randomized PM',()=>{
@@ -56,7 +59,7 @@ test('PM and skeletons cannot take a rescue chair, and retries use the new PM id
  r.place(0,1);assert.equal(r.board(1,1,{alive:false}),-1);assert.equal(r.chairs[0].passenger,null);
  assert.equal(r.board(1,1),0);r.place(1,2);assert.equal(r.board(2,1),-1,'no duplicate passenger');
  puzzle.pmIndex=2;r.reset();
- const i=createInventory();i.add('caster');i.add('hammer');r.use(0,'caster',i);r.use(0,'hammer',i);
+ const i=createInventory();i.add('caster');i.add('ratchet');r.use(0,'caster',i);r.use(0,'ratchet',i);
  r.place(0,2);assert.equal(r.board(2,2),-1);r.place(0,0);assert.equal(r.board(0,0),0);
 });
 test('finite draining leaves broad persistent puddles that ignore camera and cable targets',()=>{

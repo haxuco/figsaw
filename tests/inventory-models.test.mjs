@@ -20,10 +20,10 @@ test('inventory previews reveal collected models without touching world objects 
 });
 
 test('batched repair tool models preserve their geometry and fit the inventory card',()=>{
- const tools=createRepairTools(new THREE.Group());
+ const drawer=new THREE.Group(),tools=createRepairTools(drawer);assert.deepEqual(Object.keys(tools),['ratchet']);assert.equal(drawer.children.length,1);
  for(const [id,source]of Object.entries(tools)){
   source.visible=false;
-  const preview=frameInventoryModel(cloneInventoryModel(source),[.12,-.3,id==='allen'?0:-.55]);
+  const preview=frameInventoryModel(cloneInventoryModel(source),[.12,-.3,-.55]);
   const bounds=new THREE.Box3().setFromObject(preview),size=bounds.getSize(new THREE.Vector3());
   assert.ok(!bounds.isEmpty(),id);assert.ok(size.x<=2.23&&size.y<=1.651,id);
   assert.equal(source.visible,false);

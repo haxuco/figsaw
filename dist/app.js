@@ -581,7 +581,7 @@ function leaveInspection(){
 inspectionBack.addEventListener('click',leaveInspection);
 const inventoryPreviews=createInventoryModelPreviews({renderer,getModel(id){
  const supply=mobileSupplies.objects[id];
- if(supply)return {object:supply,rotation:id==='string'?[.3,-.35,-.2]:[.12,-.3,id==='allen'?0:-.55]};
+ if(supply)return {object:supply,rotation:id==='string'?[.3,-.35,-.2]:[.12,-.3,-.55]};
  if(id==='key')return {object:ketchupKey.key,rotation:[1.15,.15,-.35]};
  if(id==='saw')return {object:handsaw,rotation:[1.25,.15,-.2]};
  if(id==='axe')return {object:fireAxe.object,rotation:[.1,-.28,-.65]};

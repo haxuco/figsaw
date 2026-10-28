@@ -1,6 +1,6 @@
 export const ITEMS=Object.freeze({
  key:{name:'Shackle key'},scissors:{name:'Scissors'},string:{name:'Cotton string'},
- hammer:{name:'Claw hammer'},screwdriver:{name:'Screwdriver'},ratchet:{name:'Ratchet wrench'},allen:{name:'Allen socket set'},
+ ratchet:{name:'Ratchet wrench'},
  caster:{name:'Salvaged caster'},seat:{name:'Salvaged seat'},base:{name:'Salvaged base'},
  saw:{name:'Handsaw'},axe:{name:'Fire axe'},charger:{name:'Charger + cable'},
  chain0:{name:'Hoist chain 01'},chain1:{name:'Hoist chain 02'},chain2:{name:'Hoist chain 03'}
