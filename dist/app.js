@@ -580,7 +580,7 @@ function sitOnChair(){
  if(sawBusy()||mobilePuzzle.active||documentViewer.active||doorKeypadUI.active)return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
  if(chairSeat.occupied)return;
- clearSawSelection();putAxeBack();sawMenu.hide();prepareSawAction();
+ clearSawSelection();sawMenu.hide();prepareSawAction();
  chairSeat.sit(state.time,{locked:restraint.locked,dying:acidLeaks.dying});
 }
 function leaveChair(){
@@ -686,16 +686,16 @@ function equipItem(id){
 }
 function useRescueObject(hit){
  const data=hit?.userData;if(!data)return false;
- const repairItem=['caster','seat','base','ratchet'].includes(inventory.equipped);
- const isRescue=(data.chairSeat&&(repairItem||inventory.equipped?.startsWith('chain')))||data.salvagePart||Number.isInteger(data.rescueChair)||Number.isInteger(data.chainPickup)||Number.isInteger(data.chainAnchor);
+ const isRescue=data.chairSeat||data.salvagePart||Number.isInteger(data.rescueChair)||Number.isInteger(data.chainPickup)||Number.isInteger(data.chainAnchor);
  if(!isRescue)return false;
  if(sawBusy())return true;
  if(restraint.locked){restraint.requestReach(state.time);return true;}
+ if(data.chairSeat){sitOnChair();return true;}
  if(data.salvagePart){rescueChairs.collectPart(data.salvagePart,inventory);return true;}
  if(Number.isInteger(data.chainPickup)){rescueChairs.collectChain(data.chainPickup,inventory);return true;}
  let index=data.chairSeat?PLAYER_CHAIR:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
  if(inventory.equipped?.startsWith('chain')){testingMode.report(rescueChairs.hook(index,inventory.equipped,inventory));return true;}
- if(index===PLAYER_CHAIR){if(repairItem)inventoryUI.notify('This chair does not need repairs.');else sitOnChair();return true;}
+ if(index===PLAYER_CHAIR){sitOnChair();return true;}
  if(rescueChairs.state.chairs[index].repaired){if(inventory.equipped)inventoryUI.notify('Chair already repaired.');else beginChairMove(index);return true;}
  if(inventory.equipped){
   const message=rescueChairs.use(index,inventory.equipped,inventory);testingMode.report(message);inventoryUI.notify(message);
