@@ -39,7 +39,7 @@ import {createContactShadows} from './contact-shadows.js';
 import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
 import {installGraphicsRecovery} from './graphics-recovery.js';
 import {createStartupProgress} from './startup-progress.js';
-import {createGameOverTransition,gameOverStyle,resolveGameOverCause} from './game-over-transition.js';
+import {createGameOverTransition,gameOverStyle,gameOverReason,resolveGameOverCause} from './game-over-transition.js';
 const loadingStatus=document.querySelector('#loading-status');
 const startupProgress=createStartupProgress(loadingStatus);
 startupProgress.update('Creating Figsaw…');
@@ -452,6 +452,7 @@ const axeInteraction=createAxeInteraction({axe:fireAxe,camera,tanks:figpalHoists
 const cancelAxeSelection=document.querySelector('#cancel-axe-selection');
 cancelAxeSelection.addEventListener('click',()=>{if(!axeInteraction.active){putAxeBack();canvas.focus({preventScroll:true});}});
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
+const gameOverReasonText=document.querySelector('#game-over-reason');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
 const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
@@ -780,13 +781,14 @@ function updateFigpalRound(time){
  if(seconds!==lastCountdownSeconds){countdownReadout.textContent=formatCountdown(seconds);lastCountdownSeconds=seconds;}
 }
 
-function endGame(message,cause='objective'){
+function endGame(cause='objective'){
  if(gameEnded)return;gameEnded=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
  document.body.classList.add('game-over');canvas.inert=true;
- restraintStatus.textContent=message;
+ gameOverReasonText.textContent=gameOverReason(cause);
+ restraintStatus.textContent=`Game over. ${gameOverReasonText.textContent}`;
 }
 function updateGameOver(time){
  const frame=deathTransition.update(time);
@@ -811,7 +813,7 @@ function resetView({skipIntro=false}={}){
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
  gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
- gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
+ gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
@@ -1056,12 +1058,12 @@ function render(){
  const deathFrame=updateGameOver(t);
  if(deathFrame.style==='objective')mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap,deathFrame.blackout);
  if(mugTrap.eyeImpact>0)document.body.classList.add('mug-impact');
- if(alarmFinished)endGame(fireAlarm.message,fireAlarm.outcome==='acid'?'explosion':'laptop');
- else if(figpalRoundFinished)endGame('The second Figpal deadline has passed. Game over.','deadline');
- else if(sawFinished)endGame('You used the saw before finding the key. Your hand is lost. Game over.','saw');
- else if(fireFinished)endGame('The fire reaches you before the sprinklers can stop it. Game over.','fire');
- else if(acidFinished)endGame('The corrosive green liquid reaches you. Game over.','acid');
- else if(mugFinished)endGame("The mug's pointed ears hit your eyes. Everything goes dark. Game over.",'mug');
+ if(alarmFinished)endGame(fireAlarm.outcome==='acid'?'explosion':'laptop');
+ else if(figpalRoundFinished)endGame('deadline');
+ else if(sawFinished)endGame('saw');
+ else if(fireFinished)endGame('fire');
+ else if(acidFinished)endGame('acid');
+ else if(mugFinished)endGame('mug');
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
  if(chairSeat.seated&&!documentViewer.active&&!mobilePuzzle.active&&!drawerCamera.active)cameraPosition.add(rescueChairs.playerOffset);

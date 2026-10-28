@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=a1eb9574b65e">
-  <link rel="modulepreload" href="./game.bundle.js?v=956ad48f7eae">
+  <link rel="stylesheet" href="./style.css?v=8f43708dbd9b">
+  <link rel="modulepreload" href="./game.bundle.js?v=39df1e6e64dd">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -24,9 +24,10 @@
   <button id="cancel-saw-selection" type="button" hidden>Put saw down</button>
   <div id="mug-eye-impact" aria-hidden="true" hidden></div>
   <div id="death-blood" aria-hidden="true" hidden></div>
-  <section id="game-over" role="dialog" aria-modal="true" aria-labelledby="game-over-title" hidden>
+  <section id="game-over" role="dialog" aria-modal="true" aria-labelledby="game-over-title" aria-describedby="game-over-reason" hidden>
     <div class="game-over-content" hidden>
       <h1 id="game-over-title">Game over</h1>
+      <p id="game-over-reason"></p>
       <button id="restart-game" type="button">Try again</button>
     </div>
   </section>
@@ -77,6 +78,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=956ad48f7eae"></script>
+  <script type="module" src="./boot.js?v=39df1e6e64dd"></script>
 </body>
 </html>

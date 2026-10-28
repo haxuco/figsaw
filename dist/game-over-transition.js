@@ -1,6 +1,18 @@
 const smooth=(time,start,end)=>{const t=Math.max(0,Math.min(1,(time-start)/(end-start)));return t*t*(3-2*t);};
 
 export function gameOverStyle(cause){return ['acid','saw','mug','fire','explosion'].includes(cause)?'injury':'objective';}
+export function gameOverReason(cause){
+ switch(cause){
+  case 'acid':return 'The acid reached you.';
+  case 'saw':return 'The saw cut too deep.';
+  case 'mug':return 'The mug pierced your eyes.';
+  case 'fire':return 'You were consumed by the fire.';
+  case 'explosion':return 'You were caught in the explosion.';
+  case 'laptop':return 'Water destroyed the laptop.';
+  case 'deadline':return 'You ran out of time.';
+  default:return 'The challenge ended in failure.';
+ }
+}
 export function resolveGameOverCause({alarm,deadline,saw,fire,acid,mug}={}){
  if(alarm==='acid')return 'explosion';
  if(alarm==='laptop')return 'laptop';
