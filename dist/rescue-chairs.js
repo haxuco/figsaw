@@ -4,6 +4,7 @@ import {batchStaticScenery} from './static-batching.js';
 import {renderQuality} from './render-quality.js';
 import {visibleLocalBounds} from './testing-highlights.js';
 import {createRescueSwingPath,CHAIR_PASSENGER_HEIGHT,RESCUE_SWING_SECONDS} from './rescue-swing.js';
+import {createChairRoute,CHAIR_RADIUS} from './chair-route.js';
 
 export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzzle}){
  const group=new THREE.Group();group.name='Chair rescue, salvaged parts and hoist chains';group.userData.ignoreAcid=true;
@@ -16,7 +17,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),right=new THREE.Vector3(1,0,0),twist=new THREE.Quaternion(),point=new THREE.Vector3();
  const linkCurve=[];for(let j=0;j<=8;j++){const a=j/8*Math.PI;linkCurve.push(new THREE.Vector3(Math.cos(a)*.017,.012+Math.sin(a)*.017,0));}for(let j=0;j<=8;j++){const a=Math.PI+j/8*Math.PI;linkCurve.push(new THREE.Vector3(Math.cos(a)*.017,-.012+Math.sin(a)*.017,0));}
  const geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkCurve,true),16,.005,4,true);
- const coilHomes=[],chains=[],slots=[],rolls=new Map(),transfers=new Map();
+ const coilHomes=[],chains=[],slots=[],tankObstacles=[],rolls=new Map(),transfers=new Map();
  let message='',moving=null,firstAnchor=null,pullAt=null,lastTime=0,linksDirty=true,discoveryEnabled=true,playerOffset=new THREE.Vector3();
  const anchorPoint=(index,out)=>[...objects,player][index].localToWorld(out.set(0,.25,.20));
  function chainMesh(){const m=new THREE.InstancedMesh(geometry,metal,128);m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.count=0;m.frustumCulled=false;m.castShadow=true;group.add(m);return m;}
@@ -67,7 +68,12 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   const pick=new THREE.Mesh(new THREE.SphereGeometry(.105,8,6),ghost);pick.userData.chainAnchor=i;anchor.add(pick);
  }
  tanks.forEach((tank,index)=>{
-  tank.updateWorldMatrix(true,false);const p=tank.localToWorld(new THREE.Vector3(0,0,.92));p.y=floorSupport(p.x,p.z);
+  tank.updateWorldMatrix(true,false);
+  const tankCenter=tank.getWorldPosition(new THREE.Vector3()),valve=tank.localToWorld(new THREE.Vector3(.30,0,.55));
+  tankObstacles.push({x:tankCenter.x,z:tankCenter.z,radius:.61},{x:valve.x,z:valve.z,radius:.14});
+  // Park in the open aisle, clear of the neighbouring staggered tanks as well
+  // as this tank. Keep the seat in front of the breach for the rescue swing.
+  const p=tank.localToWorld(new THREE.Vector3(.90,0,1.05));p.y=floorSupport(p.x,p.z);
   const marker=new THREE.Group();marker.name=`Chair destination — Tank ${String(index+1).padStart(2,'0')}`;marker.position.copy(p);marker.visible=false;marker.userData.rescueSlot=index;group.add(marker);
   const ring=new THREE.Mesh(new THREE.RingGeometry(.46,.50,32),tint);ring.rotation.x=-Math.PI/2;ring.position.y=.014;marker.add(ring);
   // A lightweight chair silhouette makes the floor target recognizable from
@@ -78,7 +84,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   const pick=new THREE.Mesh(new THREE.BoxGeometry(.98,1.1,.98),ghost);pick.position.y=.55;pick.userData.rescueSlot=index;const target=new THREE.Group();target.position.copy(p);target.add(pick);target.visible=false;group.add(target);
   // Present the open front of the seat to the breach. A forward-facing chair's
   // mesh back would otherwise sit directly across the captive's landing path.
-  slots.push({p,q:tank.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(up,Math.PI)),seatedQ:tank.quaternion.clone(),marker,target});
+  slots.push({p,q:tank.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(up,Math.PI+Math.atan2(.90,1.05))),seatedQ:tank.quaternion.clone(),marker,target});
   const mesh=chainMesh();mesh.visible=false;mesh.userData.chainPickup=index;
   const center=tank.localToWorld(new THREE.Vector3(.43,0,.62));center.y=floorSupport(center.x,center.z)+.02;coilHomes.push(center);
   const pickChain=new THREE.Mesh(new THREE.BoxGeometry(.32,.11,.32),ghost);pickChain.position.copy(center);pickChain.userData.chainPickup=index;pickChain.visible=false;group.add(pickChain);
@@ -92,11 +98,18 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   syncParts();if(c.repaired){const object=objects[index];rolls.set(index,{from:object.position.clone(),q:object.quaternion.clone(),to:object.position.clone().setY(floorSupport(object.position.x,object.position.z)),toQ:new THREE.Quaternion().setFromAxisAngle(up,object.rotation.y),at:lastTime,duration:1});}
   return message;
  }
- function canMove(index){return !rolls.has(index)&&slots.some((s,i)=>state.canPlace(index,i));}
+ function canMove(index){return !rolls.size&&!transfers.size&&slots.some((s,i)=>state.canPlace(index,i));}
  function availableSlots(){return moving===null?[]:slots.flatMap((s,i)=>state.canPlace(moving,i)?[i]:[]);}
  function select(index){if(!canMove(index))return false;moving=index;slots.forEach((s,i)=>{s.marker.visible=s.target.visible=state.canPlace(index,i);});return true;}
  function cancelMove(){moving=null;slots.forEach(s=>s.marker.visible=s.target.visible=false);}
- function place(tank){if(moving===null||!state.place(moving,tank))return false;const index=moving,o=objects[index],slot=slots[tank];rolls.set(index,{from:o.position.clone(),q:o.quaternion.clone(),to:slot.p.clone(),toQ:slot.q.clone(),at:lastTime,duration:1.5});cancelMove();return true;}
+ function place(tank){
+  if(moving===null||rolls.size||transfers.size||!state.canPlace(moving,tank))return false;
+  const index=moving,o=objects[index],slot=slots[tank];
+  const parked=objects.flatMap((other,i)=>i!==index&&state.chairs[i].repaired?[{x:other.position.x,z:other.position.z,radius:CHAIR_RADIUS}]:[]);
+  const route=createChairRoute(o.position,slot.p,[...tankObstacles,...parked]);
+  if(!route){message='That chair route is blocked.';return false;}
+  state.place(index,tank);rolls.set(index,{route,q:o.quaternion.clone(),toQ:slot.q.clone(),at:lastTime,duration:Math.max(1.5,route.length/1.8)});cancelMove();return true;
+ }
  function prepare(tank,alive=true){if(rolls.size||transfers.size)return false;return state.reserve(tank,tank,{alive});}
  function board(tank,hanger,alive=true){const index=state.chairAt(tank);if(index<0||rolls.has(index))return false;const chosen=state.board(tank,tank,{alive});if(chosen<0)return false;
   const object=objects[index],source=tanks[tank],from=source.worldToLocal(hanger.getWorldPosition(new THREE.Vector3())),to=source.worldToLocal(object.localToWorld(new THREE.Vector3(0,CHAIR_PASSENGER_HEIGHT,0)));
@@ -117,7 +130,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   pullOrder=[PLAYER_CHAIR];while(pullOrder.length<=PLAYER_CHAIR){const n=pullOrder.at(-1),link=state.links.find(l=>(l.a===n&&!pullOrder.includes(l.b))||(l.b===n&&!pullOrder.includes(l.a)));if(!link)break;pullOrder.push(link.a===n?link.b:link.a);}return true;
  }
  function update(time,reducedMotion=false){lastTime=time;syncPartHighlights(time,reducedMotion);let dirty=linksDirty;linksDirty=false;playerOffset.set(0,0,0);
-  for(const [i,r]of rolls){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-r.at,0,r.duration),o=objects[i];o.position.lerpVectors(r.from,r.to,u);o.quaternion.slerpQuaternions(r.q,r.toQ,u);dirty=true;if(u===1)rolls.delete(i);}
+  for(const [i,r]of rolls){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-r.at,0,r.duration),o=objects[i];if(r.route){r.route.getPoint(u,o.position);o.position.y=floorSupport(o.position.x,o.position.z);}else o.position.lerpVectors(r.from,r.to,u);o.quaternion.slerpQuaternions(r.q,r.toQ,u);dirty=true;if(u===1)rolls.delete(i);}
   for(const [i,t]of transfers){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-t.at,0,RESCUE_SWING_SECONDS);t.path.getPoint(u,point);t.source.localToWorld(point);group.worldToLocal(point);t.hanger.position.copy(point);t.hanger.quaternion.slerpQuaternions(t.q,t.toQ,u);twist.setFromAxisAngle(right,-Math.sin(u*Math.PI)*.14);t.hanger.quaternion.multiply(twist);
    if(u===1){t.object.attach(t.hanger);t.hanger.position.set(0,CHAIR_PASSENGER_HEIGHT,0);t.hanger.quaternion.identity();rolls.set(t.index,{from:t.object.position.clone(),to:t.object.position.clone(),q:t.object.quaternion.clone(),toQ:slots[i].seatedQ.clone(),at:time,duration:1});transfers.delete(i);}
   }

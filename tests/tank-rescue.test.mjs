@@ -5,11 +5,12 @@ import {createFigpalVats} from '../dist/figpal-vats.js';
 import {createRescueChairs} from '../dist/rescue-chairs.js';
 import {createAcidFlow,BREACHED_TANK_RESIDUAL} from '../dist/acid-flow.js';
 import {createInventory} from '../dist/inventory.js';
+import {CHAIR_RADIUS,CHAIR_GAP} from '../dist/chair-route.js';
 
 function canvasMock(){const gradient={addColorStop(){}};const ctx=new Proxy({createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,measureText:()=>({width:50})},{get:(t,k)=>k in t?t[k]:()=>{}});return {width:0,height:0,getContext:()=>ctx};}
 function fixture(){
  const room=new THREE.Group(),vats=createFigpalVats({floorSupport:()=>0}),flow=createAcidFlow(),inventory=createInventory();room.add(vats.group);
- const objects=[0,1].map(()=>{const o=new THREE.Group();o.chairParts={base:new THREE.Group(),seat:new THREE.Group(),caster:new THREE.Group()};o.add(o.chairParts.base,o.chairParts.seat);room.add(o);return o;});
+ const objects=[0,1].map(i=>{const o=new THREE.Group();o.position.set(...(i===0?[-1.85,0,-1.28]:[2.75,0,3.3]));o.chairParts={base:new THREE.Group(),seat:new THREE.Group(),caster:new THREE.Group()};o.add(o.chairParts.base,o.chairParts.seat);room.add(o);return o;});
  const parts=Object.fromEntries(['caster','seat','base'].map(id=>{const o=new THREE.Group();o.add(new THREE.Mesh(new THREE.BoxGeometry(.1,.1,.1),new THREE.MeshStandardMaterial()));room.add(o);return [id,o];}));
  const player=new THREE.Group();room.add(player);
  const rescue=createRescueChairs({objects,parts,player,tanks:vats.rigs.map(r=>r.vat),floorSupport:()=>0,puzzle:{pmIndex:2}});room.add(rescue.group);vats.bindRescue(rescue,{...flow,isDrained:i=>flow.remaining(i)<=.0001});
@@ -19,7 +20,7 @@ function fixture(){
  function prepareChairs(){
   for(const id of ['caster','seat','base','ratchet'])inventory.add(id);
   for(const [i,part]of [[0,'caster'],[1,'seat'],[1,'base']]){rescue.use(i,part,inventory);rescue.use(i,'ratchet',inventory);}
-  update(2);for(let i=0;i<2;i++){assert.equal(rescue.select(i),true);assert.equal(rescue.place(i),true);update(2);}
+  update(2);for(let i=0;i<2;i++){assert.equal(rescue.select(i),true);assert.equal(rescue.place(i),true);update(8);}
   for(const [a,b,id]of [[2,0,'chain0'],[0,1,'chain1']]){rescue.hook(a,id,inventory);rescue.hook(b,id,inventory);}
   assert.equal(rescue.state.arranged,true);
  }
@@ -47,5 +48,36 @@ test('real hoists retain acid, require preparation before descent, and swing bot
   }
   assert.equal(f.rescue.state.ready,true);assert.equal(f.rescue.pull(),true);f.update(10,true);assert.equal(f.rescue.state.safe,true);
   f.rescue.reset();f.vats.reset();assert.ok(f.vats.rigs.every(r=>!r.rescued&&!r.escaping&&!r.rescuePlanned&&!r.transformation.damaged&&r.hanger.parent===r.rig));
+ }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
+});
+
+test('both chairs avoid every tank and valve from their room positions and when switching between all three parking spots',()=>{
+ const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
+ try{
+  const f=fixture(),obstacles=f.vats.rigs.flatMap(({vat})=>{
+   const center=vat.getWorldPosition(new THREE.Vector3()),valve=vat.localToWorld(new THREE.Vector3(.30,0,.55));
+   return [{x:center.x,z:center.z,radius:.61},{x:valve.x,z:valve.z,radius:.14}];
+  });
+  const homes=[new THREE.Vector3(-1.85,0,-1.28),new THREE.Vector3(2.75,0,3.3)],docks=f.vats.rigs.map((_,i)=>f.rescue.group.getObjectByName(`Chair destination — Tank 0${i+1}`).position.clone());
+  for(let i=0;i<docks.length;i++)for(let j=i+1;j<docks.length;j++)assert.ok(docks[i].distanceTo(docks[j])>CHAIR_RADIUS*2+CHAIR_GAP,'parked chairs have separate space in the aisle');
+  let time=0;
+  for(let chair=0;chair<2;chair++)for(const source of[homes[chair],...docks])for(let tank=0;tank<3;tank++){
+   f.rescue.reset();f.rescue.objects[chair].position.copy(source);f.rescue.state.chairs[chair].repaired=true;
+   assert.equal(f.rescue.select(chair),true);assert.equal(f.rescue.place(tank),true,`chair ${chair} can reach tank ${tank}`);
+   for(let frame=0;frame<240;frame++){
+    time+=.04;f.rescue.update(time);
+    const position=f.rescue.objects[chair].position;assert.equal(position.y,0,'wheels stay grounded along the route');
+    for(const obstacle of obstacles)assert.ok(Math.hypot(position.x-obstacle.x,position.z-obstacle.z)>=obstacle.radius+CHAIR_RADIUS+CHAIR_GAP-1e-7,`chair ${chair} clips a tank or valve on its way to tank ${tank}`);
+   }
+   assert.ok(f.rescue.objects[chair].position.distanceTo(docks[tank])<1e-9);
+  }
+  f.rescue.reset();for(const chair of f.rescue.state.chairs)chair.repaired=true;
+  for(let i=0;i<2;i++){
+   assert.equal(f.rescue.select(i),true);assert.equal(f.rescue.place(i),true);assert.equal(f.rescue.canMove(1-i),false,'finish one move before routing the other chair');
+   for(let frame=0;frame<240;frame++){
+    time+=.04;f.rescue.update(time);const a=f.rescue.objects[0].position,b=f.rescue.objects[1].position;
+    assert.ok(Math.hypot(a.x-b.x,a.z-b.z)>=CHAIR_RADIUS*2+CHAIR_GAP-1e-7,'the second chair clears the already parked chair');
+   }
+  }
  }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
 });

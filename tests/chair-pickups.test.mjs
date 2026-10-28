@@ -73,11 +73,11 @@ test('a repaired chair offers large clickable destinations and rolls to the chos
  assert.equal(rescue.canMove(0),false,'finish the repair settling animation first');
  rescue.update(2);assert.equal(rescue.canMove(0),true);assert.equal(rescue.select(0),true);
  assert.deepEqual(rescue.availableSlots(),[0,1,2]);room.updateMatrixWorld(true);
- const ray=createSceneRaycaster();ray.set(new THREE.Vector3(0,.85,1),new THREE.Vector3(0,0,-1));
+ const ray=createSceneRaycaster();ray.set(new THREE.Vector3(.9,.85,1),new THREE.Vector3(0,0,-1));
  assert.equal(ray.intersectObject(rescue.group,true).find(h=>h.object.parent.visible&&h.object.visible)?.object.userData.rescueSlot,0,'the silhouette is clickable above the floor ring');
  assert.equal(rescue.place(0),true);assert.equal(rescue.moving,null);assert.deepEqual(rescue.availableSlots(),[]);
  for(const o of rescue.group.children.filter(o=>o.name.startsWith('Chair destination')))assert.equal(o.visible,false);
- rescue.update(4);assert.ok(objects[0].position.distanceTo(new THREE.Vector3(0,.003,-1.08))<1e-9);
+ rescue.update(4);assert.ok(objects[0].position.distanceTo(new THREE.Vector3(.9,.003,-.95))<1e-9);
  rescue.state.chairs[1].repaired=true;assert.equal(rescue.select(1),true);
  assert.deepEqual(rescue.availableSlots(),[1,2],'an occupied destination is disabled, without revealing the randomized PM');
  assert.equal(rescue.place(0),false);assert.equal(rescue.moving,1,'an invalid placement keeps the selection');
