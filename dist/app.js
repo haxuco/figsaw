@@ -13,10 +13,11 @@ import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
+import {createSceneRaycaster} from './scene-picking.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
-import { createFigsawDeparture } from './figsaw-departure.js';
+import {createFigsawDeparture,createFigsawCornerReaction,FIGSAW_CORNER_LINE} from './figsaw-departure.js';
 import { createLaptopOpening } from './laptop-opening.js';
 import { createDrawerCamera } from './drawer-camera.js';
 import { createFigpalRounds } from './figpal-rounds.js';
@@ -385,6 +386,7 @@ const entrancePath=new THREE.CatmullRomCurve3([
 ].map(point=>new THREE.Vector3(...point)),false,'centripetal');
 entrancePath.arcLengthDivisions=240;
 const departure=createFigsawDeparture(entrancePath,modelScale);
+const cornerReaction=createFigsawCornerReaction(()=>departure.finished);
 const entranceDelay=1.0,entranceDuration=8.5;
 const entranceLength=entrancePath.getLength(),ridePoint=new THREE.Vector3(),rideDirection=new THREE.Vector3();
 const arrivalDialogue=document.querySelector('#figsaw-dialogue');
@@ -400,7 +402,7 @@ const dialogueLines=[
 ];
 let dialogueLineIndex=-1,nextDialogueAt=Infinity;
 const dialogueAnchor=new THREE.Vector3(),dialogueProjection=new THREE.Vector3();
-const dialogueRay=new THREE.Raycaster(),dialogueDirection=new THREE.Vector3();
+const dialogueRay=createSceneRaycaster(),dialogueDirection=new THREE.Vector3();
 let entranceStartedAt=0,entranceArrived=false,entranceArrivedAt=0,dialogueOccluded=false,nextDialogueVisibilityCheck=0,dialogueSpeech=null;
 function showFigsawDialogue(index){
  const text=dialogueLines[index];dialogueLineIndex=index;
@@ -416,8 +418,10 @@ function showFigsawDialogue(index){
  if(index===0)countdownStartTime=speech.startTime+speech.duration;
 }
 function updateEntrance(time){
+ puppet.rotation.z=0;
  const departingDistance=departure.update(time,model,puppet,reducedMotion);
  if(departingDistance!==null){
+  const shake=cornerReaction.shake(time,reducedMotion);puppet.rotation.y+=shake;puppet.rotation.z=shake*.5;
   setRollingDistance(departingDistance);figsawIdlePose(-1,reducedMotion,idlePose);return;
  }
  const elapsed=time-entranceStartedAt-entranceDelay;
@@ -433,6 +437,14 @@ function updateEntrance(time){
  puppet.rotation.y=THREE.MathUtils.clamp(relativeYaw*.58,-.70,.70)+idlePose.headYaw;
 }
 updateEntrance(0);
+function reactToFigsaw(){
+ if(!departure.finished){state.talkUntil=state.time+1.8;return;}
+ const speech=cornerReaction.react(state.time);if(!speech)return;
+ arrivalDialogue.classList.remove('long-dialogue');
+ arrivalDialogue.querySelector('.dialogue-bubble span').textContent=FIGSAW_CORNER_LINE;
+ dialogueAnnouncement.textContent=`Figsaw. ${FIGSAW_CORNER_LINE}`;
+ dialogueSpeech=reducedMotion?null:speech;nextDialogueVisibilityCheck=0;
+}
 profiler.mark('characterBuilt');
 await yieldStartup('Building the office…');
 const escapePuzzle=createEscapePuzzle(),inventory=createInventory();
@@ -502,7 +514,7 @@ batchStaticScenery(office,{exclude:[rescueChairs.group,...rescueChairs.objects,.
 const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
- if(documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||!entranceArrived||departure.active||figpalRounds.active||fireAlarm.dying){arrivalDialogue.hidden=true;return;}
+ if(documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||!entranceArrived||(departure.active&&!cornerReaction.visible(time))||figpalRounds.active||fireAlarm.dying){arrivalDialogue.hidden=true;return;}
  // Keep the bubble attached to the crown as the viewer walks or turns around.
  puppet.localToWorld(dialogueAnchor.set(-.28,bodyHeight+.24,0));
  dialogueProjection.copy(dialogueAnchor).project(camera);
@@ -515,13 +527,15 @@ function updateArrivalDialogue(time){
   dialogueRay.set(camera.position,dialogueDirection.normalize());dialogueRay.near=.06;dialogueRay.far=Math.max(.06,distance-.035);
   dialogueOccluded=dialogueRay.intersectObject(office,true).length>0;
  }
- if(dialogueOccluded){arrivalDialogue.hidden=true;return;}
+ // A click on the visible rider/bike already confirms the corner reaction's
+ // visibility, even if the table blocks the ray to his crown.
+ if(dialogueOccluded&&!cornerReaction.visible(time)){arrivalDialogue.hidden=true;return;}
  arrivalDialogue.hidden=false;
  const rect=canvas.getBoundingClientRect(),anchorX=rect.left+(dialogueProjection.x*.5+.5)*rect.width;
  const anchorY=rect.top+(-dialogueProjection.y*.5+.5)*rect.height;
  arrivalDialogue.style.transform=`translate3d(${anchorX}px,${anchorY-8}px,0) translate(-50%,-100%)`;
 }
-const interactionRay=new THREE.Raycaster(),interactionPointer=new THREE.Vector2();
+const interactionRay=createSceneRaycaster(),interactionPointer=new THREE.Vector2();
 function interactionAt(event){
  const rect=canvas.getBoundingClientRect();
  interactionPointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
@@ -531,7 +545,7 @@ function interactionAt(event){
   for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
   return true;
  });
- for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
+ for(let object=hit?.object;object;object=object.parent){if(object===model&&departure.finished)return puppet;if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 const leaveChairButton=document.querySelector('#leave-chair');
@@ -821,7 +835,7 @@ function resetView({skipIntro=false}={}){
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
  figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
- resetting=!skipIntro;departure.reset();
+ resetting=!skipIntro;departure.reset();cornerReaction.reset();canvas.classList.remove('over-figsaw');
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
  arrivalDialogue.hidden=true;arrivalDialogue.classList.remove('long-dialogue');dialogueAnnouncement.textContent='';dialogueSpeech=null;
@@ -914,7 +928,7 @@ canvas.addEventListener('pointermove',event=>{
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(documentViewer.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);documentViewer.drag(dx,dy);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
- if(dragPointer===null){const hit=interactionAt(event);hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair);hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad);canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
+ if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair);hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad);canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object&&!laptop.isOpen);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
  if(pointerDistance>=6&&chairDragCandidate!==null&&rescueChairs.moving===null)rescueChairs.select(chairDragCandidate);
@@ -950,11 +964,11 @@ canvas.addEventListener('pointerup',event=>{
   else if(hit===catMug)grabMug();
   else if(hit===handsaw)grabSaw();
   else if(Number.isInteger(hit?.userData.valveIndex))openTankValve(hit.userData.valveIndex);
-  else if(hit===puppet)state.talkUntil=state.time+1.8;
+  else if(hit===puppet)reactToFigsaw();
   else if(Number.isInteger(hit?.userData.hoistIndex))operateHoist(hit.userData.hoistIndex);
  }
 });
-canvas.addEventListener('pointerleave',()=>{hoveredChair=false;canvas.classList.remove('over-chair');hoveredDocument=null;hoveredFish=false;hoveredSupply=null;hoveredMobile=hoveredKeypad=false;canvas.classList.remove('over-puzzle');hoveredAlarm=false;canvas.classList.remove('over-alarm');hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-axe','over-tank','over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging','over-plush');});
+canvas.addEventListener('pointerleave',()=>{hoveredChair=false;canvas.classList.remove('over-chair');hoveredDocument=null;hoveredFish=false;hoveredSupply=null;hoveredMobile=hoveredKeypad=false;canvas.classList.remove('over-puzzle');hoveredAlarm=false;canvas.classList.remove('over-alarm');hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-axe','over-tank','over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging','over-plush','over-figsaw');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('wheel',event=>{event.preventDefault();if(documentViewer.active){documentViewer.setZoom(documentViewer.zoom*Math.exp(event.deltaY*.0015));return;}if(mobilePuzzle.active||mobileCamera.returning)return;if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});

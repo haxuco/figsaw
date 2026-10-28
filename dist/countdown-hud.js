@@ -1,8 +1,9 @@
 import * as THREE from './vendor/three.module.js';
 import {formatCountdown} from './countdown-clock.js';
+import {createSceneRaycaster} from './scene-picking.js';
 
 export function createCountdownHUD({timer,camera,occluders,corner,warning,reducedMotion=false}){
- const display=timer.display,ray=new THREE.Raycaster(),center=new THREE.Vector3(),towardEye=new THREE.Vector3(),normal=new THREE.Vector3(),projected=new THREE.Vector3();
+ const display=timer.display,ray=createSceneRaycaster(),center=new THREE.Vector3(),towardEye=new THREE.Vector3(),normal=new THREE.Vector3(),projected=new THREE.Vector3();
  const width=display.geometry.parameters.width/2,height=display.geometry.parameters.height/2;
  let nextVisibilityCheck=0,displayVisible=false,lastSecond=null,secondChangedAt=0;
  function inView(){
