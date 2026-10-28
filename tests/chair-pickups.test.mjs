@@ -45,3 +45,18 @@ test('pickup volumes and markers disappear immediately on collection, and reset 
  inventory.reset();rescue.reset();
  for(const [id,part]of Object.entries(parts))assert.equal(at(part.position.x+.07,.07)?.userData.salvagePart,id);
 });
+
+test('repair chairs accept clicks in frame gaps, retain furniture occlusion and carry their target when moved',()=>{
+ const room=new THREE.Group(),material=new THREE.MeshStandardMaterial();
+ const chairs=[0,1].map(i=>{
+  const chair=new THREE.Group();chair.position.x=i*2;room.add(chair);
+  chair.chairParts={base:new THREE.Group(),seat:new THREE.Group(),caster:new THREE.Group()};chair.add(chair.chairParts.base,chair.chairParts.seat);
+  for(const x of[-.25,.25]){const rail=new THREE.Mesh(new THREE.BoxGeometry(.04,1.1,.04),material);rail.position.set(x,.55,0);chair.add(rail);}
+  const seat=new THREE.Mesh(new THREE.BoxGeometry(.5,.04,.5),material);seat.position.y=.5;chair.chairParts.seat.add(seat);return chair;
+ });
+ createRescueChairs({objects:chairs,parts:{},player:new THREE.Group(),tanks:[],floorSupport:()=>.003});room.updateMatrixWorld(true);
+ const ray=createSceneRaycaster(),hitAt=x=>{ray.set(new THREE.Vector3(x,.8,2),new THREE.Vector3(0,0,-1));return ray.intersectObject(room,true)[0]?.object;};
+ const pick=hitAt(.08);assert.equal(pick.name,'Rescue chair 1 click target');assert.equal(pick.parent,chairs[0]);assert.equal(pick.material.colorWrite,false);
+ const panel=new THREE.Mesh(new THREE.BoxGeometry(.7,1.3,.08),material);panel.position.set(0,.65,.8);room.add(panel);room.updateMatrixWorld(true);assert.equal(hitAt(.08),panel,'the target must not select chairs through a desk or wall');
+ room.remove(panel);chairs[0].position.x=-1;room.updateMatrixWorld(true);assert.equal(hitAt(.08),undefined);assert.equal(hitAt(-.92),pick,'the target stays attached during chair movement');
+});

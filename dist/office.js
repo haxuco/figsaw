@@ -237,7 +237,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   if(!damage.noBack){const back=chairBack(g,damage.backTear??1);back.position.set(0,.55,-.22);back.rotation.set(damage.backLean??0,0,damage.backTwist??0);}
   return settleChairPart(g,x,z,rotation);
  }
- const rescueObjects=[];rescueObjects.push(aeronChair(-2.85,-2.48,[0,.35,-.08],{backTear:1,seatTear:0}));rescueObjects[0].chairParts.caster.visible=false;
+ // Keep the repairable chair in front of the workstations: the desk panels
+ // used to hide its seat and intercept clicks from the player's floor view.
+ const rescueObjects=[];rescueObjects.push(aeronChair(-1.85,-1.28,[0,.35,-.08],{backTear:1,seatTear:0}));rescueObjects[0].chairParts.caster.visible=false;
  // The nearby left chair is worn but structurally sound enough to climb onto.
  const refugeChair=aeronChair(-.30,3.35,[0,Math.PI-.20,0],{seatTear:0,backTear:1,backLean:-.08});
  refugeChair.name='Usable Aeron chair';refugeChair.userData.chairSeat=true;

@@ -2,6 +2,7 @@ import * as THREE from './vendor/three.module.js';
 import {createRescueState,REPAIRS,PLAYER_CHAIR} from './rescue-state.js';
 import {batchStaticScenery} from './static-batching.js';
 import {renderQuality} from './render-quality.js';
+import {visibleLocalBounds} from './testing-highlights.js';
 import {createRescueSwingPath,CHAIR_PASSENGER_HEIGHT,RESCUE_SWING_SECONDS} from './rescue-swing.js';
 
 export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzzle}){
@@ -52,6 +53,13 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   batchStaticScenery(object,{exclude:[repair.base,repair.seat],minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});
   batchStaticScenery(repair.base,{exclude:[repair.caster],minObjects:2,palette:renderQuality.mobile});
   batchStaticScenery(repair.seat,{minObjects:2,palette:renderQuality.mobile});
+  // A chair has many thin rails and gaps. Use a modest, attached hit volume
+  // so mouse and touch clicks between those rails still reach the chair.
+  const bounds=visibleLocalBounds(object).expandByScalar(.025);
+  if(!bounds.isEmpty()){
+   const pick=new THREE.Mesh(pickGeometry,ghost);pick.name=`Rescue chair ${i+1} click target`;
+   bounds.getCenter(pick.position);bounds.getSize(pick.scale);object.add(pick);
+  }
  });
  for(let i=0;i<=PLAYER_CHAIR;i++){
   const chair=i===PLAYER_CHAIR?player:objects[i],anchor=new THREE.Mesh(new THREE.TorusGeometry(.046,.009,5,16),metal);anchor.position.set(0,.25,.20);anchor.userData.chainAnchor=i;anchor.name='Chair towing loop';chair.add(anchor);
