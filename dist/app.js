@@ -26,6 +26,7 @@ import {createFigsawDeparture,createFigsawCornerReaction,FIGSAW_CORNER_LINE} fro
 import { createLaptopOpening } from './laptop-opening.js';
 import { createDrawerCamera } from './drawer-camera.js';
 import { createFigpalRounds } from './figpal-rounds.js';
+import {createHazardClock} from './hazard-clock.js';
 import { createFigpalCamera } from './figpal-camera.js';
 import { createAcidCamera } from './acid-camera.js';
 import {createChairSeat} from './chair-seat.js';
@@ -464,10 +465,11 @@ const drawerCamera=createDrawerCamera({position:cameraPosition,state,getView:cha
 const acidCamera=createAcidCamera({position:cameraPosition,state});
 const chairSeat=createChairSeat({position:cameraPosition,state,getView:chairRefuge.getView});
 const alarmCamera=createAlarmCamera({position:cameraPosition,state});
+const hazardClock=createHazardClock(state.time);
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>ketchupKey.hasKey});
 const axeInteraction=createAxeInteraction({axe:fireAxe,camera,tanks:figpalHoists.tanks,onBreak(index,time,outlet){
- acidLeaks.breach(index,time,outlet);
+ acidLeaks.breach(index,hazardClock.time,outlet);
 }});scene.add(axeInteraction.group);
 const cancelAxeSelection=document.querySelector('#cancel-axe-selection');
 cancelAxeSelection.addEventListener('click',()=>{if(!axeInteraction.active){putAxeBack();canvas.focus({preventScroll:true});}});
@@ -783,7 +785,7 @@ function cutStuffedAnimal(object){
 function openTankValve(index){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent='The chain pulls tight.';return;}
- if(acidLeaks.open(index,state.time,restraint.locked)){
+ if(acidLeaks.open(index,hazardClock.time,restraint.locked)){
   drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
   arrivalCameraMove.cancel();resetting=false;chainMenu.hide();
   const source=acidLeaks.leaks.find(leak=>leak.index===index).origin;
@@ -794,7 +796,7 @@ function openTankValve(index){
 function pullFireAlarm(){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
- const outcome=fireAlarm.pull(state.time);
+ const outcome=fireAlarm.pull(hazardClock.time);
  if(!outcome){return;}
  releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();chainMenu.hide();resetting=false;
  alarmCamera.start(state.time,fireAlarm.target);
@@ -860,7 +862,7 @@ function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
- gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
+ gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';fireWarning.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -1079,6 +1081,7 @@ function render(){
  drawerCamera.update(t,reducedMotion);acidCamera.update(t,reducedMotion);alarmCamera.update(t,reducedMotion);chairSeat.update(t,reducedMotion);
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
  updateFigpalRound(t);figpalCamera.update(t,reducedMotion);mobileCamera.update(t,reducedMotion);documentViewer.update(t,reducedMotion);
+ const hazardFrame=hazardClock.update(t,figpalRounds.active);
  const viewYaw=state.yaw;
  // Manual controls rotate the view only; scripted interactions own camera position.
  camera.position.copy(cameraPosition);
@@ -1095,16 +1098,16 @@ function render(){
  if(mobileEvent==='restring')inventory.remove('string');
  axeInteraction.update(t,reducedMotion);cancelAxeSelection.disabled=axeInteraction.active;
  const physicalPosition=chairSeat.occupied?chairSeat.hazardPosition:documentViewer.origin;
- const acidFinished=!fireAlarm.dying&&acidLeaks.update(t,dt,physicalPosition,camera,reducedMotion,{protectedFromAcid:chairSeat.protectedFromAcid});
- const fireFinished=fireHazard.update(t,dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
- const fireWarningOpacity=fireHazard.warningOpacity(t,reducedMotion);fireWarning.hidden=fireWarningOpacity<=0;fireWarning.style.opacity=String(fireWarningOpacity);
- const alarmFinished=fireAlarm.update(t,camera,reducedMotion);
+ const acidFinished=!hazardFrame.paused&&!fireAlarm.dying&&acidLeaks.update(hazardFrame.time,hazardFrame.dt,physicalPosition,camera,reducedMotion,{protectedFromAcid:chairSeat.protectedFromAcid});
+ const fireFinished=!hazardFrame.paused&&fireHazard.update(hazardFrame.time,hazardFrame.dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
+ const fireWarningOpacity=fireHazard.warningOpacity(hazardFrame.time,reducedMotion);fireWarning.hidden=fireWarningOpacity<=0;fireWarning.style.opacity=String(fireWarningOpacity);
+ const alarmFinished=!hazardFrame.paused&&fireAlarm.update(hazardFrame.time,camera,reducedMotion);
  if(acidLeaks.dying||fireHazard.dying||fireAlarm.dying)releaseControls();
  const mugFinished=mugTrap.update(t,reducedMotion);
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(t)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(t)>0,acid:acidLeaks.blackout(t)>0,mug:mugTrap.blackout>0});
+ const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,mug:mugTrap.blackout>0});
  if(failureCause){deathTransition.start(t,reducedMotion,gameOverStyle(failureCause));document.body.classList.add('mug-impact');}
  const deathFrame=updateGameOver(t);
  if(deathFrame.style==='objective')mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap,deathFrame.blackout);
