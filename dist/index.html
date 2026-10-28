@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=aeffc12e508d">
-  <link rel="modulepreload" href="./game.bundle.js?v=eafc9f1d9483">
+  <link rel="stylesheet" href="./style.css?v=2c0eb82528e9">
+  <link rel="modulepreload" href="./game.bundle.js?v=eb59b7c4c901">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -40,6 +40,25 @@
         <p class="game-over-share-status" data-share-status role="status" aria-live="polite"></p>
       </div>
     </div>
+  </section>
+  <section id="laptop-program" hidden role="region" aria-label="Laptop design challenge">
+    <header><span class="program-file">design-challenge.fig</span><span data-power></span></header>
+    <main data-play>
+      <p class="program-eyebrow">01 / ALIGNMENT</p>
+      <h1>Restore the layout.</h1>
+      <p class="program-instruction">Click a component to change its alignment.</p>
+      <div class="program-components">
+        <button type="button" data-component="0"><span class="program-guide"></span><span class="program-tile"></span><span class="program-number">01</span></button>
+        <button type="button" data-component="1"><span class="program-guide"></span><span class="program-tile"></span><span class="program-number">02</span></button>
+        <button type="button" data-component="2"><span class="program-guide"></span><span class="program-tile"></span><span class="program-number">03</span></button>
+      </div>
+    </main>
+    <main data-result hidden>
+      <div class="program-check" aria-hidden="true">✓</div><p class="program-eyebrow">CHECK PASSED</p>
+      <h1>Challenge complete.</h1><p>Your design has passed the check.</p>
+      <button type="button" data-return>Return to room</button>
+    </main>
+    <footer><p data-status role="status" aria-live="polite"></p><button type="button" data-check>Run check ↗</button></footer>
   </section>
   <div id="figsaw-dialogue" hidden aria-hidden="true">
     <div class="dialogue-bubble"><strong>Figsaw</strong> <span>I want to play a game...</span></div>
@@ -90,6 +109,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=eafc9f1d9483"></script>
+  <script type="module" src="./boot.js?v=eb59b7c4c901"></script>
 </body>
 </html>

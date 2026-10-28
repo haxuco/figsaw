@@ -5,6 +5,8 @@ import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
 import { createFigpalVats } from './figpal-vats.js?v=no-skulls';
 
 import { createPlushCut } from './plush-cut.js';
+import {createLaptopProgramTexture} from './laptop-program.js';
+import {createLaptopLid} from './laptop-lid.js';
 import { createFallenMobile } from './fallen-mobile.js?v=plush-grounded';
 import { createFailingFluorescent } from './failing-fluorescent.js?v=erratic-bursts';
 import { createFloorTimer } from './floor-timer.js?v=smaller-clockwise';
@@ -327,22 +329,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const figmaMap=texture(logoCanvas),figmaMat=new THREE.MeshStandardMaterial({map:figmaMap,transparent:true,alphaTest:.1,roughness:.64,metalness:.03,emissiveMap:figmaMap,emissive:0xffffff,emissiveIntensity:.14});
  const lidEmblem=mesh(new THREE.PlaneGeometry(.115,.1725),figmaMat,laptopLid);lidEmblem.name='Off-center Figma vinyl sticker';lidEmblem.position.set(.265,.365,-.0108);lidEmblem.rotation.set(0,Math.PI,-.14);lidEmblem.castShadow=false;
 
- const[cDisplay,display]=canvas(1024,640);
- display.fillStyle='#111b22';display.fillRect(0,0,1024,640);
- display.fillStyle='#222e36';display.fillRect(0,0,1024,38);display.fillRect(0,38,140,602);display.fillRect(894,38,130,602);
- drawFigmaMark(display,15,6,17);
- display.font='13px sans-serif';display.fillStyle='#bac6ca';display.fillText('Figma / Wireframes',44,25);
- for(let i=0;i<7;i++){display.fillStyle=i===2?'#48616b':'#657a80';display.fillRect(18,85+i*34,85-i%3*18,3);}
- for(let i=0;i<3;i++){
-  const x=181+i*231;display.fillStyle='#b2bfbb';display.fillRect(x,118,197,390);
-  display.fillStyle='#465b62';display.fillRect(x+12,137,173,19);display.fillRect(x+12,175,173,86);
-  display.strokeStyle='#53696d';display.lineWidth=2;display.beginPath();display.moveTo(x+12,175);display.lineTo(x+185,261);display.moveTo(x+185,175);display.lineTo(x+12,261);display.stroke();
-  for(let row=0;row<5;row++){display.fillStyle='#82918f';display.fillRect(x+13,278+row*20,range(75,170),4);}
-  display.fillStyle='#526c72';display.fillRect(x+14,401,169,28);
-  display.strokeStyle='#788c8d';display.strokeRect(x+14,447,78,39);display.strokeRect(x+105,447,78,39);
- }
- for(let i=0;i<12;i++){display.fillStyle='#50666e';display.fillRect(912,84+i*31,range(35,90),3);}
- const displayMap=texture(cDisplay),displayMat=new THREE.MeshBasicMaterial({map:displayMap,color:0x7f9296});
+ // Keep the established seeded floor clutter when replacing the old screen graphic.
+ for(let i=0;i<27;i++)random();
+ const displayMap=createLaptopProgramTexture(),displayMat=new THREE.MeshBasicMaterial({map:displayMap,color:0xc3c8ca,toneMapped:false});
  const laptopScreen=mesh(new THREE.PlaneGeometry(.823,.525),displayMat,laptopLid);laptopScreen.position.set(0,.300,.013);laptopScreen.castShadow=false;
  box([.076,.014,.002],[0,.556,.014],keyBlack,laptopLid);sphere([.003,.003,.001],[0,.553,.0155],material(0x1e3038,.2),laptopLid);
  const[cLabel,label]=canvas(512,64);label.font='22px sans-serif';label.textAlign='center';label.fillStyle='#9ca5a6';label.fillText('MacBook Pro',256,40);
@@ -356,31 +345,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(let i=0;i<480;i++){const o=new THREE.Object3D(),side=i<240?-1:1,j=i%240;o.position.set(side*(.355+(j%8)*.006),.017,-.196+Math.floor(j/8)*.0085);o.rotation.x=-Math.PI/2;o.updateMatrix();speakerDots.setMatrixAt(i,o.matrix);}laptop.add(speakerDots);
  for(const side of[-1,1])for(let i=0;i<3;i++)box([.003,.006,.035],[side*.444,.001,-.18+i*.065],keyBlack,laptop);
  const screenSpill=new THREE.PointLight(0x8daebe,0,1.4,2);screenSpill.position.set(0,.29,.14);laptopLid.add(screenSpill);
- const screenColor=displayMat.color.clone();displayMat.color.setScalar(0);
- let laptopOpened=false,laptopProgress=0,manualOpening=false,waterDamage=0,batteryPowered=true;
- function applyLidProgress(progress){
-  laptopLid.rotation.x=THREE.MathUtils.lerp(Math.PI/2,-.20,progress);
-  const wake=THREE.MathUtils.smoothstep(progress,.22,.72);
-  displayMat.color.copy(screenColor).multiplyScalar(wake*(1-waterDamage)*Number(batteryPowered));screenSpill.intensity=.60*wake*(1-waterDamage)*Number(batteryPowered);
- }
- const laptopControl={
-  object:laptop,screen:laptopScreen,
-  setPower(powered){if(batteryPowered===powered)return;batteryPowered=powered;applyLidProgress(laptopProgress);},
-  get isPowered(){return batteryPowered&&waterDamage<1;},
-  damageWater(amount){waterDamage=THREE.MathUtils.clamp(amount,0,1);applyLidProgress(laptopProgress);},
-  get isReady(){return laptopProgress===1;},
-  get isOpen(){return laptopOpened;},
-  get openProgress(){return laptopProgress;},
-  getLidGrip(out){laptopLid.updateWorldMatrix(true,false);return laptopLid.localToWorld(out.set(.12,.600,-.004));},
-  setOpenProgress(progress){manualOpening=true;laptopProgress=THREE.MathUtils.clamp(progress,0,1);laptopOpened=laptopProgress>0;applyLidProgress(laptopProgress);},
-  open(){if(laptopOpened)return false;manualOpening=false;laptopOpened=true;return true;},
-  close(){manualOpening=false;laptopOpened=false;laptopProgress=0;applyLidProgress(0);},
-  update(dt,instant=false){
-   if(manualOpening||!laptopOpened||laptopProgress===1)return;
-   laptopProgress=instant?1:Math.min(1,laptopProgress+dt/.95);
-   applyLidProgress(THREE.MathUtils.smootherstep(laptopProgress,0,1));
-  }
- };
+ const laptopControl=createLaptopLid({object:laptop,screen:laptopScreen,lid:laptopLid,displayMaterial:displayMat,screenSpill});
 
  // Paperwork, circuit boards, cables and broken casing fragments cover the floor.
  function paperMap(){const[c,ctx]=canvas();ctx.fillStyle='#b2af94';ctx.fillRect(0,0,512,512);ctx.fillStyle='#4f584c';for(let i=0;i<35;i++){const y=35+i*12;ctx.fillRect(30,y,range(100,430),range(1,3));}ctx.strokeStyle='rgba(64,54,28,.4)';ctx.lineWidth=4;ctx.beginPath();ctx.arc(345,130,61,0,Math.PI*2);ctx.stroke();speckle(ctx,512,8000,'49,45,27',.16);return texture(c);}
