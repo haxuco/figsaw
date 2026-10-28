@@ -1,12 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {visibleLocalBounds,createTestingHighlights,initialTestingMode} from '../dist/testing-highlights.js';
+import {visibleLocalBounds,createTestingHighlights} from '../dist/testing-highlights.js';
 import {createEquippedModel} from '../dist/equipped-model.js';
 
-test('testing mode defaults on for this testing build, honors the switch, and survives blocked storage',()=>{
- assert.equal(initialTestingMode(),true);assert.equal(initialTestingMode({query:'?testing=0'}),false);assert.equal(initialTestingMode({query:'?testing=1',storage:{getItem:()=> '0'}}),true);assert.equal(initialTestingMode({storage:{getItem:()=> '0'}}),false);assert.equal(initialTestingMode({storage:{getItem(){throw Error('blocked');}}}),true);
-});
 test('highlight bounds exclude invisible pick targets and hidden model pieces, while following world movement',()=>{
  const root=new THREE.Group(),model=new THREE.Mesh(new THREE.BoxGeometry(1,1,1),new THREE.MeshBasicMaterial());root.add(model);
  const pick=new THREE.Mesh(new THREE.BoxGeometry(99,99,99),new THREE.MeshBasicMaterial({colorWrite:false,opacity:0}));root.add(pick);

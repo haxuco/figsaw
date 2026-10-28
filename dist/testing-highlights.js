@@ -55,17 +55,13 @@ export function createTestingHighlights({entries,maxTargets=256}){
  },get counts(){return counts;}};
 }
 
-export function initialTestingMode({query='',storage=null}={}){
- const flag=new URLSearchParams(query).get('testing');if(flag==='0'||flag==='1')return flag==='1';
- try{const saved=storage?.getItem('figsaw-testing-mode');if(saved==='0'||saved==='1')return saved==='1';}catch{}
- return true;
-}
 export function createTestingModeUI(){
- let storage=null;try{storage=localStorage;}catch{}
- let enabled=initialTestingMode({query:location.search,storage}),messageUntil=0;
- const root=document.createElement('div');root.id='testing-tools';root.innerHTML='<button type="button" aria-pressed="true"></button><div class="testing-legend"><span>●</span> Interactive <b>●</b> Matching target</div><p role="status" aria-live="polite"></p>';document.body.append(root);
+ // Testing belongs to the session-only diagnostics menu. Old URL/storage flags
+ // must never turn on highlights during an ordinary game.
+ let enabled=false,messageUntil=0;
+ const root=document.createElement('div');root.id='testing-tools';root.hidden=true;root.innerHTML='<button type="button" aria-pressed="false"></button><div class="testing-legend"><span>●</span> Interactive <b>●</b> Matching target</div><p role="status" aria-live="polite"></p>';
  const button=root.querySelector('button'),legend=root.querySelector('.testing-legend'),status=root.querySelector('p');
  function sync(){button.textContent=`Testing: ${enabled?'on':'off'}`;button.setAttribute('aria-pressed',String(enabled));legend.hidden=!enabled;status.hidden=!enabled;}
- button.onclick=()=>{enabled=!enabled;try{storage?.setItem('figsaw-testing-mode',enabled?'1':'0');}catch{}sync();};sync();
- return{get enabled(){return enabled;},setEnabled(value){enabled=!!value;sync();},report(message){if(enabled&&message){status.textContent=message;messageUntil=performance.now()+5000;}},update({hidden=false,itemName='',matches=0}={}){root.hidden=hidden;if(performance.now()>messageUntil){const text=enabled&&itemName?`${itemName} · ${matches} matching target${matches===1?'':'s'}`:'';if(status.textContent!==text)status.textContent=text;}}};
+ button.onclick=()=>{enabled=!enabled;sync();};sync();
+ return{element:root,get enabled(){return enabled;},setEnabled(value){enabled=!!value;sync();},report(message){if(enabled&&message){status.textContent=message;messageUntil=performance.now()+5000;}},update({hidden=false,itemName='',matches=0}={}){root.hidden=hidden;if(performance.now()>messageUntil){const text=enabled&&itemName?`${itemName} · ${matches} matching target${matches===1?'':'s'}`:'';if(status.textContent!==text)status.textContent=text;}}};
 }

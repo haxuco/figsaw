@@ -36,9 +36,10 @@ export function createDiagnostics({clock,actions,onActivate=()=>{},onExit=()=>{}
  };
 }
 
-export function createDiagnosticUI({mode,clock,actions,focusScene=()=>{}}){
+export function createDiagnosticUI({mode,clock,actions,testingMode,focusScene=()=>{}}){
  const root=document.createElement('details');root.id='diagnostic-tools';root.hidden=true;
  root.innerHTML='<summary>Diagnostics <span data-badge>Invulnerable</span></summary><div class="diagnostic-panel"><label><input type="checkbox" data-pause> Pause countdown</label><label><input type="checkbox" data-immune> Invulnerability</label><label class="diagnostic-field">Action<select data-action></select></label><label class="diagnostic-field" data-target-label>Target<select data-target><option value="0">Tank / Figpal 01</option><option value="1">Tank / Figpal 02</option><option value="2">Tank / Figpal 03</option></select></label><div class="diagnostic-actions"><button type="button" data-run>Run action</button><button type="button" data-undo>Undo last action</button></div><p data-status role="status" aria-live="polite"></p><button type="button" data-exit>Exit diagnostics</button></div>';document.body.append(root);
+ if(testingMode)root.querySelector('.diagnostic-panel').prepend(testingMode.element);
  const select=root.querySelector('[data-action]'),target=root.querySelector('[data-target]'),targetLabel=root.querySelector('[data-target-label]'),pause=root.querySelector('[data-pause]'),immune=root.querySelector('[data-immune]'),undo=root.querySelector('[data-undo]'),status=root.querySelector('[data-status]'),badge=root.querySelector('[data-badge]');
  for(const action of actions){const option=document.createElement('option');option.value=action.id;option.textContent=action.label;select.append(option);}
  const targetVisibility=()=>{targetLabel.hidden=!actions.find(a=>a.id===select.value)?.target;};select.onchange=targetVisibility;targetVisibility();

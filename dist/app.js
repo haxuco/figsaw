@@ -648,7 +648,7 @@ function updateTestingMode(time){
  const context={locked:restraint.locked,hasKey:ketchupKey.hasKey,mobilePhase:mobilePuzzle.phase,chargingPhase:chargingKit.phase,chairs:rescueChairs.state.chairs,canHook:rescueChairs.canHook,brokenTanks:figpalHoists.tanks.map(t=>t.broken),canCut:plushCut.canCut,selectingAnimal};
  const revision=[inventory.revision,mobilePuzzle.phase,mobilePuzzle.action,chargingKit.phase,chargingKit.drawerOpen,ketchupKey.phase,restraint.locked,doorKeypadUI.active,context.brokenTanks.join(),context.chairs.map(c=>[c.step,c.installed.join(),c.repaired,c.tank,c.passenger].join(':')).join('|'),rescueChairs.state.links.length,figpalHoists.fishClueReady].join(';');
  const counts=testingHighlights.update(time,{enabled:testingMode.enabled&&!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!mobilePuzzle.action&&!sawMenu.active,item:inventory.equipped,revision,context});
- testingMode.update({hidden:gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
+ testingMode.update({hidden:!diagnostics.enabled||gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
  equippedModel.update(inventory.equipped,time,!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.action);
 }
 let movePromptChair=null;
@@ -933,14 +933,13 @@ function resetView({skipIntro=false}={}){
  }
 }
 
-let previousTestingMode=testingMode.enabled;
 const diagnosticView={capture:()=>({position:cameraPosition.toArray(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom}),restore(value){figpalCamera.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;cameraPosition.fromArray(value.position);state.yaw=value.yaw;state.pitch=value.pitch;state.zoom=value.zoom;}};
 const diagnosticProps={capture:()=>({saw:handsaw.visible,axe:fireAxe.object.visible}),restore(value){handsaw.visible=value.saw;fireAxe.object.visible=value.axe;},hideCollected(){handsaw.visible=false;fireAxe.object.visible=false;}};
 const prepareDiagnosticTimer=()=>{countdownStartTime=null;};prepareDiagnosticTimer.capture=()=>({delay:countdownStartTime===null?null:countdownStartTime-state.time,announcement:countdownAnnouncement.textContent});
 const diagnosticActions=createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
 const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
- onActivate(){diagnosticRunUsed=true;previousTestingMode=testingMode.enabled;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
- onExit(){testingMode.setEnabled(previousTestingMode);canvas.focus({preventScroll:true});},
+ onActivate(){diagnosticRunUsed=true;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
+ onExit(){testingMode.setEnabled(false);testingHighlights.group.visible=false;canvas.focus({preventScroll:true});},
  onInvulnerability(value){
   acidLeaks.setInvulnerable(value);fireHazard.setInvulnerable(value);fireAlarm.setInvulnerable(value);
   if(value){deathTransition.reset();mugImpactOverlay.reset();gameOver.hidden=true;document.body.classList.remove('mug-impact');}
@@ -950,7 +949,7 @@ const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
   laptopProgram.cancel();inventoryUI.close();rescueChairs.cancelMove();releaseControls();chainMenu.hide();sawMenu.hide();return true;
  }
 });
-const diagnosticUI=createDiagnosticUI({mode:diagnostics,clock:countdown,actions:diagnosticActions,focusScene:()=>canvas.focus({preventScroll:true})});
+const diagnosticUI=createDiagnosticUI({mode:diagnostics,clock:countdown,actions:diagnosticActions,testingMode,focusScene:()=>canvas.focus({preventScroll:true})});
 
 function releaseControls(){state.space=false;dragPointer=null;}
 
