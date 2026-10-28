@@ -2,6 +2,59 @@ import * as THREE from './vendor/three.module.js';
 
 export const FIGPAL_PLEAS=['Nooo!!!!','Tell my wife that I love her!','Delete my browser history!'];
 export const HANGING_PLEAS=['help','I have a family',"I swear I didn't detach the component!"];
+export const FIGPAL_RELIEF=Object.freeze([
+ "We're saved!",
+ 'A dry run. Literally.',
+ 'Best empty state ever!',
+ 'No fill? No funeral!',
+ 'Cancel my exit interview!',
+ 'New status: undissolved.',
+ 'My bones stay internal!',
+ 'Death failed QA!',
+ 'Undo my last scream!',
+ 'I still have layers!',
+ 'This counts as PTO, right?',
+ 'Survived another sprint!',
+ 'Finally, a safe drop shadow!',
+ "Tell my wife I'm... fine?",
+ 'I take back the browser thing!',
+ 'Five stars. No acid.',
+ 'Less toxic than my last job!',
+ 'Nothing to dissolve here!',
+ 'Not today, skeleton me!',
+ 'The only good scope cut!',
+ 'Love the negative space!',
+ 'Shipped without the acid!',
+ 'Still a solid contributor!',
+ 'Can we expense therapy?'
+]);
+
+// Manual and timed descents share the same tank-aware dialogue. A shuffled bag
+// gives every relief line a turn before repeating, including across game retries.
+export function createFigpalLoweringDialogue(hoists,bubbles,isDrained,random=Math.random){
+ const active=new Map();let bag=[],lastLine=null;
+ function relief(){
+  if(!bag.length){
+   bag=[...FIGPAL_RELIEF];
+   for(let i=bag.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
+   if(bag.at(-1)===lastLine)[bag[0],bag[bag.length-1]]=[bag.at(-1),bag[0]];
+  }
+  lastLine=bag.pop();return lastLine;
+ }
+ function hide(index){active.delete(index);bubbles.hide(index);}
+ function show(index,time){
+  if(!hoists.canSpeak(index)){hide(index);return null;}
+  const dry=!!isDrained(index),line=dry?relief():FIGPAL_PLEAS[index];
+  active.set(index,dry);bubbles.show(index,time,line);return line;
+ }
+ return {show,hide,reset(){active.clear();bubbles.hide();},update(time){
+  for(const [index,dry]of active){
+   if(!hoists.canSpeak(index)||!hoists.isLowered(index)){hide(index);continue;}
+   // If a tank finishes draining during the descent, the living Figpal notices.
+   if(!dry&&isDrained(index)){active.set(index,true);bubbles.show(index,time,relief());}
+  }
+ }};
+}
 
 // One captive calls out at a time, with a quiet interval between their pleas.
 export function createHangingPleas(hoists,bubbles,random=Math.random){

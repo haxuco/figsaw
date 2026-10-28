@@ -8,7 +8,7 @@ import {createRoomReflections} from './room-reflections.js';
 import {createPerformanceReport} from './performance-report.js';
 import {createFrameRateCounter} from './frame-rate.js';
 import { createOffice } from './office.js?v=fewer-faster';
-import { FIGPAL_PLEAS, createFigpalBubbles, createHangingPleas } from './figpal-finale.js?v=silent-skeletons';
+import { createFigpalBubbles, createHangingPleas, createFigpalLoweringDialogue } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { formatCountdown } from './countdown-clock.js';
@@ -502,6 +502,7 @@ const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,c
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
+const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,acidLeaks.isDrained);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 // Diffuse mobile materials do not sample a reflection environment. Avoid the
 // panorama conversion, render targets and PMREM shader compilation on phones.
@@ -581,7 +582,7 @@ function inspectDocument(hit){
 }
 function escapeRoom(){
  if(gameEnded||gameWon)return;exitDoor.unlock();gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;escapedAt=state.time;
- countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();figpalBubbles.hide();arrivalDialogue.hidden=true;canvas.inert=true;
+ countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  const target=exitDoor.object.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,1.1,0)),direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=1;
  camera.position.copy(cameraPosition);camera.lookAt(cameraPosition.clone().add(direction));camera.fov=homeCamera.fov;camera.updateProjectionMatrix();
  restraintStatus.textContent='The code works. The door opens. You escaped.';
@@ -793,14 +794,15 @@ function updateFigpalRound(time){
  const event=figpalRounds.update(time,rescueChairs.state.pulling||chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying);
  if(event?.type==='lower'){
   releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
-  figpalCamera.start(event.index,time);figpalBubbles.hide();figpalBubbles.show(event.index,time);
-  countdownAnnouncement.textContent=`Time is up. Figpal ${event.index+1} is lowering into the green liquid. ${FIGPAL_PLEAS[event.index]}`;
+  figpalCamera.start(event.index,time);loweringDialogue.reset();const line=loweringDialogue.show(event.index,time);
+  const destination=acidLeaks.isDrained(event.index)?'empty tank':'green liquid';
+  countdownAnnouncement.textContent=`Time is up. Figpal ${event.index+1} is lowering into the ${destination}.${line?' '+line:''}`;
  }else if(event?.type==='return'){
-  figpalBubbles.hide();figpalCamera.restore(time);
+  loweringDialogue.reset();figpalCamera.restore(time);
  }else if(event?.type==='restart'){
   countdownAnnouncement.textContent=`The timer resets to five minutes. ${event.remaining} Figpal${event.remaining===1?' remains':'s remain'}.`;
  }else if(event?.type==='ending'){
-  releaseControls();chainMenu.hide();figpalBubbles.hide();arrivalDialogue.hidden=true;
+  releaseControls();chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;
   countdownAnnouncement.textContent='The second deadline has passed. Your time is up.';
  }else if(event?.type==='gameover')figpalRoundFinished=true;
  const seconds=countdown.update();
@@ -811,7 +813,7 @@ function endGame(cause='objective'){
  if(gameEnded)return;gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
- releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
+ releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;loweringDialogue.reset();
  document.body.classList.add('game-over');canvas.inert=true;
  gameOverReasonText.textContent=gameOverReason(cause);
  restraintStatus.textContent=`Game over. ${gameOverReasonText.textContent}`;
@@ -828,8 +830,8 @@ function operateHoist(index){
  if(rescueChairs.state.pulling||chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  const message=toggleHoist(index);if(!message){document.querySelector('#hoist-status').textContent='Wait for the moving hoist to stop before operating another.';return;}
  const lowering=figpalHoists.isLowered(index);
- if(lowering)figpalBubbles.show(index,state.time);else figpalBubbles.hide(index);
- document.querySelector('#hoist-status').textContent=lowering&&figpalHoists.canSpeak(index)?`${message} ${FIGPAL_PLEAS[index]}`:message;
+ const line=lowering?loweringDialogue.show(index,state.time):null;if(!lowering)loweringDialogue.hide(index);
+ document.querySelector('#hoist-status').textContent=line?`${message} ${line}`:message;
 }
 let chairDragCandidate=null;
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
@@ -844,7 +846,7 @@ function resetView({skipIntro=false}={}){
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
- figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;figpalBubbles.hide();hangingPleas.reset(state.time);releaseControls();
+ figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);releaseControls();
  resetting=!skipIntro;departure.reset();cornerReaction.reset();canvas.classList.remove('over-figsaw');
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
@@ -1116,7 +1118,7 @@ function render(){
  renderer.render(scene,camera);
  countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active});
  frameRate.frame(performance.now());
- updateArrivalDialogue(t);hangingPleas.update(t,documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
+ updateArrivalDialogue(t);loweringDialogue.update(t);hangingPleas.update(t,documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
   if(frameSamples>30&&slowFrames/frameSamples>.65&&requestedPixelRatio>quality.minPixelRatio){requestedPixelRatio=Math.max(quality.minPixelRatio,requestedPixelRatio-.2);resize();}

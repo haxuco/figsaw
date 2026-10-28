@@ -23,16 +23,20 @@ export function createFigpalTransformation(captive,index){
  }
  clipMaterials(captive,skinPlane);clipMaterials(skeleton,bonePlane);
  let cut=bounds.min.y-.04,transformed=false;const waterPoint=new THREE.Vector3();
- function update(waterHeight){
+ function update(waterHeight=null){
   captive.updateWorldMatrix(true,false);
-  waterPoint.setFromMatrixPosition(captive.matrixWorld);waterPoint.y=waterHeight;captive.worldToLocal(waterPoint);
-  // Retain the deepest exposure: raising the hoist does not restore dissolved parts.
-  cut=Math.max(cut,Math.min(bounds.max.y+.04,waterPoint.y));
+  if(waterHeight!==null){
+   waterPoint.setFromMatrixPosition(captive.matrixWorld);waterPoint.y=waterHeight;captive.worldToLocal(waterPoint);
+   // Retain the deepest exposure: raising the hoist does not restore dissolved parts.
+   cut=Math.max(cut,Math.min(bounds.max.y+.04,waterPoint.y));
+  }
+  // Dry tanks still need moving world-space planes. Freezing these while the
+  // hanger descends clips away the living character without revealing bones.
   skinPlane.set(new THREE.Vector3(0,1,0),-cut).applyMatrix4(captive.matrixWorld);bonePlane.copy(skinPlane).negate();
   transformed=cut>=bounds.max.y+.015;
   captive.visible=!transformed;skeleton.visible=cut>bounds.min.y;
  }
- update(-100);
- function reset(){cut=bounds.min.y-.04;transformed=false;update(-100);}
+ update();
+ function reset(){cut=bounds.min.y-.04;transformed=false;update();}
  return {skeleton,update,reset,attachBoneDetail(object){clipMaterials(object,bonePlane);skeleton.add(object);},get transformed(){return transformed;},get cutHeight(){return cut;}};
 }

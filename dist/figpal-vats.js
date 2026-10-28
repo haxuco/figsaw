@@ -281,14 +281,14 @@ export function createFigpalVats({floorSupport,puzzle}={}){
     const u=Math.min(1,(time-rig.payingOut)/1.7);rig.drum.rotation.y+=dt*5;rig.loadChain.setPoints([0,rig.winchY-.10,.025],[.12,.10+(1-u)*rig.height,0]);
     if(u===1){rig.chainDropped=true;rig.loadChain.object.visible=false;rescue?.dropChain(rig.index);}
    }
-   if(rig.rescued){rig.transformation.update(-100);continue;}
+   if(rig.rescued){rig.transformation.update();continue;}
    const delta=rig.targetHeight-rig.height;rig.height=reducedMotion?rig.targetHeight:rig.height+Math.sign(delta)*Math.min(Math.abs(delta),dt*.15);
    figpalSwayPose(time,rig.height,rig.winchY,rig.phase,reducedMotion,swayPose);
    rig.hanger.position.set(swayPose.x,swayPose.y,0);rig.hanger.rotation.z=swayPose.angle;
    if(rig.payingOut===null&&!rig.chainDropped)rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
    rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
    const remaining=leaks?.remaining(rig.index)??1;
-   if(remaining>.0001)rig.transformation.update(.227+.865*remaining);
+   rig.transformation.update(remaining>.0001?.227+.865*remaining:null);
    if(remaining<=.0001&&rig.lowered){
     rig.targetHeight=.43;
     if(Math.abs(rig.height-.43)<.01&&vats[rig.index].breakage.broken&&rescue?.board(rig.index,rig.hanger,!rig.transformation.transformed)){
