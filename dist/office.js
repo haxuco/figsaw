@@ -647,7 +647,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   let x=random()*1024,y=range(60,850);rearWear.strokeStyle='rgba(28,34,26,.75)';rearWear.lineWidth=.8;rearWear.beginPath();rearWear.moveTo(x,y);for(let j=0;j<8;j++){x+=range(-9,12);y+=range(5,16);rearWear.lineTo(x,y);}rearWear.stroke();
  }
  const rearScars=mesh(new THREE.PlaneGeometry(7.8,3.35),new THREE.MeshStandardMaterial({map:texture(cRear),transparent:true,depthWrite:false,roughness:1}),rear);rearScars.position.set(0,1.675,.007);rearScars.castShadow=false;
- const door=new THREE.Group();door.name='Scuffed service door and failing exit sign';door.position.set(1.20,0,.05);rear.add(door);
+ const door=new THREE.Group();door.name='Scuffed service door and illuminated red exit sign';door.position.set(1.20,0,.05);rear.add(door);
  const doorHinge=new THREE.Group();doorHinge.position.set(-.53,0,.06);door.add(doorHinge);
  const doorLeaf=new THREE.Group();doorLeaf.position.set(.53,0,-.06);doorHinge.add(doorLeaf);doorLeaf.userData.exitKeypad=true;
  const doorPaint=material(0x697368,.88,metalMap,.22);
@@ -673,8 +673,21 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  let doorUnlocked=false,doorAngle=0;
  const exitDoor={object:doorHinge,unlock(){doorUnlocked=true;},reset(){doorUnlocked=false;doorAngle=0;doorHinge.rotation.y=0;},update(reducedMotion){doorAngle=reducedMotion?(doorUnlocked?-1.3:0):THREE.MathUtils.lerp(doorAngle,doorUnlocked?-1.3:0,.06);doorHinge.rotation.y=doorAngle;}};
  const doorKeypad=createDoorKeypad();doorKeypad.group.position.set(1.96,1.22,.085);rear.add(doorKeypad.group);
- box([.54,.21,.10],[0,2.66,.08],steel,door);
- const exitLabel=wallLabel('EXIT  →',.48,.15,door,[0,2.66,.133],'#263b30','#a8b593');exitLabel.material.emissive.set(0x5b7657);exitLabel.material.emissiveMap=exitLabel.material.map;exitLabel.material.emissiveIntensity=.25;
+ const exitSign=new THREE.Group();exitSign.name='Illuminated red EXIT fixture';exitSign.position.set(0,2.69,.035);door.add(exitSign);
+ const exitCase=material(0xd6d0bc,.76,plasticMap,.12);
+ rounded([.68,.30,.12],[0,0,.06],exitCase,exitSign);
+ box([.625,.245,.006],[0,0,.124],rubber,exitSign);
+ const[exitArt,exitInk]=canvas(768,288),[exitEmission,exitMask]=canvas(768,288);
+ exitInk.fillStyle='#bcb7a6';exitInk.fillRect(0,0,768,288);exitMask.fillStyle='#000';exitMask.fillRect(0,0,768,288);
+ for(const p of[exitInk,exitMask]){p.font='900 226px Arial, sans-serif';p.textAlign='center';p.textBaseline='middle';p.fillStyle=p===exitInk?'#e52b21':'#fff';p.fillText('EXIT',384,155,650);}
+ // Dirt stays on the diffuser; only the red letter cutouts emit light.
+ for(let i=0;i<90;i++){exitInk.fillStyle=i%3?'rgba(34,27,19,.12)':'rgba(226,216,185,.12)';exitInk.fillRect((i*137)%768,(i*71)%288,1+i%5,2+i%9);}
+ const exitFace=mesh(new THREE.PlaneGeometry(.604,.226),new THREE.MeshStandardMaterial({map:texture(exitArt),emissive:0xff0200,emissiveMap:texture(exitEmission),emissiveIntensity:1.05,roughness:.54,toneMapped:false}),exitSign);exitFace.position.z=.129;exitFace.castShadow=false;
+ for(const x of[-.316,.316])for(const y of[-.122,.122]){sphere([.008,.008,.003],[x,y,.123],silver,exitSign);box([.008,.0015,.001],[x,y,.127],black,exitSign);}
+ for(let i=0;i<6;i++)box([.018,.002,.034],[-.13+i*.052,.151,.064],black,exitSign);
+ // A static light spill preserves the red wall halo without adding another room-wide light pass.
+ const[exitGlow,glowInk]=canvas(128);const glow=glowInk.createRadialGradient(64,64,9,64,64,64);glow.addColorStop(0,'rgba(255,25,8,.34)');glow.addColorStop(.48,'rgba(211,10,3,.12)');glow.addColorStop(1,'rgba(120,0,0,0)');glowInk.fillStyle=glow;glowInk.fillRect(0,0,128,128);
+ const exitHalo=mesh(new THREE.PlaneGeometry(1.44,.98),new THREE.MeshBasicMaterial({map:texture(exitGlow),transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,toneMapped:false}),door);exitHalo.position.set(0,2.69,-.038);exitHalo.castShadow=exitHalo.receiveShadow=false;exitHalo.raycast=()=>{};
  // An old pinboard of discarded design critiques, curling printouts and tape ghosts.
  const notices=new THREE.Group();notices.name='Abandoned critique pinboard';notices.position.set(-.95,1.94,.055);notices.rotation.z=-.018;rear.add(notices);
  const cork=wallDecay.cork;box([1.86,1.25,.045],[0,0,0],cork,notices);
