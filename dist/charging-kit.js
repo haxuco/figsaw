@@ -135,5 +135,10 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
   filing.localToWorld(lookAt.set(drawer.position.x,drawer.position.y-.085,.42));
  }
  function meltCable(position,amount){burnPoint.value.copy(position);burnAmount.value=amount;if(amount>=1){state.damageCable();led.visible=false;}}
- update(0);return {group,drawer,use,update,reset,hint,syncPower,takePowerMessage(){const message=powerMessage;powerMessage='';return message;},get canUse(){return state.canUse;},getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
+ function inventoryModel(){
+  const model=new THREE.Group(),adapter=brick.clone(),cable=coil.clone();
+  adapter.visible=cable.visible=true;adapter.position.set(-.09,-.07,0);adapter.rotation.set(0,-.25,0);
+  cable.position.set(.09,-.045,.025);cable.rotation.set(.8,0,-.2);model.add(adapter,cable);return model;
+ }
+ update(0);return {group,drawer,inventoryModel,use,update,reset,hint,syncPower,takePowerMessage(){const message=powerMessage;powerMessage='';return message;},get canUse(){return state.canUse;},getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
 }

@@ -1,4 +1,5 @@
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
+import {createInventoryModelPreviews} from './inventory-models.js';
 import {REPAIRS,PLAYER_CHAIR} from './rescue-state.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
@@ -578,7 +579,17 @@ function leaveInspection(){
  syncInspectionBack();
 }
 inspectionBack.addEventListener('click',leaveInspection);
-const inventoryUI=createInventoryUI({inventory,onEquip:equipItem,onPutAway:putEquipmentAway,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},canOpen:()=>!sawBusy()&&!rescueChairs.state.pulling});
+const inventoryPreviews=createInventoryModelPreviews({renderer,getModel(id){
+ const supply=mobileSupplies.objects[id];
+ if(supply)return {object:supply,rotation:id==='string'?[.3,-.35,-.2]:[.12,-.3,id==='allen'?0:-.55]};
+ if(id==='key')return {object:ketchupKey.key,rotation:[1.15,.15,-.35]};
+ if(id==='saw')return {object:handsaw,rotation:[1.25,.15,-.2]};
+ if(id==='axe')return {object:fireAxe.object,rotation:[.1,-.28,-.65]};
+ if(id==='charger')return {object:chargingKit.inventoryModel(),rotation:[.15,-.2,0]};
+ if(id.startsWith('chain'))return {object:rescueChairs.inventoryChain(Number(id.at(-1))),rotation:[.9,-.15,-.25]};
+ return {object:rescueChairs.parts[id],rotation:[.48,-.4,-.12]};
+}});
+const inventoryUI=createInventoryUI({inventory,previews:inventoryPreviews,onEquip:equipItem,onPutAway:putEquipmentAway,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},canOpen:()=>!sawBusy()&&!rescueChairs.state.pulling});
 const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;rescueControls.innerHTML='<button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button>';document.body.append(rescueControls);
 rescueControls.querySelector('[data-cancel]').onclick=()=>rescueChairs.cancelMove();
 rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){keyFeedback('Climb onto your Aeron chair first.');return;}if(rescueChairs.pull())keyFeedback('The chains tighten. You pull the Figpals toward the exit.');};
@@ -1085,6 +1096,7 @@ function render(){
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
+ if(inventoryUI.active)inventoryPreviews.update();
  renderer.render(scene,camera);
  frameRate.frame(performance.now());
  updateArrivalDialogue(t);hangingPleas.update(t,documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
