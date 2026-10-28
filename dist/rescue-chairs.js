@@ -14,7 +14,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  const linkCurve=[];for(let j=0;j<=8;j++){const a=j/8*Math.PI;linkCurve.push(new THREE.Vector3(Math.cos(a)*.017,.012+Math.sin(a)*.017,0));}for(let j=0;j<=8;j++){const a=Math.PI+j/8*Math.PI;linkCurve.push(new THREE.Vector3(Math.cos(a)*.017,-.012+Math.sin(a)*.017,0));}
  const geometry=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(linkCurve,true),16,.005,4,true);
  const coilHomes=[],chains=[],slots=[],rolls=new Map(),transfers=new Map();
- let message='',moving=null,firstAnchor=null,pullAt=null,lastTime=0,linksDirty=true,playerOffset=new THREE.Vector3();
+ let message='',moving=null,firstAnchor=null,pullAt=null,lastTime=0,linksDirty=true,discoveryEnabled=true,playerOffset=new THREE.Vector3();
  const anchorPoint=(index,out)=>[...objects,player][index].localToWorld(out.set(0,.25,.20));
  function chainMesh(){const m=new THREE.InstancedMesh(geometry,metal,128);m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);m.count=0;m.frustumCulled=false;m.castShadow=true;group.add(m);return m;}
  function chainPath(mesh,points){const curve=new THREE.CatmullRomCurve3(points),length=curve.getLength(),count=Math.min(128,Math.max(2,Math.ceil(length/.042)));mesh.count=count;
@@ -23,7 +23,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  for(const [id,object]of Object.entries(parts)){object.userData.salvagePart=id;object.userData.ignoreAcid=true;object.name=`Salvage ${id} from donor chair`;batchStaticScenery(object,{minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});}
  // Keep forgiving hit volumes and temporary markers outside the collectible
  // models, so inventory previews and installed replacements remain unchanged.
- const partHighlights=new THREE.Group();partHighlights.name='Temporary chair part highlights';group.add(partHighlights);
+ const partHighlights=new THREE.Group();partHighlights.name='Temporary chair part highlights';partHighlights.userData.testingDecoration=true;group.add(partHighlights);
  const beaconGeometry=new THREE.OctahedronGeometry(.065),beaconMaterial=new THREE.MeshBasicMaterial({color:0xffdd44,transparent:true,opacity:.9,depthTest:false,depthWrite:false,toneMapped:false,fog:false});
  const pickGeometry=new THREE.BoxGeometry(1,1,1);
  const highlightedParts=Object.entries(parts).map(([id,object])=>{
@@ -39,7 +39,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   const pulse=reducedMotion?1:.8+.2*Math.sin(time*3);
   beaconMaterial.opacity=pulse;
   for(const {object,pick,outline,beacon,height}of highlightedParts){
-   pick.visible=outline.visible=beacon.visible=object.visible;
+   pick.visible=object.visible;outline.visible=beacon.visible=discoveryEnabled&&object.visible;
    if(!object.visible)continue;
    outline.material.opacity=pulse;beacon.position.y=height+(reducedMotion?0:Math.sin(time*3)*.025);beacon.rotation.y=reducedMotion?0:time*.8;
   }
@@ -100,5 +100,5 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   if(dirty)for(const link of state.links){const c=chains[Number(link.chain.slice(-1))],a=anchorPoint(link.a,new THREE.Vector3()),b=anchorPoint(link.b,new THREE.Vector3()),mid=a.clone().lerp(b,.5);mid.y=state.pulling?Math.max(.05,Math.min(a.y,b.y)-.06):floorSupport(mid.x,mid.z)+.035;c.mesh.visible=true;chainPath(c.mesh,[a,mid,b]);}
  }
  function reset(){message='';cancelMove();firstAnchor=null;pullAt=null;state.reset();rolls.clear();transfers.clear();linksDirty=true;objects.forEach((o,i)=>{o.position.copy(homes[i].p);o.quaternion.copy(homes[i].q);if(o.replacementSeat){o.remove(o.replacementSeat);o.replacementSeat=null;}o.chairParts.seat.visible=true;});player.position.copy(playerHome.p);player.quaternion.copy(playerHome.q);playerOffset.set(0,0,0);for(const p of Object.values(parts))p.visible=true;for(const c of chains){c.dropped=c.collected=false;c.mesh.visible=c.pick.visible=false;}syncParts();syncPartHighlights();}
- return {group,state,objects,parts,inventoryChain:index=>chains[index]?.mesh,takeMessage(){const result=message;message='';return result;},use,select,cancelMove,place,board,dropChain,collectChain,hook,pull,update,reset,cancelHook(){firstAnchor=null;},get moving(){return moving;},get playerOffset(){return playerOffset;},get busy(){return rolls.size>0||transfers.size>0||state.pulling;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
+ return {group,state,objects,parts,inventoryChain:index=>chains[index]?.mesh,canCollectChain:index=>!!chains[index]?.dropped&&!chains[index].collected,canHook:(index,item)=>firstAnchor===null?state.canStartLink(index,item):state.canConnect(firstAnchor,index,item),setHighlightsEnabled(value){discoveryEnabled=value;syncPartHighlights(lastTime);},takeMessage(){const result=message;message='';return result;},use,select,cancelMove,place,board,dropChain,collectChain,hook,pull,update,reset,cancelHook(){firstAnchor=null;},get moving(){return moving;},get playerOffset(){return playerOffset;},get busy(){return rolls.size>0||transfers.size>0||state.pulling;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
 }

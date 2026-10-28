@@ -19,11 +19,14 @@ export function createRescueState(puzzle={pmIndex:2}){
  function place(index,tank){const c=chairs[index];if(!c?.repaired||c.passenger!==null||pulling||safe||!Number.isInteger(tank)||tank<0||tank>2||chairs.some((o,i)=>i!==index&&o.tank===tank))return false;c.tank=tank;return true;}
  function board(tank,figpal,{alive=true}={}){const i=chairs.findIndex(c=>c.tank===tank&&c.repaired&&c.passenger===null);if(!alive||figpal===puzzle.pmIndex||!Number.isInteger(figpal)||figpal<0||figpal>2||chairs.some(c=>c.passenger===figpal)||i<0||pulling||safe)return -1;chairs[i].passenger=figpal;return i;}
  function connected(a,b){const visited=new Set([a]),stack=[a];while(stack.length){const n=stack.pop();for(const link of links){const next=link.a===n?link.b:link.b===n?link.a:null;if(next===null||visited.has(next))continue;visited.add(next);stack.push(next);}}return visited.has(b);}
+ function canStartLink(index,chain){
+  return /^chain[0-2]$/.test(chain)&&!pulling&&!safe&&Number.isInteger(index)&&index>=0&&index<=PLAYER_CHAIR&&!usedChains.has(chain)&&links.length<PLAYER_CHAIR&&(index===PLAYER_CHAIR||chairs[index].repaired)&&links.filter(l=>l.a===index||l.b===index).length<(index===PLAYER_CHAIR?1:2);
+ }
+ function canConnect(a,b,chain){return a!==b&&canStartLink(a,chain)&&canStartLink(b,chain)&&!connected(a,b);}
  function connect(a,b,chain){
-  if(!/^chain[0-2]$/.test(chain)||pulling||safe||a===b||![a,b].every(i=>Number.isInteger(i)&&i>=0&&i<=PLAYER_CHAIR)||usedChains.has(chain)||links.length>=PLAYER_CHAIR||connected(a,b))return false;
-  if([a,b].some(i=>i<PLAYER_CHAIR&&!chairs[i].repaired)||[a,b].some(i=>links.filter(l=>l.a===i||l.b===i).length>=(i===PLAYER_CHAIR?1:2)))return false;
+  if(!canConnect(a,b,chain))return false;
   links.push({a,b,chain});usedChains.add(chain);return true;
  }
  const ready=()=>links.length===PLAYER_CHAIR&&chairs.every((c,i)=>c.repaired&&c.passenger!==null&&c.passenger!==puzzle.pmIndex&&connected(i,PLAYER_CHAIR));
- return {reset,use,place,board,connect,get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
+ return {reset,use,place,board,connect,canStartLink,canConnect,get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
 }
