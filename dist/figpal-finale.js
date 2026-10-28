@@ -4,9 +4,9 @@ export const FIGPAL_PLEAS=['Nooo!!!!','Tell my wife that I love her!','Delete my
 export const HANGING_PLEAS=['help','I have a family',"I swear I didn't detach the component!"];
 export const FIGPAL_RELIEF=Object.freeze([
  "We're saved!",
- 'A dry run. Literally.',
+ 'A rolling release!',
  'Best empty state ever!',
- 'No fill? No funeral!',
+ 'My exit has a seat!',
  'Cancel my exit interview!',
  'New status: undissolved.',
  'My bones stay internal!',
@@ -18,20 +18,20 @@ export const FIGPAL_RELIEF=Object.freeze([
  'Finally, a safe drop shadow!',
  "Tell my wife I'm... fine?",
  'I take back the browser thing!',
- 'Five stars. No acid.',
+ 'Five stars. Chair service.',
  'Less toxic than my last job!',
- 'Nothing to dissolve here!',
+ 'Chair today, gone tomorrow!',
  'Not today, skeleton me!',
  'The only good scope cut!',
  'Love the negative space!',
- 'Shipped without the acid!',
+ 'Rescue shipped on wheels!',
  'Still a solid contributor!',
  'Can we expense therapy?'
 ]);
 
 // Manual and timed descents share the same tank-aware dialogue. A shuffled bag
 // gives every relief line a turn before repeating, including across game retries.
-export function createFigpalLoweringDialogue(hoists,bubbles,isDrained,random=Math.random){
+export function createFigpalLoweringDialogue(hoists,bubbles,isSafe,random=Math.random){
  const active=new Map();let bag=[],lastLine=null;
  function relief(){
   if(!bag.length){
@@ -44,14 +44,15 @@ export function createFigpalLoweringDialogue(hoists,bubbles,isDrained,random=Mat
  function hide(index){active.delete(index);bubbles.hide(index);}
  function show(index,time){
   if(!hoists.canSpeak(index)){hide(index);return null;}
-  const dry=!!isDrained(index),line=dry?relief():FIGPAL_PLEAS[index];
-  active.set(index,dry);bubbles.show(index,time,line);return line;
+  const safe=!!isSafe(index),line=safe?relief():FIGPAL_PLEAS[index];
+  active.set(index,safe);bubbles.show(index,time,line);return line;
  }
  return {show,hide,reset(){active.clear();bubbles.hide();},update(time){
-  for(const [index,dry]of active){
+  for(const [index,safe]of active){
    if(!hoists.canSpeak(index)||!hoists.isLowered(index)){hide(index);continue;}
-   // If a tank finishes draining during the descent, the living Figpal notices.
-   if(!dry&&isDrained(index)){active.set(index,true);bubbles.show(index,time,relief());}
+   // A genuinely empty tank can become safe during a descent. Residual acid
+   // alone never qualifies; a prepared chair route does.
+   if(!safe&&isSafe(index)){active.set(index,true);bubbles.show(index,time,relief());}
   }
  }};
 }

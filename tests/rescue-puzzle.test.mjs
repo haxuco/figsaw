@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import {createEscapePuzzle,createDirectionalKeypadState} from '../dist/mobile-puzzle-state.js';
 import {createInventory} from '../dist/inventory.js';
 import {createRescueState,PLAYER_CHAIR} from '../dist/rescue-state.js';
-import {createAcidFlow} from '../dist/acid-flow.js';
+import {createAcidFlow,BREACHED_TANK_RESIDUAL} from '../dist/acid-flow.js';
 
 test('every retry reassigns the PM and keeps roles, clue identity and timed order consistent',()=>{
  let seed=15;const random=()=>((seed=(seed*1664525+1013904223)>>>0)/4294967296),p=createEscapePuzzle(random),seen=new Set();
@@ -43,33 +43,46 @@ test('exactly two survivors and two chains complete the train for every randomiz
  for(let pmIndex=0;pmIndex<3;pmIndex++){
   const {state:r}=repairedChairs({pmIndex}),survivors=[0,1,2].filter(n=>n!==pmIndex);
   assert.equal(r.place(0,survivors[0]),true);assert.equal(r.place(1,survivors[0]),false);r.place(1,survivors[1]);
-  assert.equal(r.board(survivors[0],survivors[0]),0);assert.equal(r.board(survivors[1],survivors[1]),1);
+  assert.equal(r.reserve(survivors[0],survivors[0]),false,'unlinked chairs cannot catch a Figpal');
   assert.equal(r.connect(PLAYER_CHAIR,0,'chain'+survivors[0]),true);
   assert.equal(r.ready,false);assert.equal(r.startPull(),false);
   assert.equal(r.connect(0,1,'chain'+survivors[1]),true);
   assert.equal(r.connect(1,PLAYER_CHAIR,'chain'+pmIndex),false);
   assert.equal(r.connect(0,3,'chain'+pmIndex),false,'no phantom fourth chair');
+  assert.equal(r.arranged,true);assert.equal(r.ready,false);
+  for(const [i,tank]of survivors.entries()){assert.equal(r.reserve(tank,tank),true);assert.equal(r.board(tank,tank),i);}
   assert.equal(r.ready,true);assert.equal(r.startPull(),true);r.finishPull();assert.equal(r.safe,true);
   r.reset();assert.equal(r.chairs.length,2);assert.equal(r.safe,false);assert.equal(r.links.length,0);assert.equal(r.ready,false);
  }
 });
-test('PM and skeletons cannot take a rescue chair, and retries use the new PM identity',()=>{
+test('PM and damaged captives cannot reserve a rescue chair; retries use the new PM identity',()=>{
  const puzzle={pmIndex:0},{state:r}=repairedChairs(puzzle);
- r.place(0,0);assert.equal(r.board(0,0),-1);assert.equal(r.chairs[0].passenger,null);
- r.place(0,1);assert.equal(r.board(1,1,{alive:false}),-1);assert.equal(r.chairs[0].passenger,null);
- assert.equal(r.board(1,1),0);r.place(1,2);assert.equal(r.board(2,1),-1,'no duplicate passenger');
- puzzle.pmIndex=2;r.reset();
- const i=createInventory();i.add('caster');i.add('ratchet');r.use(0,'caster',i);r.use(0,'ratchet',i);
- r.place(0,2);assert.equal(r.board(2,2),-1);r.place(0,0);assert.equal(r.board(0,0),0);
+ r.place(0,1);r.place(1,2);r.connect(PLAYER_CHAIR,0,'chain0');r.connect(0,1,'chain1');
+ assert.equal(r.reserve(0,0),false);assert.equal(r.reserve(1,1,{alive:false}),false);
+ assert.equal(r.board(1,1),-1,'boarding without a pre-descent reservation is forbidden');
+ assert.equal(r.reserve(1,1),true);assert.equal(r.place(1,0),false,'the route cannot move during a descent');assert.equal(r.board(1,1),0);
+ assert.equal(r.reserve(2,1),false,'no duplicate passenger');
+ puzzle.pmIndex=2;r.reset();const i=createInventory();for(const id of ['caster','seat','base','ratchet'])i.add(id);
+ for(const [chair,part]of [[0,'caster'],[1,'seat'],[1,'base']]){r.use(chair,part,i);r.use(chair,'ratchet',i);}
+ r.place(0,0);r.place(1,1);r.connect(PLAYER_CHAIR,0,'chain0');r.connect(0,1,'chain1');
+ assert.equal(r.reserve(2,2),false);assert.equal(r.reserve(0,0),true);r.cancelReservation(0);assert.equal(r.board(0,0),-1);assert.equal(r.reserve(0,0),true);assert.equal(r.board(0,0),0);
 });
 test('finite draining leaves broad persistent puddles that ignore camera and cable targets',()=>{
  const a=createAcidFlow(),b=createAcidFlow();a.open(0,{x:0,y:.01,z:0},0,false,{breach:true});b.open(0,{x:0,y:.01,z:0},0,false,{breach:true});
  for(let t=0;t<40;t+=.1){a.update(t,.1,{x:20,z:20},{target:{x:2,z:4}});b.update(t,.1,{x:-20,z:-20},{target:{x:-2,z:-4}});}
- assert.deepEqual(a.leaks,b.leaks);assert.equal(a.remaining(0),0);assert.equal(a.leaks[0].pouring,0);
+ assert.deepEqual(a.leaks,b.leaks);assert.equal(a.remaining(0),BREACHED_TANK_RESIDUAL);assert.equal(a.leaks[0].pouring,0);assert.equal(a.outflowFinished(0),true);
  const points=a.leaks[0].points;assert.ok(points.some(p=>p.x>2)&&points.some(p=>p.x<-2)&&points.some(p=>p.z>2)&&points.some(p=>p.z<-2));assert.ok(points.length<=180);
  a.update(50,.1,{x:0,z:0},{protectedFromAcid:true});assert.equal(a.dying,false);a.update(51,.1,{x:0,z:0});assert.equal(a.dying,true);assert.equal(a.update(52,.1,{x:0,z:0}),true);a.reset();assert.equal(a.remaining(0),1);
 });
 test('breaking a partly emptied tank accelerates only the remaining reservoir without refilling it',()=>{
  const f=createAcidFlow();f.open(1,{x:0,y:.1,z:0},0);f.update(10,.1,{x:20,z:20});const before=f.remaining(1);assert.ok(before<1&&before>0);
- f.breach(1,{x:1,y:.1,z:0},10);f.update(10.5,.1,{x:20,z:20});assert.ok(f.remaining(1)<=before);f.update(30,.1,{x:20,z:20});assert.equal(f.remaining(1),0);assert.equal(f.breach(1,{x:1,z:0},31),false);
+ f.breach(1,{x:1,y:.1,z:0},10);f.update(10.5,.1,{x:20,z:20});assert.ok(f.remaining(1)<=before);f.update(30,.1,{x:20,z:20});assert.equal(f.remaining(1),BREACHED_TANK_RESIDUAL);assert.equal(f.breach(1,{x:1,z:0},31),false);
+});
+
+test('breaking a tank below the hole never refills it, and neutralizing floor acid leaves the residual hazardous',()=>{
+ for(const end of [18,40]){
+  const f=createAcidFlow();f.open(0,{x:0,y:.1,z:0},0);f.update(end,.1,{x:20,z:20});const before=f.remaining(0);
+  assert.ok(before<BREACHED_TANK_RESIDUAL);f.breach(0,{x:1,y:.1,z:0},end);f.update(end+30,.1,{x:20,z:20});assert.equal(f.remaining(0),before);
+ }
+ const f=createAcidFlow();assert.equal(f.outflowFinished(1),false);f.breach(1,{x:0,y:.1,z:0},0);f.update(15,.1,{x:20,z:20});f.neutralize();f.update(40,.1,{x:0,z:0});assert.equal(f.remaining(1),BREACHED_TANK_RESIDUAL);assert.equal(f.dying,false);f.reset();assert.equal(f.outflowFinished(1),false);assert.equal(f.remaining(1),1);
 });

@@ -147,5 +147,5 @@ export function createTankLeaks({valves,floorSupport}){
   for(const valve of valves)valve.setOpen(0);
   burn.clearRect(0,0,512,512);burn.fillStyle='#000';burn.fillRect(0,0,512,512);burnMap.needsUpdate=true;lastPaint=-Infinity;
  }
- return {group,open,breach,update,reset,bindTargets,neutralize(time){if(!flow.neutralize())return false;neutralizedAt=time;rippleMaterial.color.setHex(0xb3c5ce);bubbles.count=smoke.count=0;return true;},get neutralized(){return flow.neutralized;},remaining:flow.remaining,isDrained:index=>flow.remaining(index)<=.0001,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
+ return {group,open,breach,update,reset,bindTargets,neutralize(time){if(!flow.neutralize())return false;neutralizedAt=time;rippleMaterial.color.setHex(0xb3c5ce);bubbles.count=smoke.count=0;return true;},get neutralized(){return flow.neutralized;},remaining:flow.remaining,outflowFinished:flow.outflowFinished,isDrained:index=>flow.remaining(index)<=.0001,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
 }

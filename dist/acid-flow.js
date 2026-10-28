@@ -1,23 +1,29 @@
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+// The bottom band sits below the axe opening and retains a hazardous heel.
+export const BREACHED_TANK_RESIDUAL=.20;
 // Finite reservoirs spread across the floor independently of the player's view.
 // Deterministic concentric lobes overlap into broad, persistent pools.
 export function createAcidFlow({speed=.38,maxPoints=180}={}){
  const leaks=[];let hitAt=null,finished=false,neutralized=false;
  function open(index,origin,time,locked=false,{breach=false}={}){
   if(locked||hitAt!==null||leaks.some(l=>l.index===index))return false;
-  leaks.push({index,openedAt:time,drainStarted:time,drainInitial:1,duration:breach?14:25,progress:0,remaining:1,pouring:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
+  leaks.push({index,openedAt:time,drainStarted:time,drainInitial:1,drainFloor:breach?BREACHED_TANK_RESIDUAL:0,breached:breach,drainingComplete:false,duration:breach?14:25,progress:0,remaining:1,pouring:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
  }
  function breach(index,origin,time){
   const leak=leaks.find(l=>l.index===index);if(!leak)return open(index,origin,time,false,{breach:true});
-  if(leak.remaining<=0)return false;
-  leak.origin={...origin};leak.drainInitial=leak.remaining;leak.drainStarted=time;leak.duration=14*leak.remaining;return true;
+  if(leak.remaining<=0||leak.breached)return false;
+  leak.origin={...origin};leak.breached=true;leak.drainInitial=leak.remaining;
+  leak.drainFloor=Math.min(BREACHED_TANK_RESIDUAL,leak.remaining);
+  leak.drainStarted=time;leak.duration=Math.max(.01,14*(leak.remaining-leak.drainFloor)/(1-BREACHED_TANK_RESIDUAL));leak.drainingComplete=false;return true;
  }
  function update(time,dt,viewer,{protectedFromAcid=false}={}){
   if(finished)return false;
   for(const leak of leaks){
    const age=Math.max(0,time-leak.openedAt),u=clamp((time-leak.drainStarted-.48)/leak.duration,0,1);
-   leak.progress=clamp(age/1.35,0,1);leak.remaining=Math.min(leak.remaining,leak.drainInitial*(1-u)**1.5);
-   leak.pouring=u>=1?0:leak.progress*Math.sqrt(leak.remaining);
+   const volume=leak.drainInitial-leak.drainFloor;
+   leak.progress=clamp(age/1.35,0,1);leak.remaining=Math.min(leak.remaining,leak.drainFloor+volume*(1-u)**1.5);
+   leak.drainingComplete=u>=1||volume<=.0001;
+   leak.pouring=leak.drainingComplete?0:leak.progress*Math.sqrt((leak.remaining-leak.drainFloor)/volume);
    if(age<.48)continue;
    const spread=Math.min(1,(age-.48)/(30*.38/speed));
    const desired=Math.min(maxPoints,1+Math.floor(spread*(maxPoints-1)));
@@ -33,5 +39,5 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
   }
   if(hitAt!==null&&time-hitAt>=.85){finished=true;return true;}return false;
  }
- return {open,breach,update,leaks,neutralize(){if(hitAt!==null||finished)return false;neutralized=true;return true;},get neutralized(){return neutralized;},remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;neutralized=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
+ return {open,breach,update,leaks,outflowFinished:index=>leaks.some(l=>l.index===index&&l.drainingComplete),neutralize(){if(hitAt!==null||finished)return false;neutralized=true;return true;},get neutralized(){return neutralized;},remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;neutralized=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
 }

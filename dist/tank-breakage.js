@@ -6,8 +6,8 @@ export function brokenGlassGeometry(radius){
  const g=new THREE.CylinderGeometry(radius,radius,1.02,48,26,true),pos=g.attributes.position,keep=[];
  for(let i=0;i<g.index.count;i+=3){
   let x=0,y=0,z=0;for(let k=0;k<3;k++){const j=g.index.getX(i+k);x+=pos.getX(j)/3;y+=pos.getY(j)/3;z+=pos.getZ(j)/3;}
-  const angle=Math.atan2(x,z),a=Math.atan2((y+.32)/.20,angle/.61),edge=1+.13*Math.sin(a*9)+.08*Math.cos(a*13);
-  if((angle/.61)**2+((y+.32)/.20)**2>edge**2)for(let k=0;k<3;k++)keep.push(g.index.getX(i+k));
+  const angle=Math.atan2(x,z),a=Math.atan2((y-.08)/.425,angle/.78),edge=1+.045*Math.sin(a*9)+.025*Math.cos(a*13);
+  if((angle/.78)**2+((y-.08)/.425)**2>edge**2)for(let k=0;k<3;k++)keep.push(g.index.getX(i+k));
  }
  g.setIndex(keep);g.computeBoundingSphere();return g;
 }
@@ -17,13 +17,13 @@ export function createTankBreakage({vat,shell,deposits,index=0,floorSupport=()=>
  for(const [original,radius]of[[shell,.485],[deposits,.487]]){
   const broken=new THREE.Mesh(brokenGlassGeometry(radius),original.material);broken.position.copy(original.position);broken.renderOrder=original.renderOrder;group.add(broken);
  }
- const impact=new THREE.Object3D(),outlet=new THREE.Object3D();impact.position.set(0,.40,.49);outlet.position.set(0,.235,.49);vat.add(impact,outlet);
+ const impact=new THREE.Object3D(),outlet=new THREE.Object3D();impact.position.set(0,.40,.49);outlet.position.set(0,.39,.49);vat.add(impact,outlet);
  // Bright chipped edges and hairline fractures radiate away from the missing pane.
  const edgeMaterial=new THREE.LineBasicMaterial({color:0xc0cfbc,transparent:true,opacity:.45});
  const chippedRim=new THREE.LineSegments(new THREE.EdgesGeometry(group.children[0].geometry,40),edgeMaterial);chippedRim.position.copy(shell.position);chippedRim.raycast=()=>{};group.add(chippedRim);
  const edges=[];for(let i=0;i<11;i++){
-  const a=i/11*Math.PI*2+Math.sin(i*13)*.13,r=.92+(i%3)*.07,theta=Math.cos(a)*.61*r,y=.40+Math.sin(a)*.20*r;
-  const length=1.12+(i%4)*.09,t2=theta*length,y2=.40+(y-.40)*length;
+  const a=i/11*Math.PI*2+Math.sin(i*13)*.13,r=.94+(i%3)*.035,theta=Math.cos(a)*.78*r,y=.80+Math.sin(a)*.425*r;
+  const length=1.06+(i%4)*.04,t2=theta*length,y2=.80+(y-.80)*length;
   edges.push(Math.sin(theta)*.489,y,Math.cos(theta)*.489,Math.sin(t2)*.489,Math.min(1.20,Math.max(.24,y2)),Math.cos(t2)*.489);
  }
  const cracks=new THREE.LineSegments(new THREE.BufferGeometry().setAttribute('position',new THREE.Float32BufferAttribute(edges,3)),new THREE.LineBasicMaterial({color:0xb5c5aa,transparent:true,opacity:.65}));cracks.raycast=()=>{};group.add(cracks);

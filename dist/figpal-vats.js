@@ -1,3 +1,4 @@
+import {RESCUE_HEIGHT} from './rescue-swing.js';
 import {createDesignCap} from './design-cap.js';
 import {createFishSkullClue} from './fish-skull-clue.js';
 import {createTankBreakage} from './tank-breakage.js';
@@ -117,8 +118,9 @@ export function createFigpalVats({floorSupport,puzzle}={}){
    for(let j=0;j<n;j++){chainDummy.position.copy(start).lerp(end,j/(n-1));chainDummy.quaternion.setFromUnitVectors(chainUp,direction);chainTwist.setFromAxisAngle(chainUp,(j%2?Math.PI/2:0)+Math.sin(j*7.17)*.07);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.setScalar(1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
    links.instanceMatrix.needsUpdate=true;
   }
-  if(maxLinks){links.instanceMatrix.setUsage(THREE.DynamicDrawUsage);setPoints(points[0],points.at(-1));}
-  else for(let j=0;j<count;j++){const t=j/(count-1);chainDummy.position.copy(curve.getPointAt(t));chainDummy.quaternion.setFromUnitVectors(chainUp,curve.getTangentAt(t));chainTwist.setFromAxisAngle(chainUp,(j%2?Math.PI/2:0)+Math.sin(j*7.17)*.07);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.setScalar(1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}
+  if(maxLinks)links.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  if(maxLinks&&points.length===2)setPoints(points[0],points.at(-1));
+  else{const n=Math.min(count,Math.max(2,Math.ceil(length/.033)));links.count=n;for(let j=0;j<n;j++){const t=j/(n-1);chainDummy.position.copy(curve.getPointAt(t));chainDummy.quaternion.setFromUnitVectors(chainUp,curve.getTangentAt(t));chainTwist.setFromAxisAngle(chainUp,(j%2?Math.PI/2:0)+Math.sin(j*7.17)*.07);chainDummy.quaternion.multiply(chainTwist);chainDummy.scale.setScalar(1);chainDummy.updateMatrix();links.setMatrixAt(j,chainDummy.matrix);}}
   return {object:links,setPoints};
  }
  const tankMaterials=createTankMaterials();
@@ -216,11 +218,12 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const transformation=createFigpalTransformation(captive.object,i);
   const skullClue=puzzle?createFishSkullClue(puzzle,i):null;
   if(skullClue){skullClue.mesh.visible=i===puzzle.pmIndex;transformation.attachBoneDetail(skullClue.mesh);transformation.skeleton.userData.fishClue=i===puzzle.pmIndex;transformation.skeleton.userData.inspectionFrame={center:[-.10,.055,.133],width:.60,height:.50,distance:.95,lift:.20};}
+  const nameTag=new THREE.Group();nameTag.name='Hinged Figpal name tag';hanger.add(nameTag);
   {
    const c=document.createElement('canvas');c.width=512;c.height=144;const p=c.getContext('2d');p.fillStyle='#c0b68f';p.fillRect(0,0,512,144);p.strokeStyle='#655e43';p.strokeRect(8,8,496,128);p.textAlign='center';p.fillStyle='#30392d';p.font='bold 32px Arial';p.font='bold 53px Arial';p.fillText(['PUDDING','MAKI','PUFF'][i],256,90);
    const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;
-   const tag=mesh(new THREE.PlaneGeometry(.49,.138),new THREE.MeshStandardMaterial({map,roughness:.95}),hanger);tag.position.set(0,-.31,.10);tag.name='Character name tag';
-   for(const side of[-1,1])rod([side*.14,-.18,.07],[side*.14,-.248,.10],.003,steel,hanger);
+   const tag=mesh(new THREE.PlaneGeometry(.49,.138),new THREE.MeshStandardMaterial({map,roughness:.95}),nameTag);tag.position.set(0,-.31,.10);tag.name='Character name tag';
+   for(const side of[-1,1])rod([side*.14,-.18,.07],[side*.14,-.248,.10],.003,steel,nameTag);
   }
   batchRigid(captive.object,{exclude:[captive.propeller],minObjects:2,dispose:false});
   transformation.skeleton.visible=true;batchRigid(transformation.skeleton,{exclude:[skullClue?.mesh],minObjects:2,dispose:false});transformation.skeleton.visible=false;
@@ -230,7 +233,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,hanger);hook.position.set(0,.49,0);hook.rotation.z=-.5;rod([-.028,.476,.008],[.016,.511,.008],.004,darkMetal,hanger);
   for(const side of[-1,1])chainRun([[side*.21,.45,0],[side*.245,.11,0],[side*.23,-.12,.015],[side*.16,-.205,.04],[0,-.222,.045]],hanger);
   const loadChain=chainRun([[0,winchY-.10,.025],[0,height+.52,0]],rig,72);
-  const returnChain=chainRun([[-.10,winchY-.01,-.11],[-.11,winchY-.36,-.12],[-.16,winchY-.40,-.10],[-.20,winchY-.05,-.08]],rig);
+  const returnChain=chainRun([[-.10,winchY-.01,-.11],[-.11,winchY-.36,-.12],[-.16,winchY-.40,-.10],[-.20,winchY-.05,-.08]],rig,96);
   returnChain.object.name='Winch return chain loop';
   const control=new THREE.Group();control.name=`Canister ${i+1} winch control`;control.position.set(.39,.85,.40);control.rotation.y=.35;control.userData.hoistIndex=i;vat.add(control);
   box([.12,.21,.07],[0,0,0],darkMetal,control);
@@ -241,20 +244,30 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
   batchRigid(vat,{exclude:[liquid,meniscus,shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
-  rigs.push({rig,hanger,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,chainDropped:false,payingOut:null});
+  rigs.push({rig,hanger,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3(),chainDropped:false,payingOut:null});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
- const movingIndex=()=>{const index=rigs.findIndex(rig=>Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
+ const movingIndex=()=>{const index=rigs.findIndex(rig=>rig.escaping||rig.payingOut!==null||Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
+ function beginLowering(rig){
+  if(rig.lowered||rig.rescued||rig.escaping)return;
+  // Decide at the start, never grant a late rescue after exposure to the acid.
+  rig.rescuePlanned=!!(vats[rig.index].breakage.broken&&leaks?.outflowFinished(rig.index)&&rescue?.prepare(rig.index,!rig.transformation.damaged));
+  rig.lowered=true;rig.targetHeight=rig.rescuePlanned?RESCUE_HEIGHT:leaks?.outflowFinished(rig.index)?.43:.65;
+ }
  function lower(index){
-  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index))return false;
-  if(rig.rescued)return true;rig.lowered=true;rig.targetHeight=leaks?.isDrained(index)?.43:.65;return true;
+  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index)||rig.payingOut!==null)return false;
+  beginLowering(rig);return true;
  }
  function toggleHoist(index){
-  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index))return null;
-  if(rig.chainDropped)return 'The chain has already been recovered.';
-  const supported=rig.rescued||(leaks?.isDrained(index)&&rig.lowered&&Math.abs(rig.height-rig.targetHeight)<.01);
-  if(supported){if(rig.payingOut===null)rig.payingOut=lastTime;return 'The winch pays out its remaining chain…';}
-  rig.lowered=!rig.lowered;rig.targetHeight=rig.lowered?(leaks?.isDrained(index)?.43:.65):rig.homeHeight;
+  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index)||rig.payingOut!==null||rig.escaping)return null;
+  // Pay out the spare return chain before lowering. The load chain continues
+  // supporting the captive, so recovering towing chains does not require a victim.
+  if(!rig.chainDropped&&vats[index].breakage.broken&&leaks?.outflowFinished(index)){
+   rig.payingOut=lastTime;return 'The winch pays out its spare return chain…';
+  }
+  if(rig.rescued)return 'The Figpal is seated on the rescue chair.';
+  if(rig.lowered){rig.lowered=false;rig.rescuePlanned=false;rescue?.cancelPreparation(index);rig.targetHeight=rig.homeHeight;}
+  else beginLowering(rig);
   return `Figpal ${index+1}${rig.transformation.transformed?"'s bones":''} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;
  }
 
@@ -266,35 +279,43 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function reset(){
   for(const vat of vats)vat.breakage.reset();
   for(const rig of rigs){
-   rig.rescued=false;rig.chainDropped=false;rig.payingOut=null;rig.loadChain.object.visible=true;rig.rig.add(rig.hanger);rig.hanger.quaternion.identity();rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
+   rig.rescued=rig.rescuePlanned=rig.escaping=false;rig.nameTag.position.y=0;rig.releasedAt=null;rig.chainDropped=false;rig.payingOut=null;rig.returnChain.object.visible=true;rig.returnChain.setPoints([-.10,rig.winchY-.01,-.11],[-.14,rig.winchY-.40,-.10]);rig.loadChain.object.visible=true;rig.rig.add(rig.hanger);rig.hanger.quaternion.identity();rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
    rig.hanger.position.set(0,rig.homeHeight,0);rig.hanger.rotation.z=0;
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[0,rig.homeHeight+.52,0]);
    rig.drum.rotation.y=rig.crank.rotation.x=0;rig.transformation.reset();rig.skullClue?.refresh();if(rig.skullClue){rig.skullClue.mesh.visible=rig.index===puzzle.pmIndex;rig.transformation.skeleton.userData.fishClue=rig.index===puzzle.pmIndex;}rig.vat.userData.fishClue=false;
   }
  }
- let lastTime=0;const swayPose={};
+ let lastTime=0;const swayPose={},chainEnd=new THREE.Vector3(),chainRest=new THREE.Vector3();
  function update(time,reducedMotion=false){
   const dt=Math.max(0,Math.min(.12,time-lastTime));lastTime=time;
   const t=reducedMotion?0:time;waterTime.value=t;
   for(const rig of rigs){
+   const tagHeight=rig.rescuePlanned?.14:0;rig.nameTag.position.y=reducedMotion?tagHeight:THREE.MathUtils.lerp(rig.nameTag.position.y,tagHeight,1-Math.exp(-dt*7));
    if(rig.payingOut!==null&&!rig.chainDropped){
-    const u=Math.min(1,(time-rig.payingOut)/1.7);rig.drum.rotation.y+=dt*5;rig.loadChain.setPoints([0,rig.winchY-.10,.025],[.12,.10+(1-u)*rig.height,0]);
-    if(u===1){rig.chainDropped=true;rig.loadChain.object.visible=false;rescue?.dropChain(rig.index);}
+    const u=Math.min(1,(time-rig.payingOut)/1.7);rig.drum.rotation.y+=dt*5;rig.returnChain.setPoints([.30,rig.winchY-.10,.15],[.43,.03+(1-u)*(rig.winchY-.15),.62]);
+    if(u===1){rig.chainDropped=true;rig.payingOut=null;rig.returnChain.object.visible=false;rescue?.dropChain(rig.index);}
    }
-   if(rig.rescued){rig.transformation.update();continue;}
+   if(rig.escaping||rig.rescued){
+    rig.transformation.update();
+    if(rig.escaping){
+     if(!rescue?.isTransferring(rig.index)){rig.escaping=false;rig.rescued=true;rig.releasedAt=time;rig.hanger.localToWorld(rig.releasedFrom.set(0,.52,0));rig.rig.worldToLocal(rig.releasedFrom);}
+     else{rig.hanger.localToWorld(chainEnd.set(0,.52,0));rig.rig.worldToLocal(chainEnd);rig.loadChain.setPoints([0,rig.winchY-.10,.025],chainEnd.toArray());rig.drum.rotation.y+=dt*1.8;}
+    }
+    if(rig.releasedAt!==null){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-rig.releasedAt,0,1.2);chainEnd.copy(rig.releasedFrom).lerp(chainRest.set(0,rig.homeHeight+.52,0),u);rig.loadChain.setPoints([0,rig.winchY-.10,.025],chainEnd.toArray());if(u===1)rig.releasedAt=null;}
+    continue;
+   }
    const delta=rig.targetHeight-rig.height;rig.height=reducedMotion?rig.targetHeight:rig.height+Math.sign(delta)*Math.min(Math.abs(delta),dt*.15);
    figpalSwayPose(time,rig.height,rig.winchY,rig.phase,reducedMotion,swayPose);
    rig.hanger.position.set(swayPose.x,swayPose.y,0);rig.hanger.rotation.z=swayPose.angle;
-   if(rig.payingOut===null&&!rig.chainDropped)rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
-   rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;
+   rig.loadChain.setPoints([0,rig.winchY-.10,.025],[swayPose.hookX,swayPose.hookY,0]);
+   if(rig.payingOut===null){rig.drum.rotation.y=(rig.homeHeight-rig.height)/.10;rig.crank.rotation.x=(rig.homeHeight-rig.height)/.10;}else rig.crank.rotation.x+=dt*4;
    const remaining=leaks?.remaining(rig.index)??1;
    rig.transformation.update(remaining>.0001?.227+.865*remaining:null);
-   if(remaining<=.0001&&rig.lowered){
-    rig.targetHeight=.43;
-    if(Math.abs(rig.height-.43)<.01&&vats[rig.index].breakage.broken&&rescue?.board(rig.index,rig.hanger,!rig.transformation.transformed)){
-     rig.rescued=true;continue;
-    }
+   if(rig.lowered&&rig.rescuePlanned&&Math.abs(rig.height-RESCUE_HEIGHT)<.01){
+    if(rescue?.board(rig.index,rig.hanger,!rig.transformation.damaged)){rig.escaping=true;continue;}
+    rig.rescuePlanned=false;rescue?.cancelPreparation(rig.index);
    }
+   if(rig.lowered&&!rig.rescuePlanned&&leaks?.outflowFinished(rig.index))rig.targetHeight=.43;
    if(rig.skullClue){const pm=rig.index===puzzle.pmIndex;rig.skullClue.mesh.visible=pm;rig.vat.userData.fishClue=pm&&rig.transformation.cutHeight>.155;if(pm&&rig.transformation.cutHeight>.215)puzzle.revealFish();}
    if(rig.propeller)rig.propeller.rotation.y=t*.18;
   }
@@ -323,8 +344,8 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.rescued&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
+ return {group,update,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(!rigs[index].escaping&&rigs[index].payingOut===null&&rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
-  canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[puzzle?.pmIndex??2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[puzzle?.pmIndex??2].transformation.skeleton;}};
+  safeDescent:index=>!!rigs[index]&&(rigs[index].rescuePlanned||rigs[index].rescued||leaks?.isDrained(index)),canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[puzzle?.pmIndex??2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[puzzle?.pmIndex??2].transformation.skeleton;}};
 }

@@ -508,7 +508,7 @@ const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,c
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
-const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,acidLeaks.isDrained);
+const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,figpalHoists.safeDescent);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 // Diffuse mobile materials do not sample a reflection environment. Avoid the
 // panorama conversion, render targets and PMREM shader compilation on phones.
@@ -644,7 +644,7 @@ function updateTestingMode(time){
 const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;rescueControls.innerHTML='<button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button>';document.body.append(rescueControls);
 rescueControls.querySelector('[data-cancel]').onclick=()=>rescueChairs.cancelMove();
 rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){return;}rescueChairs.pull();};
-function syncRescueControls(){const cancel=rescueChairs.moving!==null,pull=rescueChairs.state.ready&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||(!cancel&&!pull);rescueControls.querySelector('[data-cancel]').hidden=!cancel;rescueControls.querySelector('[data-pull]').hidden=!pull;}
+function syncRescueControls(){const cancel=rescueChairs.moving!==null,pull=rescueChairs.state.ready&&!rescueChairs.busy&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||(!cancel&&!pull);rescueControls.querySelector('[data-cancel]').hidden=!cancel;rescueControls.querySelector('[data-pull]').hidden=!pull;}
 function putEquipmentAway(){putAxeBack();clearSawSelection();sawMenu.hide();rescueChairs.cancelHook();inventory.putAway();if(inventory.has('saw')&&!sawTrap.active&&!plushCut.active)handsaw.visible=false;canvas.focus({preventScroll:true});}
 function equipItem(id){
  putEquipmentAway();rescueChairs.cancelMove();if(!inventory.equip(id))return;
@@ -826,7 +826,7 @@ function updateFigpalRound(time){
  if(event?.type==='lower'){
   laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
   figpalCamera.start(event.index,time);loweringDialogue.reset();const line=loweringDialogue.show(event.index,time);
-  const destination=acidLeaks.isDrained(event.index)?'empty tank':'green liquid';
+  const destination=figpalHoists.safeDescent(event.index)?'prepared rescue route':'green liquid';
   countdownAnnouncement.textContent=`Time is up. Figpal ${event.index+1} is lowering into the ${destination}.${line?' '+line:''}`;
  }else if(event?.type==='return'){
   loweringDialogue.reset();figpalCamera.restore(time);
