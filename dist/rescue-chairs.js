@@ -21,6 +21,26 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   for(let j=0;j<count;j++){const t=j/(count-1);curve.getPoint(t,point);dummy.position.copy(point);dummy.quaternion.setFromUnitVectors(up,curve.getTangent(t));twist.setFromAxisAngle(up,j%2?Math.PI/2:0);dummy.quaternion.multiply(twist);dummy.scale.setScalar(1);dummy.updateMatrix();mesh.setMatrixAt(j,dummy.matrix);}mesh.instanceMatrix.needsUpdate=true;
  }
  for(const [id,object]of Object.entries(parts)){object.userData.salvagePart=id;object.userData.ignoreAcid=true;object.name=`Salvage ${id} from donor chair`;batchStaticScenery(object,{minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});}
+ // Temporary discovery aid: lightweight markers stay outside the collectible
+ // models, so inventory previews and installed replacements remain unchanged.
+ const partHighlights=new THREE.Group();partHighlights.name='Temporary chair part highlights';group.add(partHighlights);
+ const beaconGeometry=new THREE.OctahedronGeometry(.065),beaconMaterial=new THREE.MeshBasicMaterial({color:0xffdd44,transparent:true,opacity:.9,depthTest:false,depthWrite:false,toneMapped:false,fog:false});
+ const highlightedParts=Object.values(parts).map(object=>{
+  object.updateWorldMatrix(true,true);
+  const bounds=new THREE.Box3().setFromObject(object).applyMatrix4(object.parent.matrixWorld.clone().invert()).expandByScalar(.025);
+  const outline=new THREE.Box3Helper(bounds,0xffdd44);outline.material.depthTest=false;outline.material.depthWrite=false;outline.material.transparent=true;outline.material.toneMapped=false;outline.material.fog=false;outline.renderOrder=90;outline.raycast=()=>{};
+  const beacon=new THREE.Mesh(beaconGeometry,beaconMaterial);bounds.getCenter(beacon.position);beacon.position.y=bounds.max.y+.18;beacon.renderOrder=91;beacon.raycast=()=>{};
+  partHighlights.add(outline,beacon);return {object,outline,beacon,height:beacon.position.y};
+ });
+ function syncPartHighlights(time=0,reducedMotion=false){
+  const pulse=reducedMotion?1:.8+.2*Math.sin(time*3);
+  beaconMaterial.opacity=pulse;
+  for(const {object,outline,beacon,height}of highlightedParts){
+   outline.visible=beacon.visible=object.visible;
+   if(!object.visible)continue;
+   outline.material.opacity=pulse;beacon.position.y=height+(reducedMotion?0:Math.sin(time*3)*.025);beacon.rotation.y=reducedMotion?0:time*.8;
+  }
+ }
  objects.forEach((object,i)=>{
   object.userData.rescueChair=i;object.userData.ignoreAcid=true;object.name=`Aeron rescue chair — ${REPAIRS[i].label}`;
   const repair=object.chairParts;
@@ -70,12 +90,12 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  function pull(){if(!state.startPull())return false;pullAt=lastTime;pullStarts.length=0;pullStarts.push(...objects.map(o=>o.position.clone()),player.position.clone());
   pullOrder=[PLAYER_CHAIR];while(pullOrder.length<=PLAYER_CHAIR){const n=pullOrder.at(-1),link=state.links.find(l=>(l.a===n&&!pullOrder.includes(l.b))||(l.b===n&&!pullOrder.includes(l.a)));if(!link)break;pullOrder.push(link.a===n?link.b:link.a);}return true;
  }
- function update(time,reducedMotion=false){lastTime=time;let dirty=linksDirty;linksDirty=false;playerOffset.set(0,0,0);
+ function update(time,reducedMotion=false){lastTime=time;syncPartHighlights(time,reducedMotion);let dirty=linksDirty;linksDirty=false;playerOffset.set(0,0,0);
   for(const [i,r]of rolls){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-r.at,0,r.duration),o=objects[i];o.position.lerpVectors(r.from,r.to,u);o.quaternion.slerpQuaternions(r.q,r.toQ,u);dirty=true;if(u===1)rolls.delete(i);}
   for(const [i,t]of transfers){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-t.at,0,1.6);t.hanger.position.lerpVectors(t.from,new THREE.Vector3(0,.78,0),u);t.hanger.quaternion.copy(t.q).slerp(new THREE.Quaternion(),u);if(u===1)transfers.delete(i);}
   if(state.pulling){const previous=player.position.clone();pullOrder.forEach((index,n)=>{const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-pullAt-n*.7,0,5);const target=new THREE.Vector3(-.70+n*.76,floorSupport(-.70+n*.76,3.9),3.9);const o=index===PLAYER_CHAIR?player:objects[index];o.position.lerpVectors(pullStarts[index],target,u);o.rotation.set(0,Math.PI,0);});playerOffset.subVectors(player.position,previous);dirty=true;if(reducedMotion||time-pullAt>=5+PLAYER_CHAIR*.7){state.finishPull();message='The Figpals are safe beside the exit. Solve the door code before the final deadline.';}}
   if(dirty)for(const link of state.links){const c=chains[Number(link.chain.slice(-1))],a=anchorPoint(link.a,new THREE.Vector3()),b=anchorPoint(link.b,new THREE.Vector3()),mid=a.clone().lerp(b,.5);mid.y=state.pulling?Math.max(.05,Math.min(a.y,b.y)-.06):floorSupport(mid.x,mid.z)+.035;c.mesh.visible=true;chainPath(c.mesh,[a,mid,b]);}
  }
- function reset(){message='';cancelMove();firstAnchor=null;pullAt=null;state.reset();rolls.clear();transfers.clear();linksDirty=true;objects.forEach((o,i)=>{o.position.copy(homes[i].p);o.quaternion.copy(homes[i].q);if(o.replacementSeat){o.remove(o.replacementSeat);o.replacementSeat=null;}o.chairParts.seat.visible=true;});player.position.copy(playerHome.p);player.quaternion.copy(playerHome.q);playerOffset.set(0,0,0);for(const p of Object.values(parts))p.visible=true;for(const c of chains){c.dropped=c.collected=false;c.mesh.visible=c.pick.visible=false;}syncParts();}
- return {group,state,objects,parts,inventoryChain:index=>chains[index]?.mesh,takeMessage(){const result=message;message='';return result;},use,select,cancelMove,place,board,dropChain,collectChain,hook,pull,update,reset,cancelHook(){firstAnchor=null;},get moving(){return moving;},get playerOffset(){return playerOffset;},get busy(){return rolls.size>0||transfers.size>0||state.pulling;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;return true;}};
+ function reset(){message='';cancelMove();firstAnchor=null;pullAt=null;state.reset();rolls.clear();transfers.clear();linksDirty=true;objects.forEach((o,i)=>{o.position.copy(homes[i].p);o.quaternion.copy(homes[i].q);if(o.replacementSeat){o.remove(o.replacementSeat);o.replacementSeat=null;}o.chairParts.seat.visible=true;});player.position.copy(playerHome.p);player.quaternion.copy(playerHome.q);playerOffset.set(0,0,0);for(const p of Object.values(parts))p.visible=true;for(const c of chains){c.dropped=c.collected=false;c.mesh.visible=c.pick.visible=false;}syncParts();syncPartHighlights();}
+ return {group,state,objects,parts,inventoryChain:index=>chains[index]?.mesh,takeMessage(){const result=message;message='';return result;},use,select,cancelMove,place,board,dropChain,collectChain,hook,pull,update,reset,cancelHook(){firstAnchor=null;},get moving(){return moving;},get playerOffset(){return playerOffset;},get busy(){return rolls.size>0||transfers.size>0||state.pulling;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
 }
