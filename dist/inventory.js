@@ -16,7 +16,7 @@ export function createInventory(){
 export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=()=>{},canOpen=()=>true}){
  const button=document.createElement('button');button.id='inventory-button';button.type='button';button.textContent='Inventory';button.setAttribute('aria-haspopup','dialog');document.body.append(button);
  const panel=document.createElement('section');panel.id='inventory-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Inventory');
- panel.innerHTML='<header><button type="button" data-back>← Back</button><h2>Inventory</h2></header><p>Select an item to equip it.</p><div class="inventory-grid"></div><p data-empty>You haven’t collected anything yet.</p>';document.body.append(panel);
+ panel.innerHTML='<header><button type="button" data-back>← Back</button><h2>Inventory</h2></header><div class="inventory-grid"></div><p data-empty>You haven’t collected anything yet.</p>';document.body.append(panel);
  const equipped=document.createElement('div');equipped.id='equipped-item';equipped.hidden=true;equipped.innerHTML='<span></span><button type="button">Put away</button>';document.body.append(equipped);
  let last=-1,active=false,lastFocus=null;
  function close(){panel.hidden=true;active=false;(lastFocus?.isConnected?lastFocus:button).focus({preventScroll:true});}

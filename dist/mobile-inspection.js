@@ -60,21 +60,14 @@ export function createMobileInspection({mobile,state}){
  return {group,update,getTarget,reset,get hung(){return hung;}};
 }
 
-export function createMobileInspectionUI({state,time,onFeedback,equipped=()=>null}){
- const panel=document.querySelector('#mobile-inspection'),status=panel.querySelector('[data-mobile-status]');
- let previous=null;
+export function createMobileInspectionUI({state,time,equipped=()=>null}){
  function activate(){
   if(!state.active||state.action||state.phase==='repaired')return;
   const cutting=state.phase==='tangled';
-  if(equipped()!==(cutting?'scissors':'string')){onFeedback(cutting?'Equip the scissors from your inventory.':'Equip fresh string from your inventory.');return;}
-  if(!(cutting?state.cut(time()):state.restring(time())))onFeedback(cutting?'Find the scissors in the Supplies drawer.':'Find fresh string in the Supplies drawer.');
+  if(equipped()!==(cutting?'scissors':'string'))return;
+  if(cutting)state.cut(time());else state.restring(time());
   sync();
  }
- function sync(){
-  panel.hidden=!state.active;document.body.classList.toggle('inspecting-mobile',state.active);
-  if(!state.active){previous=null;return;}
-  const key=[state.phase,state.action,state.has('scissors'),state.has('string')].join('|');if(key===previous)return;previous=key;
-  status.textContent=state.action==='cut'?'Snipping the tangled cords…':state.action==='restring'?'Tying fresh strings…':state.phase==='tangled'?(state.has('scissors')?'Equip scissors, then click the tangled cords.':'The cords are tangled. Find scissors in Supplies.'):state.phase==='cut'?(state.has('string')?'Equip string, then click the mobile.':'Find fresh string in Supplies.'):'Drag to look around';
- }
+ function sync(){document.body.classList.toggle('inspecting-mobile',state.active);}
  return {sync,activate};
 }

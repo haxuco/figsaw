@@ -1,6 +1,6 @@
-import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
+import {createInventory,createInventoryUI} from './inventory.js';
 import {createInventoryModelPreviews} from './inventory-models.js';
-import {REPAIRS,PLAYER_CHAIR} from './rescue-state.js';
+import {PLAYER_CHAIR} from './rescue-state.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
 import {batchStaticScenery} from './static-batching.js';
@@ -447,32 +447,32 @@ const alarmCamera=createAlarmCamera({position:cameraPosition,state});
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>ketchupKey.hasKey});
 const axeInteraction=createAxeInteraction({axe:fireAxe,camera,tanks:figpalHoists.tanks,onBreak(index,time,outlet){
- if(acidLeaks.breach(index,time,outlet))keyFeedback(`Tank ${index+1} shatters. Acid is pouring through the broken glass.`);
+ acidLeaks.breach(index,time,outlet);
 }});scene.add(axeInteraction.group);
 const cancelAxeSelection=document.querySelector('#cancel-axe-selection');
-cancelAxeSelection.addEventListener('click',()=>{if(!axeInteraction.active){putAxeBack();keyFeedback('The axe is stored in Inventory.');canvas.focus({preventScroll:true});}});
+cancelAxeSelection.addEventListener('click',()=>{if(!axeInteraction.active){putAxeBack();canvas.focus({preventScroll:true});}});
 const gameOver=document.querySelector('#game-over'),gameOverContent=gameOver.querySelector('.game-over-content');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
 const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
-let gameEnded=false,gameWon=false,escapedAt=0,fishClueAnnounced=false;
+let gameEnded=false,gameWon=false,escapedAt=0;
 const escapeScreen=document.querySelector('#escaped');
 document.querySelector('#new-game').addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
 const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle});scene.add(mobileInspection.group);
 const mobileCamera=createMobileCamera({position:cameraPosition,state,getTarget:mobileInspection.getTarget,aspect:()=>camera.aspect,baseFov:homeCamera.fov});
-const mobileUI=createMobileInspectionUI({state:mobilePuzzle,time:()=>state.time,onFeedback:keyFeedback,equipped:()=>inventory.equipped});
-const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,onFeedback:keyFeedback,puzzle:escapePuzzle,onOpen:target=>documentViewer.show(target),onClose:immediate=>documentViewer.hide(immediate)});
+const mobileUI=createMobileInspectionUI({state:mobilePuzzle,time:()=>state.time,equipped:()=>inventory.equipped});
+const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,puzzle:escapePuzzle,onOpen:target=>documentViewer.show(target),onClose:immediate=>documentViewer.hide(immediate)});
 const documentViewer=createDocumentViewer({documents,position:cameraPosition,state,aspect:()=>camera.aspect,baseFov:homeCamera.fov,scene,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;chainMenu.hide();sawMenu.hide();canvas.focus({preventScroll:true});},onClose(){canvas.focus({preventScroll:true});}});
 let selectingAnimal=false;
 const cancelSawSelection=document.querySelector('#cancel-saw-selection');
-cancelSawSelection.addEventListener('click',()=>{clearSawSelection();keyFeedback('You put the saw down.');canvas.focus({preventScroll:true});});
-const chargingHint=document.querySelector('#charging-hint');let hoveredChair=false,hoveredDocument=null,hoveredFish=false,hoveredSupply=null,hoveredMobile=false,hoveredKeypad=false,hoveredAlarm=false,hoveredKeyAction=null,hoveredChargingAction=null,chargingToast='',chargingToastUntil=0;
+cancelSawSelection.addEventListener('click',()=>{clearSawSelection();canvas.focus({preventScroll:true});});
+let hoveredChair=false,hoveredDocument=null,hoveredFish=false,hoveredSupply=null,hoveredMobile=false,hoveredKeypad=false,hoveredAlarm=false,hoveredKeyAction=null,hoveredChargingAction=null;
 const chainMenu=createRestraintMenu(()=>{
- if(!ketchupKey.hasKey){keyFeedback('The shackle is locked. Find its key first.');return;}
- if(restraint.detach(state.time)){restraintStatus.textContent='Instance detached. Your wrist is free. You can open the laptop, drink from the cat mug, or turn a tank drain valve.';canvas.classList.remove('over-chain');canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('Your wrist is chained to the rear pipes. Pour the glass ketchup bottle beside the cat mug, collect the key, then click or right-click the shackle and choose Detach instance to free your hand.','Your wrist is free. Click the laptop, cat mug, or a red tank drain valve to use it.'));}
-},{canDetach:()=>ketchupKey.hasKey,onBlocked:()=>keyFeedback('The shackle is locked. Find its key first.')});
+ if(!ketchupKey.hasKey){return;}
+ if(restraint.detach(state.time)){restraintStatus.textContent='Your wrist is free.';canvas.classList.remove('over-chain');}
+},{canDetach:()=>ketchupKey.hasKey});
 const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!ketchupKey.hasKey,canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
@@ -534,15 +534,15 @@ const leaveChairButton=document.querySelector('#leave-chair');
 leaveChairButton.addEventListener('click',leaveChair);
 function sitOnChair(){
  if(sawBusy()||mobilePuzzle.active||documentViewer.active||doorKeypadUI.active)return;
- if(restraint.locked){restraint.requestReach(state.time);keyFeedback('The chain holds you back. Unlock the shackle before climbing onto the chair.');return;}
+ if(restraint.locked){restraint.requestReach(state.time);return;}
  if(chairSeat.occupied)return;
  clearSawSelection();putAxeBack();sawMenu.hide();prepareSawAction();
- if(chairSeat.sit(state.time,{locked:restraint.locked,dying:acidLeaks.dying}))keyFeedback('You climb onto the chair and tuck your feet up, above the acid.');
+ chairSeat.sit(state.time,{locked:restraint.locked,dying:acidLeaks.dying});
 }
 function leaveChair(){
  if(sawBusy()||mobilePuzzle.active||drawerCamera.active||documentViewer.active||doorKeypadUI.active)return;
  prepareSawAction();
- if(chairSeat.leave(state.time)){keyFeedback('You climb back down to the floor.');canvas.focus({preventScroll:true});}
+ if(chairSeat.leave(state.time)){canvas.focus({preventScroll:true});}
 }
 function syncChairButton(){
  leaveChairButton.hidden=!chairSeat.seated||sawBusy()||mobilePuzzle.active||drawerCamera.active||documentViewer.active||doorKeypadUI.active;
@@ -561,9 +561,9 @@ function escapeRoom(){
 }
 function inspectMobile(){
  if(sawBusy()||mobilePuzzle.active)return;
- if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Free your wrist before picking up the tangled mobile.');return;}
+ if(restraint.locked){restraint.requestReach(state.time);return;}
  clearSawSelection();putAxeBack();prepareSawAction();sawMenu.hide();
- if(mobilePuzzle.inspect()){mobileCamera.start(state.time);mobileUI.sync();keyFeedback(mobilePuzzle.phase==='repaired'?'Drag to look around the mobile.':'The mobile is tangled. Inspect it, then find repair supplies.');}
+ if(mobilePuzzle.inspect()){mobileCamera.start(state.time);mobileUI.sync();}
 }
 function closeMobileInspection(force=false){if(mobilePuzzle.close(true)){mobileCamera.restore(state.time,force);mobileUI.sync();syncInspectionBack();releaseControls();canvas.focus({preventScroll:true});}}
 const inspectionBack=document.querySelector('#inspection-back');
@@ -592,39 +592,38 @@ const inventoryPreviews=createInventoryModelPreviews({renderer,getModel(id){
 const inventoryUI=createInventoryUI({inventory,previews:inventoryPreviews,onEquip:equipItem,onPutAway:putEquipmentAway,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},canOpen:()=>!sawBusy()&&!rescueChairs.state.pulling});
 const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;rescueControls.innerHTML='<button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button>';document.body.append(rescueControls);
 rescueControls.querySelector('[data-cancel]').onclick=()=>rescueChairs.cancelMove();
-rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){keyFeedback('Climb onto your Aeron chair first.');return;}if(rescueChairs.pull())keyFeedback('The chains tighten. You pull the Figpals toward the exit.');};
+rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){return;}rescueChairs.pull();};
 function syncRescueControls(){const cancel=rescueChairs.moving!==null,pull=rescueChairs.state.ready&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||(!cancel&&!pull);rescueControls.querySelector('[data-cancel]').hidden=!cancel;rescueControls.querySelector('[data-pull]').hidden=!pull;}
 function putEquipmentAway(){putAxeBack();clearSawSelection();sawMenu.hide();rescueChairs.cancelHook();inventory.putAway();if(inventory.has('saw')&&!sawTrap.active&&!plushCut.active)handsaw.visible=false;canvas.focus({preventScroll:true});}
 function equipItem(id){
  putEquipmentAway();rescueChairs.cancelMove();if(!inventory.equip(id))return;
  if(id==='axe'){fireAxe.object.visible=true;axeInteraction.pickUp(state.time);}
  if(id==='saw'){grabSaw();}
- keyFeedback(`${ITEMS[id].name} equipped. Click an object to use it.`);canvas.focus({preventScroll:true});
+ canvas.focus({preventScroll:true});
 }
 function useRescueObject(hit){
  const data=hit?.userData;if(!data)return false;
  const isRescue=(data.chairSeat&&inventory.equipped?.startsWith('chain'))||data.salvagePart||Number.isInteger(data.rescueChair)||Number.isInteger(data.chainPickup)||Number.isInteger(data.chainAnchor);
  if(!isRescue)return false;
  if(sawBusy())return true;
- if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Free your wrist before repairing or moving chairs.');return true;}
- if(data.salvagePart){if(rescueChairs.collectPart(data.salvagePart,inventory))keyFeedback(`${ITEMS[data.salvagePart].name} salvaged. Equip it to fit the broken chair.`);return true;}
- if(Number.isInteger(data.chainPickup)){if(rescueChairs.collectChain(data.chainPickup,inventory))keyFeedback('Hoist chain collected. Equip it and click two chair towing loops.');return true;}
+ if(restraint.locked){restraint.requestReach(state.time);return true;}
+ if(data.salvagePart){rescueChairs.collectPart(data.salvagePart,inventory);return true;}
+ if(Number.isInteger(data.chainPickup)){rescueChairs.collectChain(data.chainPickup,inventory);return true;}
  let index=data.chairSeat?PLAYER_CHAIR:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
- if(inventory.equipped?.startsWith('chain')){keyFeedback(rescueChairs.hook(index,inventory.equipped,inventory));return true;}
+ if(inventory.equipped?.startsWith('chain')){rescueChairs.hook(index,inventory.equipped,inventory);return true;}
  if(index===PLAYER_CHAIR){sitOnChair();return true;}
- if(inventory.equipped){keyFeedback(rescueChairs.use(index,inventory.equipped,inventory));return true;}
- if(rescueChairs.state.chairs[index].passenger!==null){keyFeedback('A Figpal is on this chair. Use chains to connect it to the rescue train.');return true;}
- if(rescueChairs.select(index))keyFeedback('Drag to a marked tank position, or click a floor ring. Esc cancels.');
- else keyFeedback(`This chair has a ${REPAIRS[index].label}. Find its replacement and repair tools.`);
+ if(inventory.equipped){rescueChairs.use(index,inventory.equipped,inventory);return true;}
+ if(rescueChairs.state.chairs[index].passenger!==null){return true;}
+ rescueChairs.select(index);
  return true;
 }
 function takeMobileSupply(item){
  if(sawBusy())return;
- if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Unlock your shackle before taking supplies.');return;}
- if(!chargingKit.drawerOpen||!chargingKit.drawerReady){keyFeedback('Open Supplies and let the drawer finish sliding out.');return;}
+ if(restraint.locked){restraint.requestReach(state.time);return;}
+ if(!chargingKit.drawerOpen||!chargingKit.drawerReady){return;}
  if(inventory.add(item)){
   if(['scissors','string'].includes(item))mobilePuzzle.collect(item,{drawerReady:true});
-  syncSupplies();keyFeedback(`${ITEMS[item].name} collected. Equip it from Inventory to use it.`);
+  syncSupplies();
  }
 }
 function syncSupplies(){mobileSupplies.sync({has:id=>inventory.has(id),phase:mobilePuzzle.phase});}
@@ -633,51 +632,44 @@ function useDoorKeypad(){if(sawBusy())return;prepareSawAction();doorKeypadUI.sho
 function putAxeBack(){axeInteraction.reset();fireAxe.object.visible=!inventory.has('axe');if(inventory.equipped==='axe')inventory.putAway();cancelAxeSelection.hidden=true;canvas.classList.remove('over-axe','over-tank');}
 function takeFireAxe(){
  if(sawBusy())return;
- if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Unlock your shackle before taking the fire axe.');return;}
- inventory.add('axe');fireAxe.object.visible=false;keyFeedback('Fire axe collected. Equip it from Inventory to break a tank.');
+ if(restraint.locked){restraint.requestReach(state.time);return;}
+ inventory.add('axe');fireAxe.object.visible=false;
 }
 
 function tankIndexFor(object){for(let o=object;o;o=o.parent)if(Number.isInteger(o.userData.tankIndex))return o.userData.tankIndex;return -1;}
 function swingFireAxe(object){
  if(sawBusy())return;
  const index=tankIndexFor(object);
- if(index<0){keyFeedback('Click the glass of a tank, or put the axe back.');return;}
- if(figpalHoists.tanks[index].broken){keyFeedback('That tank is already broken.');return;}
+ if(index<0){return;}
+ if(figpalHoists.tanks[index].broken){return;}
  if(axeInteraction.strike(index,state.time,restraint.locked)){
-  prepareSawAction();keyFeedback('You swing the fire axe into the tank.');
+  prepareSawAction();
  }
 }
-function keyFeedback(message){chargingToast=message;chargingToastUntil=state.time+4.5;restraintStatus.textContent=message;}
 function useKeyObject(action){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  arrivalCameraMove.cancel();resetting=false;
  if(action==='pour'){
-  if(ketchupKey.pour(state.time))keyFeedback('You tip the bottle. Something metal is sliding through the ketchup…');
-  else keyFeedback(ketchupKey.hint('pour'));
+  ketchupKey.pour(state.time);
  }else if(action==='collect'&&ketchupKey.collect()){
-  inventory.add('key');keyFeedback('Shackle key collected. Click your shackle and choose Detach instance.');
+  inventory.add('key');
   restraint.requestReach(state.time);
  }
 }
 function useCharging(action){
  if(!action||rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(['strip','laptop'].includes(action)&&inventory.equipped!=='charger'){keyFeedback('Equip the charger from Inventory first.');return;}
+ if(['strip','laptop'].includes(action)&&inventory.equipped!=='charger'){return;}
  const wasOpen=chargingKit.drawerOpen,previousPhase=chargingKit.phase;
  hoveredChargingAction=null;canvas.classList.remove('over-charging');
  if(restraint.locked)restraint.requestReach(state.time);
- if(action==='charger'&&chargingKit.phase==='drawer'&&!chargingKit.drawerReady&&!restraint.locked){chargingToast='Let the drawer finish opening.';}
- else chargingToast=chargingKit.use(action,state.time,restraint.locked);
+ if(!(action==='charger'&&chargingKit.phase==='drawer'&&!chargingKit.drawerReady&&!restraint.locked))chargingKit.use(action,state.time,restraint.locked);
  if(previousPhase==='drawer'&&chargingKit.phase==='carrying')inventory.add('charger');
  if(previousPhase==='powered'&&chargingKit.phase==='charging')inventory.remove('charger');
- chargingToastUntil=state.time+3.8;restraintStatus.textContent=chargingToast;arrivalCameraMove.cancel();resetting=false;
+ arrivalCameraMove.cancel();resetting=false;
  if(!restraint.locked){
   if(action==='drawer'&&!wasOpen&&chargingKit.drawerOpen){acidCamera.cancel();alarmCamera.cancel();releaseControls();drawerCamera.start(state.time);}
   else if((action==='drawer'&&wasOpen&&!chargingKit.drawerOpen)||(previousPhase==='drawer'&&chargingKit.phase==='carrying')){releaseControls();drawerCamera.restore(state.time);}
  }
-}
-function updateChargingHint(){
- const label=axeInteraction.held?(state.time<chargingToastUntil?chargingToast:'Click the bottom of a tank to smash it · Put away stores the axe'):selectingAnimal?(state.time<chargingToastUntil?chargingToast+' · Esc to cancel':'Click a stuffed animal to saw · Esc to cancel'):state.time<chargingToastUntil?chargingToast:hoveredChair?(restraint.locked?'Unlock your shackle to climb onto the chair':chairSeat.occupied?'You are sitting above the acid':'Sit on the Aeron chair'):hoveredDocument?'Inspect '+documents.entries.get(hoveredDocument).title:hoveredFish?'Examine the PM’s skull clue':hoveredSupply?`Take ${ITEMS[hoveredSupply]?.name??hoveredSupply}`:hoveredMobile?'Inspect the tangled animal mobile':hoveredKeypad?'Use door keypad':hoveredAlarm?fireAlarm.hint():hoveredKeyAction?ketchupKey.hint(hoveredKeyAction):hoveredChargingAction?chargingKit.hint(hoveredChargingAction):ketchupKey.hasKey&&restraint.locked?'Shackle key collected · Click the shackle to unlock':chargingKit.hint(null);
- if(chargingHint.textContent!==label)chargingHint.textContent=label;chargingHint.hidden=!label||documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||gameEnded||gameWon||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||laptopOpening.active;
 }
 function openLaptop(){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
@@ -686,7 +678,7 @@ function openLaptop(){
  }
  if(chargingKit.phase==='powered'&&inventory.equipped==='charger'){useCharging('laptop');return;}
  chargingKit.syncPower();
- if(laptop.isOpen&&!laptop.isPowered){keyFeedback('The laptop is out of power. Connect the charger to use it.');return;}
+ if(laptop.isOpen&&!laptop.isPowered){return;}
  if(laptop.isOpen){finishOpeningLaptop();return;}
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
  if(laptopOpening.start(state.time)){
@@ -696,15 +688,15 @@ function openLaptop(){
 }
 function finishOpeningLaptop(fromHand=false){
  chargingKit.syncPower();
- if(!laptop.isPowered){keyFeedback('The laptop is out of power. Connect the charger to use it.');return;}
+ if(!laptop.isPowered){return;}
  if(!fromHand&&!laptop.open())return;
  restraintStatus.textContent='You lift the lid and let go. The laptop is open.';
  canvas.classList.remove('over-laptop');
- canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro').replace(' Click the laptop or press Enter to open it.',''));
+ canvas.setAttribute('aria-label',canvas.getAttribute('aria-label').replace('a closed MacBook Pro','an open MacBook Pro'));
 }
 function grabMug(){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. Detach the shackle before picking up the mug.";return;}
+ if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent='The chain pulls tight.';return;}
  if(!mugTrap.start(state.time))return;
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
  releaseControls();arrivalCameraMove.cancel();resetting=false;chainMenu.hide();
@@ -716,34 +708,34 @@ function clearSawSelection(){selectingAnimal=false;cancelSawSelection.hidden=tru
 function prepareSawAction(){drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();arrivalCameraMove.cancel();resetting=false;releaseControls();chainMenu.hide();}
 function grabSaw(){
  if(sawBusy())return;
- if(!inventory.has('saw')){inventory.add('saw');handsaw.visible=false;keyFeedback('Handsaw collected. Equip it from Inventory.');return;}
- if(inventory.equipped!=='saw'){keyFeedback('Equip the handsaw from Inventory.');return;}
+ if(!inventory.has('saw')){inventory.add('saw');handsaw.visible=false;return;}
+ if(inventory.equipped!=='saw'){return;}
  putAxeBack();clearSawSelection();prepareSawAction();sawMenu.show();
 }
 function sawShackle(){
  if(sawBusy()||ketchupKey.hasKey||!restraint.locked)return;
  handsaw.visible=true;if(!sawTrap.start(state.time))return;
- prepareSawAction();chargingToast='';chargingHint.hidden=true;canvas.classList.remove('over-saw');
+ prepareSawAction();canvas.classList.remove('over-saw');
  restraintStatus.textContent='You try to saw through the shackle, but the blade slips against your wrist.';
 }
 function chooseStuffedAnimal(){
  if(sawBusy())return;
- if(restraint.locked){keyFeedback('Unlock your shackle before cutting a stuffed animal.');return;}
- prepareSawAction();selectingAnimal=true;cancelSawSelection.hidden=false;keyFeedback('Choose one of the stuffed animals on the floor.');
+ if(restraint.locked){return;}
+ prepareSawAction();selectingAnimal=true;cancelSawSelection.hidden=false;
  const target=stuffedAnimals[0].object.getWorldPosition(new THREE.Vector3());target.y+=.10;
  const direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=.78;
 }
 function cutStuffedAnimal(object){
  if(sawBusy())return;
- if(restraint.locked){clearSawSelection();keyFeedback('Unlock your shackle before cutting a stuffed animal.');return;}
- if(!object?.userData.stuffedAnimal){keyFeedback('Click a stuffed animal, or press Escape to put the saw down.');return;}
- handsaw.visible=true;if(!plushCut.start(object,state.time,restraint.locked)){keyFeedback('That animal is already split open. Choose another one.');return;}
- clearSawSelection();prepareSawAction();chargingToast='';
+ if(restraint.locked){clearSawSelection();return;}
+ if(!object?.userData.stuffedAnimal){return;}
+ handsaw.visible=true;if(!plushCut.start(object,state.time,restraint.locked)){return;}
+ clearSawSelection();prepareSawAction();
  restraintStatus.textContent=`You saw into the stuffed ${object.userData.stuffedAnimal.toLowerCase()}. Cotton filling spills out.`;
 }
 function openTankValve(index){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. Detach the shackle before turning a tank valve.";return;}
+ if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent='The chain pulls tight.';return;}
  if(acidLeaks.open(index,state.time,restraint.locked)){
   drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
   arrivalCameraMove.cancel();resetting=false;chainMenu.hide();
@@ -754,11 +746,10 @@ function openTankValve(index){
 }
 function pullFireAlarm(){
  if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(restraint.locked){restraint.requestReach(state.time);keyFeedback('The chain holds you back. Unlock the shackle before pulling the fire alarm.');return;}
+ if(restraint.locked){restraint.requestReach(state.time);return;}
  const outcome=fireAlarm.pull(state.time);
- if(!outcome){keyFeedback('The fire alarm has already been pulled.');return;}
+ if(!outcome){return;}
  releaseControls();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();chainMenu.hide();resetting=false;
- keyFeedback(outcome==='fire'?'You pull the alarm. The ceiling sprinklers start smothering the fire.':outcome==='acid'?'You pull the alarm. Water is falling toward the spilled acid…':'You pull the alarm. Water is pouring onto the laptop…');
  alarmCamera.start(state.time,fireAlarm.target);
 }
 function nearestTankValve(){
@@ -818,9 +809,8 @@ const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-
 function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
- chargingToast='';chargingToastUntil=0;chargingHint.hidden=true;
  inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
- gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fishClueAnnounced=false;fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
+ gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;
  document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -871,9 +861,9 @@ document.addEventListener('keydown',event=>{
   else if(event.code.startsWith('Arrow')){event.preventDefault();mobileCamera.drag(event.code==='ArrowLeft'?-12:event.code==='ArrowRight'?12:0,event.code==='ArrowUp'?12:event.code==='ArrowDown'?-12:0,state.time);}
   return;
  }
- if(axeInteraction.held&&event.code==='Escape'){event.preventDefault();putAxeBack();keyFeedback('The axe is stored in Inventory.');return;}
+ if(axeInteraction.held&&event.code==='Escape'){event.preventDefault();putAxeBack();return;}
  if(axeInteraction.held&&!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyR'].includes(event.code))return;
- if(selectingAnimal&&event.code==='Escape'){event.preventDefault();clearSawSelection();keyFeedback('You put the saw down.');return;}
+ if(selectingAnimal&&event.code==='Escape'){event.preventDefault();clearSawSelection();return;}
  if(selectingAnimal&&!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyR'].includes(event.code))return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
  if(event.code==='Escape'&&drawerCamera.active){event.preventDefault();leaveInspection();return;}
@@ -903,8 +893,8 @@ canvas.addEventListener('contextmenu',event=>{
  if(documentViewer.active){leaveInspection();return;}
  if(mobilePuzzle.active){closeMobileInspection();return;}
  if(rescueChairs.state.pulling||chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(axeInteraction.held){putAxeBack();keyFeedback('The axe is stored in Inventory.');return;}
- if(selectingAnimal){clearSawSelection();keyFeedback('You put the saw down.');return;}
+ if(axeInteraction.held){putAxeBack();return;}
+ if(selectingAnimal){clearSawSelection();return;}
  if(restraint.locked&&interactionAt(event)===restraint.target)chainMenu.show(event.clientX,event.clientY);else chainMenu.hide();
 });
 canvas.addEventListener('pointerdown',event=>{
@@ -930,7 +920,7 @@ canvas.addEventListener('pointermove',event=>{
 canvas.addEventListener('pointerup',event=>{
  if(event.pointerId!==dragPointer)return;
  dragPointer=null;chairDragCandidate=null;
- if(rescueChairs.moving!==null){const hit=interactionAt(event);if(Number.isInteger(hit?.userData.rescueSlot)&&rescueChairs.place(hit.userData.rescueSlot))keyFeedback('The repaired chair rolls into position.');return;}
+ if(rescueChairs.moving!==null){const hit=interactionAt(event);if(Number.isInteger(hit?.userData.rescueSlot))rescueChairs.place(hit.userData.rescueSlot);return;}
  if(documentViewer.active){if(!documentViewer.returning&&pointerDistance<6){const hit=interactionAt(event);if(doorKeypadUI.active&&hit?.userData.keypadKey)doorKeypadUI.press(hit.userData.keypadKey);else if(!doorKeypadUI.active&&hit?.userData.wallDocument&&hit!==documentViewer.target)inspectDocument(hit);}return;}
  if(mobilePuzzle.active){
   if(pointerDistance<6){const hit=interactionAt(event);if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)mobileUI.activate();}
@@ -1051,17 +1041,15 @@ function render(){
  puppet.position.y=riderSeatY+state.jaw*maxMouthTravel*riderScale;
  const mobileEvent=mobileInspection.update(t,reducedMotion);mobileUI.sync();syncInspectionBack();syncChairButton();syncSupplies();
  if(mobileEvent==='restring')inventory.remove('string');
- if(mobileEvent)keyFeedback(mobileEvent==='cut'?'The tangled cords are cut. Restring the mobile next.':'Mobile repaired. Try a different perspective.');
  axeInteraction.update(t,reducedMotion);cancelAxeSelection.disabled=axeInteraction.active;
  const physicalPosition=chairSeat.occupied?chairSeat.hazardPosition:documentViewer.origin;
  const acidFinished=!fireAlarm.dying&&acidLeaks.update(t,dt,physicalPosition,camera,reducedMotion,{protectedFromAcid:chairSeat.protectedFromAcid});
  const fireFinished=fireHazard.update(t,dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
  const alarmFinished=fireAlarm.update(t,camera,reducedMotion);
- const fireMessage=fireHazard.takeMessage();if(fireMessage&&!fireAlarm.dying){chargingToast=fireMessage;chargingToastUntil=t+5;restraintStatus.textContent=fireMessage;}
  if(acidLeaks.dying||fireHazard.dying||fireAlarm.dying)releaseControls();
  const mugFinished=mugTrap.update(t,reducedMotion);
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
- if(plushCut.update(t,reducedMotion)){handsaw.visible=false;keyFeedback('The seam is split. Stuffing is scattered across the floor.');}
+ if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
  const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(t)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(t)>0,acid:acidLeaks.blackout(t)>0,mug:mugTrap.blackout>0});
  if(failureCause){deathTransition.start(t,reducedMotion,gameOverStyle(failureCause));document.body.classList.add('mug-impact');}
@@ -1075,13 +1063,9 @@ function render(){
  else if(acidFinished)endGame('The corrosive green liquid reaches you. Game over.','acid');
  else if(mugFinished)endGame("The mug's pointed ears hit your eyes. Everything goes dark. Game over.",'mug');
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
- const powerMessage=chargingKit.takePowerMessage();if(powerMessage&&!gameEnded)keyFeedback(powerMessage);
- updateChargingHint();
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
  if(chairSeat.seated&&!documentViewer.active&&!mobilePuzzle.active&&!drawerCamera.active)cameraPosition.add(rescueChairs.playerOffset);
  inventoryUI.sync();syncRescueControls();
- const rescueMessage=rescueChairs.takeMessage();if(rescueMessage)keyFeedback(rescueMessage);
- if(escapePuzzle.fishRevealed&&!fishClueAnnounced){fishClueAnnounced=true;keyFeedback('The PM’s animal-order clue is revealed. Inspect the skull.');}
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.

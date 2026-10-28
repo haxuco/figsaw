@@ -29,11 +29,11 @@ export function createDoorKeypad(){
  for(const x of[-.099,.099])for(const y of[-.161,.161]){const screw=new THREE.Mesh(new THREE.CircleGeometry(.004,8),metal);screw.position.set(x,y,.038);group.add(screw);}
  setDisplay();batchStaticScenery(group,{exclude:[display,...buttons],minObjects:2});return {group,setDisplay,update:paint};
 }
-export function createDoorKeypadUI({keypad,locked,onUnlock,onFeedback,puzzle,onOpen,onClose}){
+export function createDoorKeypadUI({keypad,locked,onUnlock,puzzle,onOpen,onClose}){
  const state=createDirectionalKeypadState(puzzle);let active=false;
  function paint(message=''){keypad.setDisplay(state.entry,state.selected,state.unlocked?'OPEN':message==='Incorrect order.'?'ERROR':'');}
- function press(key){if(!active)return;const message=state.press(key,{locked:locked()});paint(message);onFeedback(message||`Keypad: ${state.entry}.`);if(state.unlocked){hide();onUnlock();}}
- function show(){if(locked()){onFeedback('Unlock your shackle before using the keypad.');return;}active=true;paint();onOpen(keypad.group);onFeedback('Door keypad. Left/right selects a digit. Up/down changes it. OK submits.');}
+ function press(key){if(!active)return;const message=state.press(key,{locked:locked()});paint(message);if(state.unlocked){hide();onUnlock();}}
+ function show(){if(locked())return;active=true;paint();onOpen(keypad.group);}
  function hide(immediate=true){if(!active)return;active=false;onClose(immediate);}
  return {show,hide,press,reset(){state.reset();hide();paint();},get active(){return active;},get unlocked(){return state.unlocked;}};
 }

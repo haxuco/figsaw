@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createMobilePuzzleState,createDoorKeypadState,createEscapePuzzle,ANIMAL_DIGITS} from '../dist/mobile-puzzle-state.js';
 import {createFallenMobile} from '../dist/fallen-mobile.js';
-import {createMobileInspection} from '../dist/mobile-inspection.js';
+import {createMobileInspection,createMobileInspectionUI} from '../dist/mobile-inspection.js';
 import {createMobileSupplies} from '../dist/mobile-supplies.js';
 import {createMobileCamera} from '../dist/mobile-camera.js';
 import {createFireAxe} from '../dist/fire-axe.js';
@@ -16,6 +16,22 @@ test('decorative axe grain does not intercept a ray aimed at the neighboring doo
 });
 
 function collect(state){for(const item of['scissors','string'])assert.equal(state.collect(item,{drawerReady:true}),true);}
+test('mobile repairs work without a hint overlay and still require the correct equipped supply',()=>{
+ const previous=globalThis.document,classes=new Set();
+ globalThis.document={body:{classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}}}};
+ try{
+  const state=createMobilePuzzleState();let equipped=null,time=0;
+  const ui=createMobileInspectionUI({state,time:()=>time,equipped:()=>equipped});
+  collect(state);state.inspect();ui.sync();assert.ok(classes.has('inspecting-mobile'));
+  ui.activate();assert.equal(state.action,null);
+  equipped='string';ui.activate();assert.equal(state.action,null);
+  equipped='scissors';ui.activate();assert.equal(state.action,'cut');
+  time=2;state.update(time);ui.activate();assert.equal(state.action,null);
+  equipped='string';ui.activate();assert.equal(state.action,'restring');
+  time=5;state.update(time);assert.equal(state.phase,'repaired');assert.equal(state.has('string'),false);
+  state.close();ui.sync();assert.ok(!classes.has('inspecting-mobile'));
+ }finally{globalThis.document=previous;}
+});
 test('supplies require a free wrist and an open ready drawer; cutting and restringing have distinct dependencies',()=>{
  const s=createMobilePuzzleState();assert.equal(s.inspect(true),false);assert.equal(s.collect('scissors',{locked:true,drawerReady:true}),false);assert.equal(s.collect('string'),false);assert.equal(s.collect('charger',{drawerReady:true}),false);
  assert.equal(s.inspect(),true);assert.equal(s.cut(0),false);assert.equal(s.restring(0),false);collect(s);assert.equal(s.collect('scissors',{drawerReady:true}),false);

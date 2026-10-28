@@ -26,7 +26,7 @@ test('new skull lettering shares bone clipping while the fish is still partially
  t.update(.4);assert.equal(t.transformed,true);t.update(-10);assert.equal(t.transformed,true);t.reset();assert.equal(t.skeleton.visible,false);
 });
 test('real keypad input respects the wrist lock and uses the same randomized exit code',()=>{
- const puzzle=createEscapePuzzle(()=>.2);let locked=true,opened=0,closed=0,escaped=0,display='';const ui=createDoorKeypadUI({keypad:{group:{},setDisplay:v=>display=v},puzzle,locked:()=>locked,onOpen:()=>opened++,onClose:()=>closed++,onUnlock:()=>escaped++,onFeedback(){}});
+ const puzzle=createEscapePuzzle(()=>.2);let locked=true,opened=0,closed=0,escaped=0,display='';const ui=createDoorKeypadUI({keypad:{group:{},setDisplay:v=>display=v},puzzle,locked:()=>locked,onOpen:()=>opened++,onClose:()=>closed++,onUnlock:()=>escaped++});
  ui.show();assert.equal(opened,0);ui.press('1');assert.equal(display,'');locked=false;ui.show();assert.equal(opened,1);for(const digit of puzzle.code){for(let i=0;i<Number(digit);i++)ui.press('up');ui.press('right');}assert.equal(display,puzzle.code);ui.press('enter');assert.equal(escaped,1);assert.equal(closed,1);assert.equal(ui.active,false);assert.equal(display,puzzle.code);
 });
 

@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=6927e94ae004">
-  <link rel="modulepreload" href="./game.bundle.js?v=448c119f591b">
+  <link rel="stylesheet" href="./style.css?v=a1eb9574b65e">
+  <link rel="modulepreload" href="./game.bundle.js?v=956ad48f7eae">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -18,11 +18,10 @@
       <progress id="loading-progress" max="100" aria-label="Loading Figsaw"></progress>
     </div>
   </div>
-  <canvas id="scene" tabindex="0" aria-label="An abandoned technology office with three worried Figpals hanging from chain winches above green vats on the left, a closed MacBook Pro and a red LED countdown timer on the floor and a smaller Figsaw riding out of a dark corner. Click a winch or its canister control, or press 1, 2, or 3, to lower and raise the matching Figpal. Click the laptop or press Enter to reach for it. Collect the handsaw and equip it from Inventory to choose a target. Escape cancels animal selection. After detaching the shackle, click the blue cat mug or press M to drink. Click a red tank drain valve or press V for the nearest tank to open it. After freeing your wrist, click the red FIRE pull station beside the rear door to release the ceiling sprinklers. Once unlocked, collect and equip the fire axe to break the bottom of a tank. Put away returns tools to Inventory. Your wrist is chained to the rear pipes. Pour the glass ketchup bottle beside the cat mug, collect the key, then click or right-click the shackle and choose Detach instance to free your hand. Open the rear SUPPLIES drawer, collect scissors and string to repair the animal mobile. Collect the ratchet wrench to fix chairs with salvaged parts. Recover chains from fully lowered hoists to link chairs. Or collect the charger, plug it into the power strip, then connect the MacBook. Equip the charger to connect it to the power strip and laptop. Click wall posters, whiteboards and sticky notes to inspect them; drag or pinch their close-ups to zoom. Repair the mobile and solve the animal-order puzzle to unlock the door keypad. Click the Aeron chair on your left after unlocking your shackle to sit above the acid. Use Leave chair or Escape to climb down. Your position is fixed. Drag or use arrow keys to look around, and scroll to zoom. Hold Space to open his mouth. Press R to reset the view and replay his entrance."></canvas>
+  <canvas id="scene" tabindex="0" aria-label="An abandoned technology office with three Figpals suspended above green vats, a closed MacBook Pro and a red countdown timer on the floor, and Figsaw on a tricycle. Drag or use arrow keys to look around; scroll to zoom."></canvas>
   <output id="frame-rate" aria-label="Frames per second" aria-live="off">— FPS</output>
   <button id="cancel-axe-selection" type="button" hidden>Put axe back</button>
   <button id="cancel-saw-selection" type="button" hidden>Put saw down</button>
-  <p id="charging-hint" hidden aria-live="off"></p>
   <div id="mug-eye-impact" aria-hidden="true" hidden></div>
   <div id="death-blood" aria-hidden="true" hidden></div>
   <section id="game-over" role="dialog" aria-modal="true" aria-labelledby="game-over-title" hidden>
@@ -48,9 +47,6 @@
   </dialog>
   <button id="leave-chair" class="inspection-back" type="button" hidden>‹ LEAVE CHAIR</button>
   <button id="inspection-back" class="inspection-back" type="button" hidden aria-label="Back to room">‹ BACK</button>
-  <section id="mobile-inspection" aria-label="Inspect the animal mobile" hidden>
-    <div class="inspection-heading"><p data-mobile-status aria-live="polite"></p></div>
-  </section>
   <section id="escaped" role="dialog" aria-modal="true" aria-labelledby="escaped-title" hidden><h1 id="escaped-title">You escaped.</h1><p>A little perspective changes everything.</p><button id="new-game">Play again</button></section>
   <div id="chain-menu" role="menu" aria-label="Chain instance" hidden>
     <button type="button" role="menuitem" aria-keyshortcuts="Alt+Meta+B">
@@ -81,6 +77,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=448c119f591b"></script>
+  <script type="module" src="./boot.js?v=956ad48f7eae"></script>
 </body>
 </html>
