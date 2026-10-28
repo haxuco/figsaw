@@ -1,11 +1,17 @@
 import * as THREE from './vendor/three.module.js';
-import { weatheredMetal } from './industrial-materials.js?v=brighter-liquid';
 
 export function createFloorHandsaw(timerPosition){
  const group=new THREE.Group();group.name='Worn handsaw beside the countdown timer';
  group.position.copy(timerPosition).add(new THREE.Vector3(-.34,0,.25));group.position.y=0;group.rotation.y=-.12;group.rotation.z=.026;
  const flat=new THREE.Group();flat.rotation.x=-Math.PI/2;group.add(flat);
- const steel=weatheredMetal(0xc5ccc6);steel.bumpScale=.00045;
+ // Neutral brushed steel, without the reddish rust patches of the shared metal.
+ const steelPixels=new Uint8Array(128*128*4);
+ for(let y=0;y<128;y++)for(let x=0;x<128;x++){
+  const i=(y*128+x)*4,value=181+Math.sin(y*2.7+x*.013)*10+Math.sin(y*.33)*5;
+  steelPixels[i]=value;steelPixels[i+1]=value+3;steelPixels[i+2]=value+4;steelPixels[i+3]=255;
+ }
+ const steelMap=new THREE.DataTexture(steelPixels,128,128);steelMap.colorSpace=THREE.SRGBColorSpace;steelMap.needsUpdate=true;
+ const steel=new THREE.MeshStandardMaterial({color:0xc5ccce,map:steelMap,bumpMap:steelMap,bumpScale:.00018,metalness:.82,roughness:.46});
  const edge=new THREE.MeshStandardMaterial({color:0xa9b1ac,metalness:.72,roughness:.38});
  const brass=new THREE.MeshStandardMaterial({color:0x9c8758,metalness:.68,roughness:.62});
  const dark=new THREE.MeshStandardMaterial({color:0x30291d,roughness:1});
@@ -32,7 +38,7 @@ export function createFloorHandsaw(timerPosition){
   blade.lineTo(x,y);if(i>0)blade.lineTo(x-.55/count*.40,y-.009);
  }
  blade.lineTo(-.365,.025);blade.closePath();
- const plate=extrusion(blade,.0028,.00035,[steel,edge]);plate.name='Tapered pitted steel blade with saw teeth';
+ const plate=extrusion(blade,.0028,.00035,[steel,edge]);plate.name='Tapered brushed steel blade with saw teeth';
  const handle=new THREE.Shape();handle.moveTo(.145,.092);handle.bezierCurveTo(.19,.119,.31,.116,.338,.079);handle.lineTo(.326,-.079);handle.quadraticCurveTo(.314,-.111,.278,-.102);handle.lineTo(.172,-.085);handle.quadraticCurveTo(.153,-.070,.157,-.047);handle.lineTo(.17,.046);handle.closePath();
  const grip=new THREE.Path();grip.moveTo(.214,.055);grip.quadraticCurveTo(.24,.072,.283,.055);grip.lineTo(.283,-.057);grip.quadraticCurveTo(.253,-.065,.226,-.052);grip.lineTo(.209,.032);grip.closePath();handle.holes.push(grip);
  const woodenHandle=extrusion(handle,.026,.006,wood);woodenHandle.name='Worn wooden open grip';

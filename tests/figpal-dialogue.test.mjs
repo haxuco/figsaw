@@ -7,10 +7,14 @@ function fixture(){
   {show:(...args)=>spoken.push(args),hide:i=>hidden.push(i)},i=>dry.has(i),()=>.4);
  return{dry,silent,lowered,spoken,hidden,dialogue};
 }
-test('each occupied acid tank keeps its original panic line; only the drained tank gets relief',()=>{
+test('unsafe manual and timed descents get desperate pleas; only a drained tank gets relief',()=>{
  const f=fixture();f.dry.add(1);
- assert.equal(f.dialogue.show(0,2),FIGPAL_PLEAS[0]);assert.ok(FIGPAL_RELIEF.includes(f.dialogue.show(1,2)));assert.equal(f.dialogue.show(2,2),FIGPAL_PLEAS[2]);
+ assert.ok(FIGPAL_PLEAS.includes(f.dialogue.show(0,2)));assert.ok(FIGPAL_RELIEF.includes(f.dialogue.show(1,2)));assert.ok(FIGPAL_PLEAS.includes(f.dialogue.show(2,2)));
  assert.deepEqual(f.spoken.map(s=>s[0]),[0,1,2]);
+});
+test('every desperate plea gets a turn before repeating, even across retry',()=>{
+ const f=fixture(),lines=Array.from({length:FIGPAL_PLEAS.length},(_,i)=>f.dialogue.show(i%3,i));
+ assert.deepEqual(new Set(lines),new Set(FIGPAL_PLEAS));f.dialogue.reset();assert.notEqual(f.dialogue.show(0,30),lines.at(-1));
 });
 test('all relief lines get a turn before repeating, and the next bag never repeats its last line',()=>{
  const f=fixture();[0,1,2].forEach(i=>f.dry.add(i));

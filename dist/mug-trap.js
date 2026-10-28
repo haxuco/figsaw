@@ -1,6 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 
 const smooth=(value,start,end)=>THREE.MathUtils.smootherstep(value,start,end);
+export const MUG_VISION_SECONDS=30;
 
 // Lift the actual floor prop by its handle, then bring its pointed ears to eye level.
 export function createMugTrap({mug,camera,restraint}){
@@ -14,7 +15,8 @@ export function createMugTrap({mug,camera,restraint}){
  const handle=mug.getObjectByName('Mug handle grip'),earTips=['Mug left ear tip','Mug right ear tip'].map(name=>mug.getObjectByName(name));
  const earCenter=new THREE.Vector3(),earPoint=new THREE.Vector3(),earOffset=new THREE.Vector3(),earSpan=new THREE.Vector3(),mugScale=new THREE.Vector3();
  const hand={position:new THREE.Vector3(),quaternion:new THREE.Quaternion(),blend:0,grip:0,reveal:0,gripKind:'handle'};
- let startedAt=null,finished=false,blackout=0,eyeImpact=0,eyeGrowth=0,eyeDrip=0,eyeSpread=.82;
+ let startedAt=null,finished=false,released=false,eyeImpact=0,eyeGrowth=0,eyeDarkness=0,eyeSpread=.82;
+ function putDown(){mug.position.copy(homePosition);mug.quaternion.copy(homeRotation);mug.updateWorldMatrix(true,false);hand.blend=hand.grip=hand.reveal=0;restraint.endReach();released=true;}
  function start(time){
   if(restraint.locked||startedAt!==null||finished||!restraint.requestReach(time))return false;
   mug.updateWorldMatrix(true,false);mug.getWorldQuaternion(floorRotation);
@@ -34,18 +36,12 @@ export function createMugTrap({mug,camera,restraint}){
   eyeSpread=Math.abs(earSpan.x)*.5*projection[0]/contactDepth;
   function eyeLine(depth,out){return out.set(0,.08*depth/projection[5],-depth).applyQuaternion(eyeRotation).add(eyePosition);}
   eyeLine(contactDepth+.30,heldPosition);eyeLine(contactDepth,drinkPosition);
-  startedAt=time;blackout=eyeImpact=eyeGrowth=eyeDrip=0;hand.blend=hand.grip=hand.reveal=0;return true;
+  startedAt=time;released=false;eyeImpact=eyeGrowth=eyeDarkness=0;hand.blend=hand.grip=hand.reveal=0;return true;
  }
  function update(time,reducedMotion=false){
   if(startedAt===null||finished)return false;
   const elapsed=time-startedAt;
-  if(reducedMotion){
-   eyeImpact=smooth(elapsed,.15,.20);
-   eyeGrowth=.12*smooth(elapsed,.20,.65);
-   eyeDrip=0;
-   blackout=smooth(elapsed,.65,1.15);
-   if(elapsed<1.25)return false;
-  }else{
+  if(!reducedMotion&&!released){
    const lift=smooth(elapsed,.82,2.12),sip=smooth(elapsed,2.28,4.05);
    drinkRotation.setFromAxisAngle(new THREE.Vector3(1,0,0),.82*sip);
    localRotation.copy(eyeRotation).multiply(drinkRotation).multiply(halfTurn);
@@ -58,24 +54,26 @@ export function createMugTrap({mug,camera,restraint}){
    worldPosition.addScaledVector(recoil,smooth(elapsed,4.60,5.05));
    mug.position.copy(worldPosition);mug.parent.worldToLocal(mug.position);
    mug.parent.getWorldQuaternion(parentRotation);mug.quaternion.copy(parentRotation.invert()).multiply(worldRotation);
+   const returning=smooth(elapsed,4.7,6.2);mug.position.lerp(homePosition,returning);mug.quaternion.slerp(homeRotation,returning);
    mug.updateWorldMatrix(true,false);
    handle.getWorldPosition(hand.position);
    // Thumb up, fingers stacked vertically around the handle. Counter the cup's
    // half-turn so the wrist still points back toward the viewer's forearm.
    hand.quaternion.copy(worldRotation).multiply(halfTurn).multiply(handleRotation);
    hand.blend=smooth(elapsed,0,.72);hand.grip=smooth(elapsed,.48,.80);hand.reveal=smooth(elapsed,0,.22);
-   // Reach the larger close-up first, then hold it briefly before the puncture marks appear.
-   eyeImpact=smooth(elapsed,4.25,4.31);
-   eyeGrowth=smooth(elapsed,4.31,6.35);
-   eyeDrip=smooth(elapsed,4.40,5.85);
-   blackout=smooth(elapsed,6.45,7.20);
-   if(elapsed<7.30)return false;
   }
-  finished=true;blackout=1;restraint.endReach();return true;
+  if(!released&&elapsed>=(reducedMotion?.65:6.2))putDown();
+  // Control returns once the cup is down. Only the camera-space blind spots
+  // remain, fading out during the final three seconds of a 30-second recovery.
+  const contact=reducedMotion?.15:4.25;
+  eyeImpact=smooth(elapsed,contact,contact+.06)*(1-smooth(elapsed,contact+MUG_VISION_SECONDS-3,contact+MUG_VISION_SECONDS));
+  eyeDarkness=smooth(elapsed,contact+.45,contact+1.8);
+  eyeGrowth=reducedMotion?1:smooth(elapsed,contact+.35,contact+2);
+  if(elapsed<contact+MUG_VISION_SECONDS)return false;
+  finished=true;eyeImpact=0;putDown();return true;
  }
  function reset(){
-  startedAt=null;finished=false;blackout=eyeImpact=eyeGrowth=eyeDrip=0;mug.position.copy(homePosition);mug.quaternion.copy(homeRotation);mug.updateWorldMatrix(true,false);
-  hand.blend=hand.grip=hand.reveal=0;restraint.endReach();
+  startedAt=null;finished=false;eyeImpact=eyeGrowth=eyeDarkness=0;putDown();released=false;
  }
- return {start,update,reset,get active(){return startedAt!==null&&!finished;},get finished(){return finished;},get blackout(){return blackout;},get eyeSpread(){return eyeSpread;},get eyeImpact(){return eyeImpact;},get eyeGrowth(){return eyeGrowth;},get eyeDrip(){return eyeDrip;},get handPose(){return startedAt!==null&&!finished?hand:null;}};
+ return {start,update,reset,get active(){return startedAt!==null&&!released&&!finished;},get recovering(){return startedAt!==null&&!finished;},get finished(){return finished;},get eyeSpread(){return eyeSpread;},get eyeImpact(){return eyeImpact;},get eyeGrowth(){return eyeGrowth;},get eyeDarkness(){return eyeDarkness;},get handPose(){return startedAt!==null&&!released&&!finished?hand:null;}};
 }

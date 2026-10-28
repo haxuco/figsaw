@@ -1,7 +1,18 @@
 import * as THREE from './vendor/three.module.js';
 
-export const FIGPAL_PLEAS=['Nooo!!!!','Tell my wife that I love her!','Delete my browser history!'];
-export const HANGING_PLEAS=['help','I have a family',"I swear I didn't detach the component!"];
+export const FIGPAL_PLEAS=Object.freeze([
+ 'Please! I can fix the auto layout!',
+ 'One more undo! Please!',
+ "I'll name every layer! I swear!",
+ "Don't flatten me!",
+ "I haven't saved my changes!",
+ 'My prototype still has potential!',
+ "I'll stop detaching components!",
+ 'Please! My work is still in draft!',
+ "I'll hand off properly this time!",
+ 'Keep me in the component library!'
+]);
+export const HANGING_PLEAS=['Help! I can still fix this!',"I swear I didn't detach the component!",'Please! I have unpublished changes!',"I'll document the design system!"];
 export const FIGPAL_RELIEF=Object.freeze([
  "We're saved!",
  'A rolling release!',
@@ -16,7 +27,7 @@ export const FIGPAL_RELIEF=Object.freeze([
  'This counts as PTO, right?',
  'Survived another sprint!',
  'Finally, a safe drop shadow!',
- "Tell my wife I'm... fine?",
+ 'Tell the team I passed QA!',
  'I take back the browser thing!',
  'Five stars. Chair service.',
  'Less toxic than my last job!',
@@ -29,22 +40,25 @@ export const FIGPAL_RELIEF=Object.freeze([
  'Can we expense therapy?'
 ]);
 
-// Manual and timed descents share the same tank-aware dialogue. A shuffled bag
-// gives every relief line a turn before repeating, including across game retries.
-export function createFigpalLoweringDialogue(hoists,bubbles,isSafe,random=Math.random){
- const active=new Map();let bag=[],lastLine=null;
- function relief(){
+function shuffledLines(lines,random){
+ let bag=[],lastLine=null;
+ return ()=>{
   if(!bag.length){
-   bag=[...FIGPAL_RELIEF];
+   bag=[...lines];
    for(let i=bag.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]];}
    if(bag.at(-1)===lastLine)[bag[0],bag[bag.length-1]]=[bag.at(-1),bag[0]];
   }
   lastLine=bag.pop();return lastLine;
- }
+ };
+}
+// Manual and timed descents share tank-aware dialogue. Separate shuffled bags
+// give every desperate plea and relief line a turn before repeating.
+export function createFigpalLoweringDialogue(hoists,bubbles,isSafe,random=Math.random){
+ const active=new Map(),relief=shuffledLines(FIGPAL_RELIEF,random),plea=shuffledLines(FIGPAL_PLEAS,random);
  function hide(index){active.delete(index);bubbles.hide(index);}
  function show(index,time){
   if(!hoists.canSpeak(index)){hide(index);return null;}
-  const safe=!!isSafe(index),line=safe?relief():FIGPAL_PLEAS[index];
+  const safe=!!isSafe(index),line=safe?relief():plea();
   active.set(index,safe);bubbles.show(index,time,line);return line;
  }
  return {show,hide,reset(){active.clear();bubbles.hide();},update(time){
@@ -80,10 +94,10 @@ export function createHangingPleas(hoists,bubbles,random=Math.random){
 // Fixed-size bubbles stay centered on their own 3D anchors without reflowing.
 export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
  const container=document.querySelector('#figpal-dialogues');
- const bubbles=FIGPAL_PLEAS.map((line,index)=>{
+ const bubbles=anchors.map((anchor,index)=>{
   const wrapper=document.createElement('div');wrapper.className='figpal-speech';wrapper.hidden=true;
   wrapper.dataset.figpal=String(index+1);
-  const text=document.createElement('span');text.className='figpal-speech-text';text.textContent=line;
+  const text=document.createElement('span');text.className='figpal-speech-text';text.textContent=FIGPAL_PLEAS[index%FIGPAL_PLEAS.length];
   const tail=document.createElementNS('http://www.w3.org/2000/svg','svg');tail.classList.add('figpal-speech-tail');tail.setAttribute('aria-hidden','true');
   const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M 0 0 L 12 0 L 6 15 Z');tail.append(path);
   wrapper.append(text,tail);container.append(wrapper);return wrapper;

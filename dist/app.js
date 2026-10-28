@@ -52,7 +52,7 @@ import {createContactShadows} from './contact-shadows.js';
 import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
 import {installGraphicsRecovery} from './graphics-recovery.js';
 import {createStartupProgress} from './startup-progress.js';
-import {createGameOverTransition,gameOverStyle,gameOverReason,resolveGameOverCause} from './game-over-transition.js';
+import {createGameOverTransition,gameOverReason,resolveGameOverCause} from './game-over-transition.js';
 const loadingStatus=document.querySelector('#loading-status');
 const startupProgress=createStartupProgress(loadingStatus);
 startupProgress.update('Creating Figsaw…');
@@ -483,7 +483,7 @@ const fireWarning=document.querySelector('#fire-warning');
 const gameOverReasonText=document.querySelector('#game-over-reason');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
-const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
+const deathTransition=createGameOverTransition(document.querySelector('#death-transition'));
 const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
 const escapeScreen=document.querySelector('#escaped');
 let diagnosticRunUsed=false;
@@ -878,7 +878,7 @@ function endGame(cause='objective'){
  if(diagnostics.invulnerable){diagnostics.report(`Invulnerability prevented: ${gameOverReason(cause)}`);return;}
  if(gameEnded)return;leaderboardUI.close();laptopProgram.cancel();gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
- deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
+ deathTransition.start(state.time,reducedMotion);
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;loweringDialogue.reset();
  document.body.classList.add('game-over');canvas.inert=true;
  gameOverReasonText.textContent=gameOverReason(cause);
@@ -910,7 +910,7 @@ function resetView({skipIntro=false}={}){
  inventory.reset();movePromptChair=null;inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
  gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';fireWarning.hidden=true;
- document.body.classList.remove('game-over','mug-impact');canvas.inert=false;
+ document.body.classList.remove('game-over','death-active');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
  figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);releaseControls();
@@ -942,7 +942,7 @@ const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
  onExit(){testingMode.setEnabled(false);testingHighlights.group.visible=false;canvas.focus({preventScroll:true});},
  onInvulnerability(value){
   acidLeaks.setInvulnerable(value);fireHazard.setInvulnerable(value);fireAlarm.setInvulnerable(value);
-  if(value){deathTransition.reset();mugImpactOverlay.reset();gameOver.hidden=true;document.body.classList.remove('mug-impact');}
+  if(value){deathTransition.reset();gameOver.hidden=true;document.body.classList.remove('death-active');}
  },
  canRun(){
   if(gameEnded||gameWon||figpalRounds.active||rescueChairs.busy||chairSeat.moving||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||mobilePuzzle.action)return false;
@@ -1177,13 +1177,12 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const failureCause=diagnostics.invulnerable?null:resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,mug:mugTrap.blackout>0});
- if(failureCause){deathTransition.start(t,reducedMotion,gameOverStyle(failureCause));document.body.classList.add('mug-impact');}
+ const failureCause=diagnostics.invulnerable?null:resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0});
+ if(failureCause){deathTransition.start(t,reducedMotion);document.body.classList.add('death-active');}
  const deathFrame=updateGameOver(t);
- if(diagnostics.invulnerable||deathFrame.style==='objective')mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap,deathFrame.blackout);
- if(!diagnostics.invulnerable&&mugTrap.eyeImpact>0)document.body.classList.add('mug-impact');
+ if(deathFrame.visible||deathFrame.blackout>0)mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap);
+ if(mugFinished){mugTrap.reset();mugImpactOverlay.reset();restraintStatus.textContent='Your vision clears.';}
  if(diagnostics.invulnerable){
-  if(mugFinished){mugTrap.reset();mugImpactOverlay.reset();}
   if(sawFinished){sawTrap.reset();handsaw.visible=!inventory.has('saw');}
  }
  if(alarmFinished)endGame(fireAlarm.outcome==='acid'?'explosion':'laptop');
@@ -1191,7 +1190,6 @@ function render(){
  else if(sawFinished)endGame('saw');
  else if(fireFinished)endGame('fire');
  else if(acidFinished)endGame('acid');
- else if(mugFinished)endGame('mug');
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
