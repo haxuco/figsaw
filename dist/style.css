@@ -54,10 +54,21 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 .death-rivulets,.death-blood-sheet{position:absolute;inset:0;width:100%;height:100%;overflow:visible;pointer-events:none}
 .death-blood-sheet{will-change:transform}
 .death-rivulet{transform-origin:50% 0;transform:scaleY(0)}
-#game-over{position:fixed;inset:0;z-index:101;display:grid;place-items:center;background:#000;color:#fff;opacity:0;text-align:center}
+#game-over{position:fixed;inset:0;z-index:101;display:grid;place-items:center;overflow:auto;box-sizing:border-box;padding:16px;background:#000;color:#fff;opacity:0;text-align:center}
+.game-over-content{width:min(100%,600px);margin:auto}
 #game-over[hidden],.game-over-content[hidden]{display:none}
 #game-over h1{margin:0 0 14px;color:#ff2424;font:500 clamp(56px,10vw,112px)/1.1 "Grenze Gotisch",Georgia,serif;letter-spacing:-.035em}
-#game-over-reason{max-width:30ch;margin:0 auto 30px;padding:0 22px;color:#b8aba7;font:400 clamp(16px,2.4vw,20px)/1.5 Georgia,serif;text-wrap:balance}
+#game-over-reason{max-width:30ch;margin:0 auto 18px;padding:0 22px;color:#b8aba7;font:400 clamp(16px,2.4vw,20px)/1.5 Georgia,serif;text-wrap:balance}
+.game-over-attempt{margin:0 0 10px;color:#9d8e88;font:12px monospace}
+#game-over-share{width:min(100%,600px,calc((100dvh - 245px)*1.90476));min-width:min(100%,260px);margin:0 auto}
+.game-over-graphic{display:block;width:100%;height:auto;aspect-ratio:1200/630;border-radius:3px}
+.game-over-share-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:10px;margin:14px 0 0}
+.game-over-share-actions button{border:1px solid #ffffff26;border-radius:3px;padding:9px 16px;background:#171512;color:#d6cec8;font:12px Arial,sans-serif;cursor:pointer}
+.game-over-share-actions button[hidden]{display:none}
+.game-over-share-actions button:disabled{opacity:.45;cursor:wait}
+.game-over-share-actions button:hover:not(:disabled),.game-over-share-actions button:focus-visible{border-color:#c86263;color:#fff;outline:2px solid #c8626355;outline-offset:3px}
+.game-over-share-status{min-height:16px;margin:8px 0 0;color:#9d8e88;font:12px/1.4 Arial,sans-serif}
+@media(max-height:600px){#game-over h1{font-size:56px;margin-bottom:8px}#game-over-reason{font-size:16px;line-height:1.35;margin-bottom:10px}}
 #restart-game{border:1px solid #ffffff35;border-radius:3px;padding:10px 22px;background:transparent;color:#bbb;font:14px Georgia,serif;cursor:pointer}
 #restart-game:hover,#restart-game:focus-visible{color:#fff;border-color:#fff;outline:2px solid #ffffff40;outline-offset:4px}
 .mug-impact .view-tools,.mug-impact #figsaw-dialogue,.mug-impact #figpal-dialogues,.game-over #chain-menu{visibility:hidden}

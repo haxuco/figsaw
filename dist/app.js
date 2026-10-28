@@ -14,6 +14,8 @@ import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
 import {createSceneRaycaster} from './scene-picking.js';
+import {createAttemptTracker} from './attempts.js';
+import {createGameOverShare} from './game-over-share.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
@@ -47,6 +49,7 @@ const startupProgress=createStartupProgress(loadingStatus);
 startupProgress.update('Creating Figsaw…');
 const yieldStartup=async message=>{startupProgress.update(message);await new Promise(resolve=>setTimeout(resolve,0));};
 const canvas=document.querySelector('#scene');
+const attempts=createAttemptTracker();
 const initialCanvasDescription=canvas.getAttribute('aria-label');
 const reducedMotion=matchMedia('(prefers-reduced-motion: reduce)').matches;
 const homeCamera={position:[1.85221,.821615,3.1149],lookAt:[1.293346,.717709,2.292176],fov:62};
@@ -471,6 +474,12 @@ const gameOverReasonText=document.querySelector('#game-over-reason');
 const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.querySelector('#mug-eye-impact');
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
 const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
+const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
+gameOver.addEventListener('keydown',event=>{
+ if(event.key!=='Tab')return;
+ const buttons=[...gameOver.querySelectorAll('button:not([hidden]):not(:disabled)')],index=buttons.indexOf(document.activeElement);
+ event.preventDefault();event.stopPropagation();buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();
+});
 let gameEnded=false,gameWon=false,escapedAt=0;
 const escapeScreen=document.querySelector('#escaped');
 document.querySelector('#new-game').addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
@@ -811,7 +820,7 @@ function updateGameOver(time){
  const frame=deathTransition.update(time);
  gameOver.hidden=frame.blackout<=0;gameOver.style.opacity=String(frame.blackout);
  if(gameEnded&&frame.finished&&gameOverContent.hidden){
-  mugEyeImpact.hidden=true;gameOverContent.hidden=false;restartGame.focus({preventScroll:true});
+  mugEyeImpact.hidden=true;gameOverContent.hidden=false;gameOverShare.prepare(attempts.count);restartGame.focus({preventScroll:true});
  }
  return frame;
 }
@@ -826,6 +835,7 @@ let chairDragCandidate=null;
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
+ attempts.next();gameOverShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
@@ -857,6 +867,8 @@ function resetView({skipIntro=false}={}){
 function releaseControls(){state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
+ // A browser refresh starts its own attempt on load; do not also restart here.
+ if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
  if(event.code==='KeyI'&&!event.repeat&&!event.target.closest('input,textarea')){event.preventDefault();inventoryUI.open();return;}
  if(event.code==='Escape'&&rescueChairs.moving!==null){event.preventDefault();rescueChairs.cancelMove();return;}

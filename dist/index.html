@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=c583f09d24b1">
-  <link rel="modulepreload" href="./game.bundle.js?v=993c25dd3d7d">
+  <link rel="stylesheet" href="./style.css?v=e2f4151a7408">
+  <link rel="modulepreload" href="./game.bundle.js?v=71b9a96a8542">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -29,7 +29,16 @@
     <div class="game-over-content" hidden>
       <h1 id="game-over-title">Game over</h1>
       <p id="game-over-reason"></p>
-      <button id="restart-game" type="button">Try again</button>
+      <div id="game-over-share">
+        <p class="game-over-attempt" data-attempt></p>
+        <canvas class="game-over-graphic" role="img" aria-label="Your Figsaw result" width="1200" height="630"></canvas>
+        <div class="game-over-share-actions">
+          <button type="button" data-save-graphic disabled>Save graphic</button>
+          <button type="button" data-share-graphic hidden>Share graphic</button>
+          <button id="restart-game" type="button">Try again</button>
+        </div>
+        <p class="game-over-share-status" data-share-status role="status" aria-live="polite"></p>
+      </div>
     </div>
   </section>
   <div id="figsaw-dialogue" hidden aria-hidden="true">
@@ -81,6 +90,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=993c25dd3d7d"></script>
+  <script type="module" src="./boot.js?v=71b9a96a8542"></script>
 </body>
 </html>
