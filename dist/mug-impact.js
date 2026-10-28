@@ -30,10 +30,13 @@ function wound(index){
 }
 export function createMugImpactOverlay(element){
  element.innerHTML=wound(0)+wound(1);
- function reset(){element.hidden=true;element.style.opacity='0';for(const name of['--eye-scale','--drip-length','--drip-width','--drip-opacity'])element.style.removeProperty(name);}
+ function reset(){element.hidden=true;element.style.opacity='0';for(const name of['--eye-scale','--eye-left','--eye-right','--drip-length','--drip-width','--drip-opacity'])element.style.removeProperty(name);}
  function update(trap,blackout){
   element.hidden=trap.eyeImpact<=0||blackout>=1;if(element.hidden)return;
   element.style.opacity=String(trap.eyeImpact);
+  const spread=trap.eyeSpread??.82;
+  element.style.setProperty('--eye-left',`${(1-spread)*50}%`);
+  element.style.setProperty('--eye-right',`${(1+spread)*50}%`);
   element.style.setProperty('--eye-scale',String(.035+1.115*trap.eyeGrowth));
   element.style.setProperty('--drip-length',String(trap.eyeDrip));
   element.style.setProperty('--drip-width',String(.12+.88*trap.eyeGrowth));

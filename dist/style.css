@@ -42,8 +42,8 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 #scene.over-mug:not(:active){cursor:pointer}
 #mug-eye-impact{position:fixed;inset:0;z-index:99;pointer-events:none;opacity:0}
 #mug-eye-impact[hidden]{display:none}
-#mug-eye-impact .eye-wound{position:absolute;top:46%;left:20%;width:0;height:0}
-#mug-eye-impact .eye-wound+.eye-wound{left:80%}
+#mug-eye-impact .eye-wound{position:absolute;top:46%;left:var(--eye-left,9%);width:0;height:0}
+#mug-eye-impact .eye-wound+.eye-wound{left:var(--eye-right,91%)}
 #mug-eye-impact .wound-mark{position:absolute;width:64vmax;height:64vmax;overflow:visible;transform:translate(-50%,-50%) scale(var(--eye-scale,.035));transform-origin:50% 50%;will-change:transform}
 #mug-eye-impact .blood-streaks{position:absolute;top:0;width:34vmax;height:84vh;overflow:visible;opacity:var(--drip-opacity,0);transform:translateX(-50%) scaleX(var(--drip-width,.12)) scaleY(var(--drip-length,0));transform-origin:50% 0;will-change:transform}
 #mug-eye-impact .eye-wound+.eye-wound .blood-streaks{height:92vh}

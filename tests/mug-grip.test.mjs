@@ -31,12 +31,12 @@ test('both visible ear tips approach the eye marks throughout the sip on desktop
    const tips=['Mug left ear tip','Mug right ear tip'].map(name=>mug.getObjectByName(name).getWorldPosition(new THREE.Vector3()).project(camera));
    const width=Math.abs(tips[1].x-tips[0].x);assert.ok(width>=previousWidth-1e-6,'the tips must approach the viewer');previousWidth=width;
    for(const tip of tips){assert.ok(Math.abs(tip.y-.08)<1e-6,'ear drops below the eye line');assert.ok(tip.z>-1&&tip.z<1,'ear is clipped before impact');}
-   if(elapsed===4.05)for(const tip of tips)assert.ok(Math.abs(Math.abs(tip.x)-.60)<1e-6,'each ear must meet its red eye mark');
+   if(elapsed===4.05)for(const tip of tips)assert.ok(Math.abs(Math.abs(tip.x)-.82)<1e-6,'each ear must meet its red eye mark');
   }
-  trap.update(8.13);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0,'the two red marks appear before any blackout');
+  trap.update(8.33);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0,'the two red marks appear before any blackout');
   trap.reset();assert.equal(trap.start(10),true);trap.update(14.05);
   const tip=mug.getObjectByName('Mug left ear tip').getWorldPosition(new THREE.Vector3()).project(camera);
-  assert.ok(Math.abs(Math.abs(tip.x)-.60)<1e-6,'reset must preserve the same eye alignment');
+  assert.ok(Math.abs(Math.abs(tip.x)-.82)<1e-6,'reset must preserve the same eye alignment');
  }
 });
 
@@ -65,7 +65,7 @@ test('mug remains locked before detaching and resets after game over',()=>{
 test('ear contact remains visible before the fade, including reduced motion',()=>{
  for(const reduced of [false,true]){
   const {restraint,trap}=fixture();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
-  const hit=reduced?.22:4.13,fade=reduced?.90:6.825;
+  const hit=reduced?.22:4.33,fade=reduced?.90:6.825;
   trap.update(4+hit,reduced);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0);
   trap.update(4+hit+.35,reduced);assert.equal(trap.eyeImpact,1);assert.equal(trap.blackout,0);
   trap.update(4+fade,reduced);assert.ok(trap.blackout>.2&&trap.blackout<.9);assert.equal(trap.eyeImpact,1);
@@ -73,10 +73,13 @@ test('ear contact remains visible before the fade, including reduced motion',()=
 });
 
 test('the cup finishes its closer approach before the red marks grow and fade',()=>{
- const {restraint,trap}=fixture();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
+ const {camera,mug,restraint,trap}=fixture();restraint.requestReach(0);restraint.update(.7);restraint.detach(1);trap.start(4);
+ trap.update(8.20);assert.equal(trap.eyeImpact,0,'hold the full close-up before either puncture mark appears');
+ const tip=mug.getObjectByName('Mug left ear tip').getWorldPosition(new THREE.Vector3()).project(camera);
+ assert.ok(Math.abs(tip.x)>.81,'the mug fills substantially more of the screen before contact');
  trap.update(7.90);assert.equal(trap.eyeImpact,0,'do not poke at the old, farther-away contact point');
  let previous=0;
- for(const elapsed of[4.11,4.4,4.9,5.4,6.0,6.35]){
+ for(const elapsed of[4.31,4.6,4.9,5.4,6.0,6.35]){
   trap.update(4+elapsed);assert.equal(trap.eyeImpact,1);assert.ok(trap.eyeGrowth>=previous);previous=trap.eyeGrowth;
   if(elapsed<=6.35)assert.equal(trap.blackout,0,'give the expanding marks time to be seen');
  }
