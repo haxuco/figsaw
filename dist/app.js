@@ -1,5 +1,5 @@
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
-import {REPAIRS} from './rescue-state.js';
+import {REPAIRS,PLAYER_CHAIR} from './rescue-state.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
 import {batchStaticScenery} from './static-batching.js';
@@ -526,7 +526,7 @@ function interactionAt(event){
   for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
   return true;
  });
- for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||object.userData.rescueClue||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
+ for(let object=hit?.object;object;object=object.parent){if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 const leaveChairButton=document.querySelector('#leave-chair');
@@ -548,7 +548,7 @@ function syncChairButton(){
 }
 function inspectDocument(hit){
  if(sawBusy())return;
- if(hit?.userData.wallDocument||hit?.userData.rescueClue)documentViewer.show(hit);
+ if(hit?.userData.wallDocument)documentViewer.show(hit);
  else if(hit?.userData.fishClue&&figpalHoists.fishClueReady)documentViewer.show(figpalHoists.fishInspectionTarget);
 }
 function escapeRoom(){
@@ -598,9 +598,9 @@ function useRescueObject(hit){
  if(restraint.locked){restraint.requestReach(state.time);keyFeedback('Free your wrist before repairing or moving chairs.');return true;}
  if(data.salvagePart){if(rescueChairs.collectPart(data.salvagePart,inventory))keyFeedback(`${ITEMS[data.salvagePart].name} salvaged. Equip it to fit the broken chair.`);return true;}
  if(Number.isInteger(data.chainPickup)){if(rescueChairs.collectChain(data.chainPickup,inventory))keyFeedback('Hoist chain collected. Equip it and click two chair towing loops.');return true;}
- let index=data.chairSeat?3:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
+ let index=data.chairSeat?PLAYER_CHAIR:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
  if(inventory.equipped?.startsWith('chain')){keyFeedback(rescueChairs.hook(index,inventory.equipped,inventory));return true;}
- if(index===3){sitOnChair();return true;}
+ if(index===PLAYER_CHAIR){sitOnChair();return true;}
  if(inventory.equipped){keyFeedback(rescueChairs.use(index,inventory.equipped,inventory));return true;}
  if(rescueChairs.state.chairs[index].passenger!==null){keyFeedback('A Figpal is on this chair. Use chains to connect it to the rescue train.');return true;}
  if(rescueChairs.select(index))keyFeedback('Drag to a marked tank position, or click a floor ring. Esc cancels.');
@@ -932,7 +932,7 @@ canvas.addEventListener('pointerup',event=>{
   else if(hit?.userData.chairSeat)sitOnChair();
   else if(hit?.userData.fireAxe)takeFireAxe();
   else if(selectingAnimal)cutStuffedAnimal(hit);
-  else if(hit?.userData.wallDocument||hit?.userData.fishClue||hit?.userData.rescueClue)inspectDocument(hit);
+  else if(hit?.userData.wallDocument||hit?.userData.fishClue)inspectDocument(hit);
   else if(hit?.userData.supplyAction)takeMobileSupply(hit.userData.supplyAction);
   else if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)inspectMobile();
   else if(hit?.userData.exitKeypad||hit?.userData.keypadKey)useDoorKeypad();
@@ -1069,7 +1069,7 @@ function render(){
  if(chairSeat.seated&&!documentViewer.active&&!mobilePuzzle.active&&!drawerCamera.active)cameraPosition.add(rescueChairs.playerOffset);
  inventoryUI.sync();syncRescueControls();
  const rescueMessage=rescueChairs.takeMessage();if(rescueMessage)keyFeedback(rescueMessage);
- if(escapePuzzle.fishRevealed&&!fishClueAnnounced){fishClueAnnounced=true;keyFeedback('The PM’s animal-order clue is revealed. Inspect the skull or recovered staff tag.');}
+ if(escapePuzzle.fishRevealed&&!fishClueAnnounced){fishClueAnnounced=true;keyFeedback('The PM’s animal-order clue is revealed. Inspect the skull.');}
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.

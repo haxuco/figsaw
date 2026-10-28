@@ -17,7 +17,7 @@ export function batchStaticScenery(root,{exclude=[],minObjects=3,allowInteractiv
   return materialKeys.get(m);
  }
  function visit(object){
-  if(!object.visible||excluded.has(object)||(!(object===root&&allowInteractiveRoot)&&(object.userData.rescueClue||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.rescueChair)||object.userData.salvagePart||object.userData.chargingAction||object.userData.keyAction||Number.isInteger(object.userData.hoistIndex)||Number.isInteger(object.userData.valveIndex))))return;
+  if(!object.visible||excluded.has(object)||(!(object===root&&allowInteractiveRoot)&&(Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.rescueChair)||object.userData.salvagePart||object.userData.chargingAction||object.userData.keyAction||Number.isInteger(object.userData.hoistIndex)||Number.isInteger(object.userData.valveIndex))))return;
   if(object.isMesh&&!object.isInstancedMesh&&!object.isSkinnedMesh&&!object.children.length){
    const g=object.geometry,m=object.material,attrs=g.attributes;
    if(m&&!Array.isArray(m)&&!m.transparent&&!g.morphAttributes.position&&g.drawRange.start===0&&g.drawRange.count===Infinity&&attrs.position&&Object.keys(attrs).every(k=>['position','normal','uv'].includes(k))){

@@ -242,10 +242,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   refugeChair.updateWorldMatrix(true,false);refugeChair.localToWorld(eye.set(0,1.36,.025));
   target.set(.7,.12,1.25);
  }};
- rescueObjects.push(aeronChair(2.75,3.30,[-.55,-.80,1.39],{seatTear:2,backTwist:.20}));
+ rescueObjects.push(aeronChair(2.75,3.30,[-.55,-.80,1.39],{noBase:true,seatTear:2,backTwist:.20}));
  aeronChair(-.55,-3.42,[1.65,.65,.32],{brokenArm:1,noBack:true});
- // A tipped chair and its detached base frame the right-hand aisle without covering the laptop.
- rescueObjects.push(aeronChair(1.35,1.42,[-.30,-.50,-1.28],{noBase:true,seatTear:0,backTwist:-.14,backTear:1}));
+ // The second rescue chair needs both its seat and base repaired.
  const looseBase=chairBase(office);looseBase.name='Detached chair base';settleChairPart(looseBase,2.35,2.53,[2.70,.36,.22]);
  const looseCaster=chairCaster(office,0,0,0);settleChairPart(looseCaster,-.32,-2.80,[0,.3,0]);
  const looseSeat=new THREE.Group();office.add(looseSeat);meshPanel([[-.24,-.20],[-.28,.1],[-.22,.24],[.22,.24],[.28,.1],[.24,-.20]],[0,0],(x,z,t)=>[x,.02*(1-t*t),z],looseSeat,0);settleChairPart(looseSeat,-.80,-2.85,[.08,.5,.06]);
@@ -739,7 +738,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const mobileSupplies=createMobileSupplies(chargingKit.drawer);
- const rescueChairs=createRescueChairs({objects:rescueObjects,parts:{caster:looseCaster,seat:looseSeat,base:looseBase},player:refugeChair,tanks:figpalVats.rigs.map(r=>r.vat),floorSupport});office.add(rescueChairs.group);figpalVats.bindRescue(rescueChairs,acidLeaks);
+ const rescueChairs=createRescueChairs({objects:rescueObjects,parts:{caster:looseCaster,seat:looseSeat,base:looseBase},player:refugeChair,tanks:figpalVats.rigs.map(r=>r.vat),floorSupport,puzzle});office.add(rescueChairs.group);figpalVats.bindRescue(rescueChairs,acidLeaks);
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
  const fireAlarm=createFireAlarm({fireHazard,acidLeaks,laptop:laptopControl,floorSupport});
  fireAlarm.station.position.set(.40,1.22,.065);rear.add(fireAlarm.station);office.add(fireAlarm.effects);

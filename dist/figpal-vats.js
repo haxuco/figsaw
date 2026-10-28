@@ -291,8 +291,8 @@ export function createFigpalVats({floorSupport,puzzle}={}){
    if(remaining>.0001)rig.transformation.update(.227+.865*remaining);
    if(remaining<=.0001&&rig.lowered){
     rig.targetHeight=.43;
-    if(Math.abs(rig.height-.43)<.01&&vats[rig.index].breakage.broken&&rescue?.board(rig.index,rig.hanger)){
-     rig.rescued=true;if(rig.index===puzzle?.pmIndex&&!rig.transformation.transformed){puzzle.revealFish();rescue.revealClue(rig.index,puzzle.letters);}continue;
+    if(Math.abs(rig.height-.43)<.01&&vats[rig.index].breakage.broken&&rescue?.board(rig.index,rig.hanger,!rig.transformation.transformed)){
+     rig.rescued=true;continue;
     }
    }
    if(rig.skullClue){const pm=rig.index===puzzle.pmIndex;rig.skullClue.mesh.visible=pm;rig.vat.userData.fishClue=pm&&rig.transformation.cutHeight>.155;if(pm&&rig.transformation.cutHeight>.215)puzzle.revealFish();}

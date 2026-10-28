@@ -1,24 +1,30 @@
-export const REPAIRS=Object.freeze([{part:'caster',tool:'hammer',label:'missing caster'},{part:'seat',tool:'screwdriver',label:'torn seat'},{part:'base',tool:'ratchet',label:'broken base'}]);
-export function createRescueState(){
+export const REPAIRS=Object.freeze([
+ {label:'missing caster',steps:[{part:'caster',tool:'hammer'}]},
+ {label:'torn seat and broken base',steps:[{part:'seat',tool:'screwdriver'},{part:'base',tool:'ratchet',socket:'allen'}]}
+]);
+export const PLAYER_CHAIR=REPAIRS.length;
+export function createRescueState(puzzle={pmIndex:2}){
  let chairs,links,usedChains,pulling=false,safe=false;
- function reset(){chairs=REPAIRS.map(()=>({partInstalled:false,repaired:false,tank:null,passenger:null}));links=[];usedChains=new Set();pulling=safe=false;}
+ function reset(){chairs=REPAIRS.map(()=>({installed:[],step:0,repaired:false,tank:null,passenger:null}));links=[];usedChains=new Set();pulling=safe=false;}
  reset();
  function use(index,item,inventory){
-  const c=chairs[index],r=REPAIRS[index];if(!c||pulling||safe)return 'That chair cannot be repaired now.';
+  const c=chairs[index];if(!c||pulling||safe)return 'That chair cannot be repaired now.';
   if(c.repaired)return 'Chair repaired. Put away the tool to move it.';
-  if(!c.partInstalled){if(item!==r.part)return `Find and equip a ${r.part} to replace the ${r.label}.`;if(!inventory.has(item))return 'Collect the replacement part first.';inventory.remove(item);c.partInstalled=true;return `Replacement fitted. Secure it with the ${r.tool}${index===2?' and Allen sockets':''}.`;}
+  const r=REPAIRS[index].steps[c.step];
+  if(!c.installed.includes(r.part)){if(item!==r.part)return `Find and equip a replacement ${r.part}.`;if(!inventory.has(item))return 'Collect the replacement part first.';inventory.remove(item);c.installed.push(item);return `Replacement fitted. Secure it with the ${r.tool}${r.socket?' and Allen sockets':''}.`;}
   if(item!==r.tool||!inventory.has(item))return `Equip the ${r.tool} to secure the replacement.`;
-  if(index===2&&!inventory.has('allen'))return 'The ratchet needs the Allen socket set from Supplies.';
+  if(r.socket&&!inventory.has(r.socket))return 'The ratchet needs the Allen socket set from Supplies.';
+  c.step++;if(c.step<REPAIRS[index].steps.length)return `Secured. Find and equip a replacement ${REPAIRS[index].steps[c.step].part} next.`;
   c.repaired=true;return 'Chair repaired. Put away the tool, then move the chair in front of a tank.';
  }
  function place(index,tank){const c=chairs[index];if(!c?.repaired||c.passenger!==null||pulling||safe||!Number.isInteger(tank)||tank<0||tank>2||chairs.some((o,i)=>i!==index&&o.tank===tank))return false;c.tank=tank;return true;}
- function board(tank,figpal){const i=chairs.findIndex(c=>c.tank===tank&&c.repaired&&c.passenger===null);if(i<0||pulling||safe)return -1;chairs[i].passenger=figpal;return i;}
+ function board(tank,figpal,{alive=true}={}){const i=chairs.findIndex(c=>c.tank===tank&&c.repaired&&c.passenger===null);if(!alive||figpal===puzzle.pmIndex||!Number.isInteger(figpal)||figpal<0||figpal>2||chairs.some(c=>c.passenger===figpal)||i<0||pulling||safe)return -1;chairs[i].passenger=figpal;return i;}
  function connected(a,b){const visited=new Set([a]),stack=[a];while(stack.length){const n=stack.pop();for(const link of links){const next=link.a===n?link.b:link.b===n?link.a:null;if(next===null||visited.has(next))continue;visited.add(next);stack.push(next);}}return visited.has(b);}
  function connect(a,b,chain){
-  if(!/^chain[0-2]$/.test(chain)||pulling||safe||a===b||![a,b].every(i=>Number.isInteger(i)&&i>=0&&i<=3)||usedChains.has(chain)||links.length>=3||connected(a,b))return false;
-  if([a,b].some(i=>i<3&&!chairs[i].repaired)||[a,b].some(i=>links.filter(l=>l.a===i||l.b===i).length>=(i===3?1:2)))return false;
+  if(!/^chain[0-2]$/.test(chain)||pulling||safe||a===b||![a,b].every(i=>Number.isInteger(i)&&i>=0&&i<=PLAYER_CHAIR)||usedChains.has(chain)||links.length>=PLAYER_CHAIR||connected(a,b))return false;
+  if([a,b].some(i=>i<PLAYER_CHAIR&&!chairs[i].repaired)||[a,b].some(i=>links.filter(l=>l.a===i||l.b===i).length>=(i===PLAYER_CHAIR?1:2)))return false;
   links.push({a,b,chain});usedChains.add(chain);return true;
  }
- const ready=()=>links.length===3&&chairs.every((c,i)=>c.repaired&&c.passenger!==null&&connected(i,3));
+ const ready=()=>links.length===PLAYER_CHAIR&&chairs.every((c,i)=>c.repaired&&c.passenger!==null&&c.passenger!==puzzle.pmIndex&&connected(i,PLAYER_CHAIR));
  return {reset,use,place,board,connect,get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
 }

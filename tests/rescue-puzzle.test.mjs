@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createEscapePuzzle,createDirectionalKeypadState} from '../dist/mobile-puzzle-state.js';
 import {createInventory} from '../dist/inventory.js';
-import {createRescueState} from '../dist/rescue-state.js';
+import {createRescueState,PLAYER_CHAIR} from '../dist/rescue-state.js';
 import {createAcidFlow} from '../dist/acid-flow.js';
 
 test('every retry reassigns the PM and keeps roles, clue identity and timed order consistent',()=>{
@@ -21,15 +21,43 @@ test('inventory only equips collected objects, consumes installed parts and pres
  i.equip('caster');r.use(0,'caster',i);assert.equal(i.has('caster'),false);assert.equal(i.equipped,null);r.use(0,'hammer',i);assert.equal(r.chairs[0].repaired,true);assert.equal(i.has('hammer'),true);i.putAway();assert.equal(i.has('hammer'),true);
  i.reset();r.reset();assert.equal(i.items.length,0);assert.equal(r.chairs[0].repaired,false);
 });
-test('ratchet requires its hex sockets; chairs occupy unique slots and chains cannot form loops',()=>{
- const i=createInventory(),r=createRescueState();for(const id of['caster','seat','base','hammer','screwdriver','ratchet'])i.add(id);
- r.use(2,'base',i);r.use(2,'ratchet',i);assert.equal(r.chairs[2].repaired,false);i.add('allen');r.use(2,'ratchet',i);assert.equal(r.chairs[2].repaired,true);
- for(const [n,p,t]of[[0,'caster','hammer'],[1,'seat','screwdriver']]){r.use(n,p,i);r.use(n,t,i);}
- assert.equal(r.place(0,0),true);assert.equal(r.place(1,0),false);r.place(1,1);r.place(2,2);
- for(let n=0;n<3;n++)assert.equal(r.board(n,n),n);
- assert.equal(r.connect(3,0,'chain0'),true);assert.equal(r.connect(0,1,'chain1'),true);assert.equal(r.connect(1,3,'chain2'),false);assert.equal(r.connect(1,2,'chain2'),true);
- assert.equal(r.ready,true);assert.equal(r.startPull(),true);assert.equal(r.connect(0,2,'chain2'),false);r.finishPull();assert.equal(r.safe,true);
- r.reset();assert.equal(r.safe,false);assert.equal(r.links.length,0);assert.equal(r.ready,false);
+function repairedChairs(puzzle={pmIndex:2}){
+ const inventory=createInventory(),state=createRescueState(puzzle);
+ for(const item of ['caster','seat','base','hammer','screwdriver','ratchet','allen'])inventory.add(item);
+ for(const [chair,part,tool]of [[0,'caster','hammer'],[1,'seat','screwdriver'],[1,'base','ratchet']]){state.use(chair,part,inventory);state.use(chair,tool,inventory);}
+ return {inventory,state};
+}
+test('two repairable chairs retain all repairs; the base needs the ratchet and Allen sockets',()=>{
+ const i=createInventory(),r=createRescueState();assert.equal(r.chairs.length,2);assert.equal(PLAYER_CHAIR,2);
+ for(const id of['seat','base','screwdriver','ratchet'])i.add(id);
+ r.use(1,'base',i);assert.equal(i.has('base'),true,'seat must be repaired before the base');
+ r.use(1,'seat',i);r.use(1,'screwdriver',i);assert.equal(r.chairs[1].repaired,false);
+ r.use(1,'base',i);r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,false);
+ i.add('allen');r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,true);
+ assert.equal(i.has('seat'),false);assert.equal(i.has('base'),false);assert.equal(i.has('ratchet'),true);
+});
+test('exactly two survivors and two chains complete the train for every randomized PM',()=>{
+ for(let pmIndex=0;pmIndex<3;pmIndex++){
+  const {state:r}=repairedChairs({pmIndex}),survivors=[0,1,2].filter(n=>n!==pmIndex);
+  assert.equal(r.place(0,survivors[0]),true);assert.equal(r.place(1,survivors[0]),false);r.place(1,survivors[1]);
+  assert.equal(r.board(survivors[0],survivors[0]),0);assert.equal(r.board(survivors[1],survivors[1]),1);
+  assert.equal(r.connect(PLAYER_CHAIR,0,'chain'+survivors[0]),true);
+  assert.equal(r.ready,false);assert.equal(r.startPull(),false);
+  assert.equal(r.connect(0,1,'chain'+survivors[1]),true);
+  assert.equal(r.connect(1,PLAYER_CHAIR,'chain'+pmIndex),false);
+  assert.equal(r.connect(0,3,'chain'+pmIndex),false,'no phantom fourth chair');
+  assert.equal(r.ready,true);assert.equal(r.startPull(),true);r.finishPull();assert.equal(r.safe,true);
+  r.reset();assert.equal(r.chairs.length,2);assert.equal(r.safe,false);assert.equal(r.links.length,0);assert.equal(r.ready,false);
+ }
+});
+test('PM and skeletons cannot take a rescue chair, and retries use the new PM identity',()=>{
+ const puzzle={pmIndex:0},{state:r}=repairedChairs(puzzle);
+ r.place(0,0);assert.equal(r.board(0,0),-1);assert.equal(r.chairs[0].passenger,null);
+ r.place(0,1);assert.equal(r.board(1,1,{alive:false}),-1);assert.equal(r.chairs[0].passenger,null);
+ assert.equal(r.board(1,1),0);r.place(1,2);assert.equal(r.board(2,1),-1,'no duplicate passenger');
+ puzzle.pmIndex=2;r.reset();
+ const i=createInventory();i.add('caster');i.add('hammer');r.use(0,'caster',i);r.use(0,'hammer',i);
+ r.place(0,2);assert.equal(r.board(2,2),-1);r.place(0,0);assert.equal(r.board(0,0),0);
 });
 test('finite draining leaves broad persistent puddles that ignore camera and cable targets',()=>{
  const a=createAcidFlow(),b=createAcidFlow();a.open(0,{x:0,y:.01,z:0},0,false,{breach:true});b.open(0,{x:0,y:.01,z:0},0,false,{breach:true});
