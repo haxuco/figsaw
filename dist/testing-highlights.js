@@ -31,8 +31,9 @@ export function createTestingHighlights({entries,maxTargets=256}){
   const data=line.geometry.attributes.position.array,offset=index*72;
   for(let i=0;i<edges.length;i++){const corner=edges[i],p=offset+i*3;data[p]=corner&1?box.max.x:box.min.x;data[p+1]=corner&2?box.max.y:box.min.y;data[p+2]=corner&4?box.max.z:box.min.z;}
  }
- function update(time,{enabled=true,item=null,revision=0,context={}}={}){
-  group.visible=enabled;if(!enabled)return counts;
+ function update(time,{enabled=true,showInteractive=true,showMatching=true,item=null,revision=0,context={}}={}){
+  // Layer visibility is independent of cached bounds and diagnostic picking.
+  group.visible=enabled;interactive.visible=showInteractive;matching.visible=showMatching;if(!enabled)return counts;
   if(time-lastTime<.12&&revision===lastRevision&&item===lastItem)return counts;
   lastTime=time;lastRevision=revision;lastItem=item;counts={interactive:0,matching:0};matchingTargets=[];
   for(const entry of entries){
@@ -59,9 +60,9 @@ export function createTestingModeUI(){
  // Testing belongs to the session-only diagnostics menu. Old URL/storage flags
  // must never turn on highlights during an ordinary game.
  let enabled=false,messageUntil=0;
- const root=document.createElement('div');root.id='testing-tools';root.hidden=true;root.innerHTML='<button type="button" aria-pressed="false"></button><div class="testing-legend"><span>●</span> Interactive <b>●</b> Matching target</div><p role="status" aria-live="polite"></p>';
- const button=root.querySelector('button'),legend=root.querySelector('.testing-legend'),status=root.querySelector('p');
+ const root=document.createElement('div');root.id='testing-tools';root.hidden=true;root.innerHTML='<button type="button" aria-pressed="false"></button><div class="testing-legend"><label><input type="checkbox" data-interactive checked><span>●</span> Interactive wireframes</label><label><input type="checkbox" data-matching checked><b>●</b> Matching target wireframes</label></div><p role="status" aria-live="polite"></p>';
+ const button=root.querySelector('button'),legend=root.querySelector('.testing-legend'),status=root.querySelector('p'),interactive=root.querySelector('[data-interactive]'),matching=root.querySelector('[data-matching]');
  function sync(){button.textContent=`Testing: ${enabled?'on':'off'}`;button.setAttribute('aria-pressed',String(enabled));legend.hidden=!enabled;status.hidden=!enabled;}
  button.onclick=()=>{enabled=!enabled;sync();};sync();
- return{element:root,get enabled(){return enabled;},setEnabled(value){enabled=!!value;sync();},report(message){if(enabled&&message){status.textContent=message;messageUntil=performance.now()+5000;}},update({hidden=false,itemName='',matches=0}={}){root.hidden=hidden;if(performance.now()>messageUntil){const text=enabled&&itemName?`${itemName} · ${matches} matching target${matches===1?'':'s'}`:'';if(status.textContent!==text)status.textContent=text;}}};
+ return{element:root,get enabled(){return enabled;},get showInteractive(){return interactive.checked;},get showMatching(){return matching.checked;},setEnabled(value){enabled=!!value;sync();},report(message){if(enabled&&message){status.textContent=message;messageUntil=performance.now()+5000;}},update({hidden=false,itemName='',matches=0}={}){root.hidden=hidden;if(performance.now()>messageUntil){const text=enabled&&itemName?`${itemName} · ${matches} matching target${matches===1?'':'s'}`:'';if(status.textContent!==text)status.textContent=text;}}};
 }

@@ -31,3 +31,15 @@ test('testing click targets select the nearest matching object and disappear whe
  near.visible=false;highlighter.update(1,{item:'seat'});assert.equal(highlighter.pickMatching(ray).object,far);
  highlighter.update(2,{enabled:false});assert.equal(highlighter.pickMatching(ray),null);
 });
+
+test('wireframe layers toggle independently and immediately without disabling diagnostic target picking',()=>{
+ const target=new THREE.Mesh(new THREE.BoxGeometry(.3,.3,.3)),other=target.clone();target.position.z=-1;other.position.x=2;
+ const highlighter=createTestingHighlights({entries:[{object:target,matches:item=>item==='seat'},{object:other}]}),ray=new THREE.Raycaster(new THREE.Vector3(),new THREE.Vector3(0,0,-1));
+ const [interactive,matching]=highlighter.group.children;
+ highlighter.update(0,{item:'seat'});assert.deepEqual(highlighter.counts,{interactive:1,matching:1});
+ highlighter.update(.01,{item:'seat',showInteractive:false});assert.equal(interactive.visible,false);assert.equal(matching.visible,true);
+ highlighter.update(.02,{item:'seat',showMatching:false});assert.equal(interactive.visible,true);assert.equal(matching.visible,false);
+ highlighter.update(.03,{item:'seat',showInteractive:false,showMatching:false});assert.equal(interactive.visible,false);assert.equal(matching.visible,false);assert.equal(highlighter.pickMatching(ray).object,target);
+ highlighter.update(.04,{enabled:false});assert.equal(highlighter.group.visible,false);assert.equal(highlighter.pickMatching(ray),null);
+ highlighter.update(.05,{item:'seat'});assert.equal(highlighter.group.visible,true);assert.equal(interactive.visible,true);assert.equal(matching.visible,true);
+});
