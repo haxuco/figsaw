@@ -20,11 +20,12 @@ export function createEscapePuzzle(random=Math.random){
   roles=Object.freeze(roles);dropOrder=Object.freeze([...others,pmIndex]);
   digits=Object.freeze(digits);order=Object.freeze(order);fishRevealed=false;revision++;
  }
- reset();return {reset,get roles(){return roles;},get pmIndex(){return pmIndex;},get dropOrder(){return dropOrder;},revealFish(){fishRevealed=true;},get digits(){return digits;},get order(){return order;},get letters(){return order.map(k=>k[0]).join('');},get code(){return order.map(k=>digits[k]).join('');},get revision(){return revision;},get fishRevealed(){return fishRevealed;}};
+ reset();return {reset,get roles(){return roles;},get pmIndex(){return pmIndex;},get dropOrder(){return dropOrder;},revealFish(){fishRevealed=true;},setFishRevealed(value){fishRevealed=!!value;},get digits(){return digits;},get order(){return order;},get letters(){return order.map(k=>k[0]).join('');},get code(){return order.map(k=>digits[k]).join('');},get revision(){return revision;},get fishRevealed(){return fishRevealed;}};
 }
 export function createMobilePuzzleState(){
  const inventory=new Set();let phase='tangled',active=false,action=null,started=0,progress=0;
  return {
+  capture(){return {items:[...inventory],phase,active,action,started,progress};},restore(value){inventory.clear();for(const id of value.items)inventory.add(id);({phase,active,action,started,progress}=value);},
   inspect(locked=false){if(locked||active)return false;active=true;return true;},
   close(force=false){if(action&&!force)return false;active=false;return true;},
   collect(item,{locked=false,drawerReady=false}={}){if(locked||!drawerReady||!['scissors','string'].includes(item)||inventory.has(item))return false;inventory.add(item);return true;},

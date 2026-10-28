@@ -1,3 +1,5 @@
+import {createDiagnostics,createDiagnosticUI} from './diagnostics.js';
+import {createDiagnosticActions} from './diagnostic-actions.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
 import {createInventoryModelPreviews} from './inventory-models.js';
 import {createEquippedModel} from './equipped-model.js';
@@ -851,7 +853,7 @@ function updateFigpalRound(time){
   countdown.start();countdownStartTime=null;
   countdownAnnouncement.textContent='The ten-minute countdown has started.';
  }
- const event=figpalRounds.update(time,rescueChairs.state.pulling||chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying);
+ const event=figpalRounds.update(time,rescueChairs.state.pulling||chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying,diagnostics.invulnerable);
  if(event?.type==='lower'){
   laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
   figpalCamera.start(event.index,time);loweringDialogue.reset();const line=loweringDialogue.show(event.index,time);
@@ -870,6 +872,7 @@ function updateFigpalRound(time){
 }
 
 function endGame(cause='objective'){
+ if(diagnostics.invulnerable){diagnostics.report(`Invulnerability prevented: ${gameOverReason(cause)}`);return;}
  if(gameEnded)return;laptopProgram.cancel();gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
@@ -897,7 +900,7 @@ let chairDragCandidate=null;
 let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
- laptopProgram.reset();
+ diagnostics.clearHistory();laptopProgram.reset();
  attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
@@ -927,9 +930,29 @@ function resetView({skipIntro=false}={}){
  }
 }
 
+let previousTestingMode=testingMode.enabled;
+const diagnosticView={capture:()=>({position:cameraPosition.toArray(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom}),restore(value){figpalCamera.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;cameraPosition.fromArray(value.position);state.yaw=value.yaw;state.pitch=value.pitch;state.zoom=value.zoom;}};
+const diagnosticProps={capture:()=>({saw:handsaw.visible,axe:fireAxe.object.visible}),restore(value){handsaw.visible=value.saw;fireAxe.object.visible=value.axe;},hideCollected(){handsaw.visible=false;fireAxe.object.visible=false;}};
+const prepareDiagnosticTimer=()=>{countdownStartTime=null;};prepareDiagnosticTimer.capture=()=>({delay:countdownStartTime===null?null:countdownStartTime-state.time,announcement:countdownAnnouncement.textContent});
+const diagnosticActions=createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
+const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
+ onActivate(){previousTestingMode=testingMode.enabled;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
+ onExit(){testingMode.setEnabled(previousTestingMode);canvas.focus({preventScroll:true});},
+ onInvulnerability(value){
+  acidLeaks.setInvulnerable(value);fireHazard.setInvulnerable(value);fireAlarm.setInvulnerable(value);
+  if(value){deathTransition.reset();mugImpactOverlay.reset();gameOver.hidden=true;document.body.classList.remove('mug-impact');}
+ },
+ canRun(){
+  if(gameEnded||gameWon||figpalRounds.active||rescueChairs.busy||chairSeat.moving||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||mobilePuzzle.action)return false;
+  laptopProgram.cancel();inventoryUI.close();rescueChairs.cancelMove();releaseControls();chainMenu.hide();sawMenu.hide();return true;
+ }
+});
+const diagnosticUI=createDiagnosticUI({mode:diagnostics,clock:countdown,actions:diagnosticActions,focusScene:()=>canvas.focus({preventScroll:true})});
+
 function releaseControls(){state.space=false;dragPointer=null;}
 
 document.addEventListener('keydown',event=>{
+ if(event.target.closest('#diagnostic-tools'))return;
  // A browser refresh starts its own attempt on load; do not also restart here.
  if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
@@ -1152,11 +1175,15 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,mug:mugTrap.blackout>0});
+ const failureCause=diagnostics.invulnerable?null:resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,mug:mugTrap.blackout>0});
  if(failureCause){deathTransition.start(t,reducedMotion,gameOverStyle(failureCause));document.body.classList.add('mug-impact');}
  const deathFrame=updateGameOver(t);
- if(deathFrame.style==='objective')mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap,deathFrame.blackout);
- if(mugTrap.eyeImpact>0)document.body.classList.add('mug-impact');
+ if(diagnostics.invulnerable||deathFrame.style==='objective')mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap,deathFrame.blackout);
+ if(!diagnostics.invulnerable&&mugTrap.eyeImpact>0)document.body.classList.add('mug-impact');
+ if(diagnostics.invulnerable){
+  if(mugFinished){mugTrap.reset();mugImpactOverlay.reset();}
+  if(sawFinished){sawTrap.reset();handsaw.visible=!inventory.has('saw');}
+ }
  if(alarmFinished)endGame(fireAlarm.outcome==='acid'?'explosion':'laptop');
  else if(figpalRoundFinished)endGame('deadline');
  else if(sawFinished)endGame('saw');
@@ -1167,7 +1194,7 @@ function render(){
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
  if(chairSeat.seated&&!documentViewer.active&&!mobilePuzzle.active&&!drawerCamera.active)cameraPosition.add(rescueChairs.playerOffset);
- inventoryUI.sync();syncRescueControls();
+ inventoryUI.sync();syncRescueControls();diagnosticUI.sync();
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.

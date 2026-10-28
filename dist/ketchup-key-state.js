@@ -2,6 +2,7 @@
 export function createKetchupKeyState(){
  let phase='sealed',startedAt=-Infinity;
  return {
+  capture(time){return {phase,age:time-startedAt};},restore(value,time){phase=value.phase;startedAt=time-value.age;},grant(time){phase='collected';startedAt=time-4;},
   get phase(){return phase;},get hasKey(){return phase==='collected';},get startedAt(){return startedAt;},
   pour(time){if(phase!=='sealed')return false;phase='pouring';startedAt=time;return true;},
   update(time){if(phase==='pouring'&&time-startedAt>=3.4)phase='revealed';},

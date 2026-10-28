@@ -140,5 +140,16 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
   adapter.visible=cable.visible=true;adapter.position.set(-.09,-.07,0);adapter.rotation.set(0,-.25,0);
   cable.position.set(.09,-.045,.025);cable.rotation.set(.8,0,-.2);model.add(adapter,cable);return model;
  }
- update(0);return {group,drawer,inventoryModel,use,update,reset,hint,syncPower,takePowerMessage(){const message=powerMessage;powerMessage='';return message;},get canUse(){return state.canUse;},getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
+ function capture(time){return {time,state:state.capture(),drawerProgress,burn:burnAmount.value,burnPoint:burnPoint.value.toArray(),connected:!!wire};}
+ function restore(value,time){
+  reset();const phase=value.state.phase;
+  if(phase!=='drawer'){
+   use('drawer',time);use('charger',time);
+   if(phase!=='carrying')use('strip',time);
+   if(phase==='charging'||phase==='damaged'&&value.connected)use('laptop',time);
+  }
+  state.restore(value.state,powerClock());drawerProgress=value.drawerProgress;drawer.position.z=drawerProgress*.43;
+  burnAmount.value=value.burn;burnPoint.value.fromArray(value.burnPoint);led.visible=phase!=='damaged';update(time,true);
+ }
+ update(0);return {group,drawer,inventoryModel,use,update,reset,capture,restore,hint,syncPower,takePowerMessage(){const message=powerMessage;powerMessage='';return message;},get canUse(){return state.canUse;},getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
 }

@@ -7,7 +7,7 @@ export const ITEMS=Object.freeze({
 });
 export function createInventory(){
  const collected=new Set();let equipped=null,revision=0,lastPickup=null;
- return {add(id){if(!ITEMS[id]||collected.has(id))return false;collected.add(id);lastPickup={id};revision++;return true;},
+ return {capture(){return {items:[...collected],equipped};},restore(value){collected.clear();for(const id of value.items)if(ITEMS[id])collected.add(id);equipped=collected.has(value.equipped)?value.equipped:null;lastPickup=null;revision++;},add(id){if(!ITEMS[id]||collected.has(id))return false;collected.add(id);lastPickup={id};revision++;return true;},
  remove(id){if(!collected.delete(id))return false;if(equipped===id)equipped=null;revision++;return true;},
  equip(id){if(!collected.has(id))return false;equipped=id;revision++;return true;},
  putAway(){if(equipped!==null){equipped=null;revision++;}},has:id=>collected.has(id),

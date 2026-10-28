@@ -5,6 +5,7 @@ export function createRestraintState({canDetach=()=>true}={}){
  let locked=true,reachStart=-Infinity,releasedAt=-Infinity,openPending=false,visibleUntil=-Infinity;
  return {
   get locked(){return locked;},
+  setLocked(value,time){locked=!!value;releasedAt=locked?-Infinity:time;reachStart=-Infinity;visibleUntil=-Infinity;openPending=false;},
   requestReach(time){
    if(time-reachStart<1.65||(!locked&&time-releasedAt<.85))return false;
    reachStart=time;visibleUntil=time+5.2;openPending=!locked;return true;

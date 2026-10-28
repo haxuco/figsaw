@@ -271,6 +271,13 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   return `Figpal ${index+1}${rig.transformation.transformed?"'s bones":''} ${rig.lowered?'lowering into the canister':'rising above the canister'}.`;
  }
 
+ function raise(index){const rig=rigs[index];if(!rig?.lowered||rig.rescued||rig.escaping)return false;rig.lowered=false;rig.rescuePlanned=false;rescue?.cancelPreparation(index);rig.targetHeight=rig.homeHeight;return true;}
+ function capture(time){return {time,fishRevealed:puzzle.fishRevealed,tanks:vats.map(v=>v.breakage.capture()),rigs:rigs.map(r=>({parent:r.hanger.parent,position:r.hanger.position.toArray(),rotation:r.hanger.quaternion.toArray(),cut:r.transformation.capture(),height:r.height,targetHeight:r.targetHeight,lowered:r.lowered,rescued:r.rescued,rescuePlanned:r.rescuePlanned,escaping:r.escaping,releasedAt:r.releasedAt,releasedFrom:r.releasedFrom.toArray(),chainDropped:r.chainDropped,payingOut:r.payingOut}))};}
+ function restore(value,time){
+  const delta=time-value.time;puzzle.setFishRevealed(value.fishRevealed);
+  value.tanks.forEach((v,i)=>vats[i].breakage.restore(v,time));
+  value.rigs.forEach((v,i)=>{const r=rigs[i];for(const key of['height','targetHeight','lowered','rescued','rescuePlanned','escaping','chainDropped'])r[key]=v[key];r.releasedAt=v.releasedAt===null?null:v.releasedAt+delta;r.payingOut=v.payingOut===null?null:v.payingOut+delta;r.releasedFrom.fromArray(v.releasedFrom);v.parent.add(r.hanger);r.hanger.position.fromArray(v.position);r.hanger.quaternion.fromArray(v.rotation);r.transformation.restore(v.cut);r.returnChain.object.visible=!r.chainDropped;r.loadChain.object.visible=true;});lastTime=time;
+ }
  function getFocusView(index,eye,target){
   const rig=rigs[index];
   rig.rig.localToWorld(eye.set(0,1.65,2.7));
@@ -344,7 +351,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.rescued&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(!rigs[index].escaping&&rigs[index].payingOut===null&&rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
+ return {group,update,capture,restore,raise,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(!rigs[index].escaping&&rigs[index].payingOut===null&&rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
   safeDescent:index=>!!rigs[index]&&(rigs[index].rescuePlanned||rigs[index].rescued||leaks?.isDrained(index)),canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[puzzle?.pmIndex??2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[puzzle?.pmIndex??2].transformation.skeleton;}};

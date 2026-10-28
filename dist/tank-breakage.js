@@ -55,5 +55,5 @@ export function createTankBreakage({vat,shell,deposits,index=0,floorSupport=()=>
   shards.instanceMatrix.needsUpdate=true;settled=reducedMotion||age>=.9;
  }
  function reset(){brokenAt=null;settled=false;plans.length=0;shell.visible=deposits.visible=true;group.visible=false;shards.count=0;}
- return {group,impact,outlet,break:breakTank,update,reset,get broken(){return brokenAt!==null;}};
+ return {group,impact,outlet,break:breakTank,update,reset,capture:()=>brokenAt,restore(value,time){reset();if(value!==null){breakTank(time-1);update(time,true);}},get broken(){return brokenAt!==null;}};
 }

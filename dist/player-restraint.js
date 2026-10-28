@@ -210,5 +210,5 @@ export function createPlayerRestraint(camera,options={}){
  }
  function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);
- return {group,target:restraint,state,update,reset,getSawContact:out=>sawContact.getWorldPosition(out),endReach:()=>state.endReach(),setEnvironment(map){for(const mat of[iron,edge,cuffSteel,polished]){mat.envMap=map;mat.envMapIntensity=mat===polished?1.65:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
+ return {group,target:restraint,state,update,reset,setLocked(value,time){if(value){reset();return;}state.setLocked(false,time);arm.visible=false;},getSawContact:out=>sawContact.getWorldPosition(out),endReach:()=>state.endReach(),setEnvironment(map){for(const mat of[iron,edge,cuffSteel,polished]){mat.envMap=map;mat.envMapIntensity=mat===polished?1.65:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
 }

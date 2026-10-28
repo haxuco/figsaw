@@ -1,3 +1,4 @@
+import {shiftTime} from './diagnostic-time.js';
 const clamp=(v,a=0,b=1)=>Math.max(a,Math.min(b,v));
 export const FIRE_GRACE_SECONDS=30;
 export const SPRINKLER_SECONDS=10;
@@ -5,6 +6,7 @@ export const SPRINKLER_SECONDS=10;
 // Game logic is independent of particles/frame rate. Only real wet/live cable
 // contact starts this chain of events; arming alone never releases water.
 export function createCableFireState(){
+ let invulnerable=false;
  let phase='idle',armed=false,contactAt=null,ignitedAt=null,sprayAt=null,hitAt=null,origin=null,head=null,intensity=0,melt=0,surrounding=0;
  const patches=[];
  function update(time,dt,{contact=null,live=false,viewer}){
@@ -32,13 +34,17 @@ export function createCableFireState(){
    for(const patch of patches){
     patch.radius=.10+.35*clamp((time-patch.born)/3);
    }
-   if(phase==='burning'&&sprayAt===null&&hitAt===null&&age>=FIRE_GRACE_SECONDS)hitAt=ignitedAt+FIRE_GRACE_SECONDS;
+   if(!invulnerable&&phase==='burning'&&sprayAt===null&&hitAt===null&&age>=FIRE_GRACE_SECONDS)hitAt=ignitedAt+FIRE_GRACE_SECONDS;
    if(wet===1){phase='extinguished';intensity=0;}
   }
   if(hitAt!==null&&time-hitAt>=1.1){phase='dead';return true;}
   return false;
  }
- return {update,patches,activateSprinklers(){armed=true;},
+ return {update,patches,
+  setInvulnerable(value){invulnerable=value;if(value){hitAt=null;if(phase==='dead')phase='burning';}},
+  ignite(time,point){if(phase!=='idle')return false;origin={...point};head={x:point.x,z:point.z};contactAt=time-1.4;ignitedAt=time;phase='burning';melt=1;patches.push({...head,born:time,radius:.10});return true;},
+  capture(time){return structuredClone({time,phase,armed,contactAt,ignitedAt,sprayAt,hitAt,origin,head,intensity,melt,surrounding,patches});},
+  restore(value,time){const v=structuredClone(value),delta=time-v.time;({phase,armed,contactAt,ignitedAt,sprayAt,hitAt,origin,head,intensity,melt,surrounding}=v);contactAt=shiftTime(contactAt,delta);ignitedAt=shiftTime(ignitedAt,delta);sprayAt=shiftTime(sprayAt,delta);hitAt=invulnerable?null:shiftTime(hitAt,delta);patches.length=0;for(const p of v.patches){p.born+=delta;patches.push(p);}},activateSprinklers(){armed=true;},
   releaseSprinklers(time){
    if(phase==='dead'||hitAt!==null||sprayAt!==null)return false;
    armed=true;sprayAt=time;if(phase==='burning')phase='extinguishing';return true;

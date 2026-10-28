@@ -36,6 +36,8 @@ export function createChargingState(){
   return '';
  }
  return {use,update,
+  capture(){return {phase,drawerOpen,battery,deadline,now,depleted};},
+  restore(value,time=value.now){({phase,drawerOpen,battery,deadline,now,depleted}=value);if(deadline!==null)deadline+=time-now;now=time;},
   damageCable(){if(phase==='powered'||phase==='charging')phase='damaged';},
   reset(){phase='drawer';drawerOpen=false;battery=8;deadline=null;now=0;depleted=false;},
   get canUse(){return phase==='charging'||battery>0;},

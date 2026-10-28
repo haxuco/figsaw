@@ -95,7 +95,8 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
   }sparkGeometry.attributes.position.needsUpdate=true;}
   return finished;
  }
- return {group,update,flowTarget,setEnvironment:sprinklers.setEnvironment,activateSprinklers:state.activateSprinklers,releaseSprinklers:state.releaseSprinklers,
+ return {group,update,flowTarget,setInvulnerable:state.setInvulnerable,ignite:state.ignite,
+  capture:state.capture,restore(value,time){state.restore(value,time);sprinklers.reset();lastPhase='';message='';flames.count=smoke.count=ash.count=0;sparks.visible=false;light.intensity=frontLight.intensity=0;power.value=0;},setEnvironment:sprinklers.setEnvironment,activateSprinklers:state.activateSprinklers,releaseSprinklers:state.releaseSprinklers,
   get origin(){return state.origin;},
   get phase(){return state.phase;},get dying(){return state.dying;},get sprinklersArmed(){return state.armed;},blackout:state.blackout,warningOpacity:state.warningOpacity,
   takeMessage(){const text=message;message='';return text;},

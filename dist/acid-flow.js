@@ -1,10 +1,11 @@
+import {shiftTime} from './diagnostic-time.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // The bottom band sits below the axe opening and retains a hazardous heel.
 export const BREACHED_TANK_RESIDUAL=.20;
 // Finite reservoirs spread across the floor independently of the player's view.
 // Deterministic concentric lobes overlap into broad, persistent pools.
 export function createAcidFlow({speed=.38,maxPoints=180}={}){
- const leaks=[];let hitAt=null,finished=false,neutralized=false;
+ const leaks=[];let hitAt=null,finished=false,neutralized=false,invulnerable=false;
  function open(index,origin,time,locked=false,{breach=false}={}){
   if(locked||hitAt!==null||leaks.some(l=>l.index===index))return false;
   leaks.push({index,openedAt:time,drainStarted:time,drainInitial:1,drainFloor:breach?BREACHED_TANK_RESIDUAL:0,breached:breach,drainingComplete:false,duration:breach?14:25,progress:0,remaining:1,pouring:0,origin:{...origin},head:{x:origin.x,z:origin.z},points:[]});return true;
@@ -34,10 +35,13 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
    }
    for(const point of leak.points){
     point.radius=.13+.34*clamp((time-point.born)/4,0,1);
-    if(!neutralized&&!protectedFromAcid&&hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
+    if(!invulnerable&&!neutralized&&!protectedFromAcid&&hitAt===null&&Math.hypot(viewer.x-point.x,viewer.z-point.z)<point.radius+.15)hitAt=time;
    }
   }
   if(hitAt!==null&&time-hitAt>=.85){finished=true;return true;}return false;
  }
- return {open,breach,update,leaks,outflowFinished:index=>leaks.some(l=>l.index===index&&l.drainingComplete),neutralize(){if(hitAt!==null||finished)return false;neutralized=true;return true;},get neutralized(){return neutralized;},remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;neutralized=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
+ return {open,breach,update,leaks,
+  setInvulnerable(value){invulnerable=value;if(value){hitAt=null;finished=false;}},
+  capture(time){return structuredClone({time,leaks,hitAt,finished,neutralized});},
+  restore(value,time){const copy=structuredClone(value),delta=time-copy.time;leaks.length=0;for(const l of copy.leaks){l.openedAt+=delta;l.drainStarted+=delta;for(const p of l.points)p.born+=delta;leaks.push(l);}hitAt=invulnerable?null:shiftTime(copy.hitAt,delta);finished=invulnerable?false:copy.finished;neutralized=copy.neutralized;},outflowFinished:index=>leaks.some(l=>l.index===index&&l.drainingComplete),neutralize(){if(hitAt!==null||finished)return false;neutralized=true;return true;},get neutralized(){return neutralized;},remaining:index=>leaks.find(l=>l.index===index)?.remaining??1,reset(){leaks.length=0;hitAt=null;finished=false;neutralized=false;},get dying(){return hitAt!==null;},get finished(){return finished;},blackout(time){return hitAt===null?0:clamp((time-hitAt)/.70,0,1);}};
 }

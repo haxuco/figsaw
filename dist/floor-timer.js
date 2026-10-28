@@ -64,5 +64,5 @@ export function createFloorTimer(viewerPosition,position){
   return seconds;
  }
  update();
- return {group,display:mobileDisplay,start:()=>clock.start(),reset(){clock.reset();update();},update,get status(){return clock.status;}};
+ return {group,display:mobileDisplay,pause:clock.pause,resume:clock.resume,capture:clock.capture,restore(value){clock.restore(value);update();},setRemaining(value){clock.setRemaining(value);update();},get paused(){return clock.paused;},start:()=>clock.start(),reset(){clock.reset();update();},update,get status(){return clock.status;}};
 }

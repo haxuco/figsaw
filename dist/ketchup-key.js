@@ -58,7 +58,7 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
   key.visible=t>=2.5&&!state.hasKey;
   if(key.visible){const fall=smooth((t-2.5)/.9);key.position.copy(spout).lerp(landing,fall);key.position.y+=Math.sin(fall*Math.PI)*.065;key.rotation.set((1-fall)*2,fall*.50,(1-fall)*3);brass.emissiveIntensity=reducedMotion?.22:.22+.10*Math.sin(time*3);}
  }
- return {group,bottle,key,update,reset,get hasKey(){return state.hasKey;},get phase(){return state.phase;},
+ return {group,bottle,key,update,reset,capture:state.capture,restore(value,time){reset();state.restore(value,time);update(time,true);},grant(time){state.grant(time);update(time,true);},get hasKey(){return state.hasKey;},get phase(){return state.phase;},
   pour:time=>state.pour(time),collect:()=>state.collect(),
   hint(action){if(action==='collect'&&!state.hasKey)return state.phase==='revealed'?'Pick up the shackle key':'A key is sliding out…';if(action==='pour')return state.phase==='sealed'?'Pour out the ketchup':state.phase==='pouring'?'Pouring ketchup…':state.hasKey?'The bottle is empty':'Pick up the key in the ketchup';return '';}
  };

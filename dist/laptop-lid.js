@@ -11,6 +11,8 @@ export function createLaptopLid({object,screen,lid,displayMaterial,screenSpill})
  apply(0);
  return {
   object,screen,
+  capture(){return {opened,progress,manualOpening,waterDamage,batteryPowered};},
+  restore(value){({opened,progress,manualOpening,waterDamage,batteryPowered}=value);apply(progress);},
   setPower(powered){if(batteryPowered===powered)return;batteryPowered=powered;apply(progress);},
   get isPowered(){return batteryPowered&&waterDamage<1;},
   damageWater(amount){waterDamage=THREE.MathUtils.clamp(amount,0,1);apply(progress);},

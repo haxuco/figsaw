@@ -73,7 +73,7 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
   if(!state.active)return false;
   const age=state.elapsed(time),pull=reducedMotion?1:THREE.MathUtils.smootherstep(age,0,.45);
   lever.rotation.x=-1.02*pull;lever.position.y=.052-.026*pull;status.material.color.setHex(0xf13819);
-  if(!state.dying)return false;
+  if(state.outcome==='fire')return false;
   const acid=state.outcome==='acid',impact=acid?1.25:1.8,burst=Math.max(0,age-impact),active=age>=impact;
   camera.getWorldQuaternion(rotation);
   flash.position.set(target.x,target.y+.35,target.z);flash.color.setHex(acid?0xe9f7b0:0xb3dfff);
@@ -120,7 +120,9 @@ export function createFireAlarm({fireHazard,acidLeaks,laptop,floorSupport}){
   }
   return state.update(time);
  }
- return {station,effects,pull,update,target,silence:sizzle.stop,blackout:state.blackout,
+ return {station,effects,pull,update,target,setInvulnerable:state.setInvulnerable,
+  capture(time){return {state:state.capture(time),target:target.toArray()};},
+  restore(value,time){sizzle.stop();state.restore(value.state,time);target.fromArray(value.target);lever.rotation.x=0;lever.position.y=.052;status.material.color.setHex(state.active?0xf13819:0x48150b);clouds.count=0;ripple.visible=puddle.visible=sparks.visible=laptopSplashes.visible=false;flash.intensity=0;},silence:sizzle.stop,blackout:state.blackout,
   get active(){return state.active;},get dying(){return state.dying;},get outcome(){return state.outcome;},get message(){return state.message;},
   hint(){return state.active?'Fire alarm pulled · Sprinklers released':'Pull fire alarm';},
   reset(){sizzle.stop();state.reset();lever.rotation.x=0;lever.position.y=.052;status.material.color.setHex(0x48150b);clouds.count=0;ripple.visible=puddle.visible=sparks.visible=laptopSplashes.visible=false;flash.intensity=0;laptop.damageWater(0);}
