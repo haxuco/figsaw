@@ -12,6 +12,7 @@ import { FIGPAL_PLEAS, createFigpalBubbles, createHangingPleas } from './figpal-
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { formatCountdown } from './countdown-clock.js';
+import {createCountdownHUD} from './countdown-hud.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
 import { createArrivalCameraMove } from './arrival-camera.js';
@@ -436,6 +437,7 @@ profiler.mark('characterBuilt');
 await yieldStartup('Building the office…');
 const escapePuzzle=createEscapePuzzle(),inventory=createInventory();
 const {group:office,rescueChairs,chairRefuge,documents,laptop,catMug,handsaw,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=await createOffice(renderer,homePosition,yieldStartup,escapePuzzle);scene.add(office);
+const countdownHUD=createCountdownHUD({timer:countdown,camera,occluders:[office,model],corner:document.querySelector('#timer-hud'),warning:document.querySelector('#countdown-warning'),reducedMotion});
 profiler.mark('officeBuilt');
 await yieldStartup('Preparing the room…');
 const restraint=createPlayerRestraint(camera,{canDetach:()=>ketchupKey.hasKey});scene.add(restraint.group);
@@ -554,7 +556,7 @@ function inspectDocument(hit){
  else if(hit?.userData.fishClue&&figpalHoists.fishClueReady)documentViewer.show(figpalHoists.fishInspectionTarget);
 }
 function escapeRoom(){
- if(gameEnded||gameWon)return;exitDoor.unlock();gameWon=true;leaveChairButton.hidden=true;escapedAt=state.time;
+ if(gameEnded||gameWon)return;exitDoor.unlock();gameWon=true;countdownHUD.hide();leaveChairButton.hidden=true;escapedAt=state.time;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();figpalBubbles.hide();arrivalDialogue.hidden=true;canvas.inert=true;
  const target=exitDoor.object.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,1.1,0)),direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=1;
  camera.position.copy(cameraPosition);camera.lookAt(cameraPosition.clone().add(direction));camera.fov=homeCamera.fov;camera.updateProjectionMatrix();
@@ -782,7 +784,7 @@ function updateFigpalRound(time){
 }
 
 function endGame(cause='objective'){
- if(gameEnded)return;gameEnded=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
+ if(gameEnded)return;gameEnded=true;countdownHUD.hide();inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion,gameOverStyle(cause));
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;figpalBubbles.hide();
@@ -824,7 +826,7 @@ function resetView({skipIntro=false}={}){
  arrivalDialogue.hidden=true;arrivalDialogue.classList.remove('long-dialogue');dialogueAnnouncement.textContent='';dialogueSpeech=null;
  dialogueLineIndex=skipIntro?dialogueLines.length-1:-1;nextDialogueAt=Infinity;
  state.jaw=0;state.talkUntil=0;nextDialogueVisibilityCheck=0;
- countdownStartTime=null;countdown.reset();lastCountdownSeconds=300;
+ countdownStartTime=null;countdown.reset();countdownHUD.hide();lastCountdownSeconds=300;
  countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';
  if(skipIntro){
   // Resume at the completed introduction, without replaying speech or the ride.
@@ -1084,6 +1086,7 @@ function render(){
  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
  if(inventoryUI.active)inventoryPreviews.update();
  renderer.render(scene,camera);
+ countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active});
  frameRate.frame(performance.now());
  updateArrivalDialogue(t);hangingPleas.update(t,documentViewer.active||mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;

@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=8f43708dbd9b">
-  <link rel="modulepreload" href="./game.bundle.js?v=2ecffddd6003">
+  <link rel="stylesheet" href="./style.css?v=cbd08d552883">
+  <link rel="modulepreload" href="./game.bundle.js?v=0beeb406f8e4">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -65,6 +65,8 @@
   <p id="dialogue-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <p id="game-countdown" class="sr-only" role="timer" aria-live="off" aria-label="Game countdown">05:00</p>
   <p id="countdown-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
+  <output id="timer-hud" aria-hidden="true" hidden>05:00</output>
+  <output id="countdown-warning" aria-hidden="true" hidden>00:05</output>
   <p id="hoist-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <div class="view-tools">
     <button id="copy-view" type="button" title="Copy the current camera view as a prompt">
@@ -78,6 +80,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=2ecffddd6003"></script>
+  <script type="module" src="./boot.js?v=0beeb406f8e4"></script>
 </body>
 </html>
