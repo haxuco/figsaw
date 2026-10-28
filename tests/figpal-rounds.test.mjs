@@ -7,7 +7,7 @@ import {createFigpalCamera} from '../dist/figpal-camera.js';
 
 function fixture(){
  let now=0;const dead=new Set(),under=new Set(),lowered=new Set(),calls=[];
- const clock=createCountdownClock(300,()=>now);
+ const clock=createCountdownClock(undefined,()=>now);
  const hoists={count:3,movingIndex:null,canSpeak:i=>!dead.has(i),isSubmerged:i=>under.has(i),isLowered:i=>lowered.has(i),
   lower(i){calls.push(i);lowered.add(i);this.movingIndex=i;return true;},
   reset(){dead.clear();under.clear();lowered.clear();this.movingIndex=null;}};
@@ -15,28 +15,30 @@ function fixture(){
  return {clock,rounds,hoists,calls,dead,under,lowered,setNow(value){now=value;},submerge(i){dead.add(i);under.add(i);hoists.movingIndex=null;}};
 }
 
-test('two complete five-minute deadlines lower the non-PMs and end before the PM',()=>{
+test('two complete ten-minute deadlines give twenty minutes before game over',()=>{
  const f=fixture();f.clock.start();
  for(let i=0;i<2;i++){
-  const start=i*320;f.setNow(start+299);
-  assert.equal(f.rounds.update(start+299),null);assert.equal(f.clock.remainingSeconds,1);
-  f.setNow(start+300);
-  assert.deepEqual(f.rounds.update(start+300),{type:'lower',index:i});
+  const start=i*620;assert.equal(f.clock.remainingSeconds,600);
+  f.setNow(start+300);assert.equal(f.rounds.update(start+300),null,'the old five-minute deadline no longer lowers a Figpal');
+  f.setNow(start+599);
+  assert.equal(f.rounds.update(start+599),null);assert.equal(f.clock.remainingSeconds,1);
+  f.setNow(start+600);
+  assert.deepEqual(f.rounds.update(start+600),{type:'lower',index:i});
   assert.equal(f.rounds.active,true);assert.deepEqual(f.calls,Array.from({length:i+1},(_,j)=>j));
-  assert.equal(f.rounds.update(start+305),null,'zero must not trigger another hoist');
-  f.dead.add(i);assert.equal(f.rounds.update(start+306),null,'wait for the full descent, not just transformation');
-  f.submerge(i);assert.equal(f.rounds.update(start+310),null);
-  const event=f.rounds.update(start+312);
+  assert.equal(f.rounds.update(start+605),null,'zero must not trigger another hoist');
+  f.dead.add(i);assert.equal(f.rounds.update(start+606),null,'wait for the full descent, not just transformation');
+  f.submerge(i);assert.equal(f.rounds.update(start+610),null);
+  const event=f.rounds.update(start+612);
   if(i<1){
    assert.deepEqual(event,{type:'return',index:i});assert.equal(f.clock.remainingSeconds,0);
-   assert.equal(f.rounds.update(start+312.5),null,'timer waits for camera return');
-   f.setNow(start+320);assert.deepEqual(f.rounds.update(start+320),{type:'restart',remaining:1-i});
-   assert.equal(f.clock.remainingSeconds,300);assert.equal(f.rounds.active,false);
+   assert.equal(f.rounds.update(start+612.5),null,'timer waits for camera return');
+   f.setNow(start+620);assert.deepEqual(f.rounds.update(start+620),{type:'restart',remaining:1-i});
+   assert.equal(f.clock.remainingSeconds,600);assert.equal(f.rounds.active,false);
   }else{
    assert.deepEqual(event,{type:'ending'});assert.equal(f.clock.remainingSeconds,0);
-   assert.ok(f.rounds.blackout(start+312.55)>.49);
-   assert.deepEqual(f.rounds.update(start+314),{type:'gameover'});
-   assert.equal(f.rounds.update(start+320),null);assert.equal(f.rounds.blackout(start+320),1);
+   assert.ok(f.rounds.blackout(start+612.55)>.49);
+   assert.deepEqual(f.rounds.update(start+614),{type:'gameover'});
+   assert.equal(f.rounds.update(start+620),null);assert.equal(f.rounds.blackout(start+620),1);
   }
  }
 });
@@ -47,23 +49,23 @@ test('a hidden-tab deadline still selects just one survivor and never catches up
  for(let i=2;i<20;i++)assert.equal(f.rounds.update(i),null);
  assert.deepEqual(f.calls,[0]);
  f.submerge(0);f.rounds.update(20);f.rounds.update(22);f.setNow(1900);f.rounds.update(24);
- assert.equal(f.clock.remainingSeconds,300);
+ assert.equal(f.clock.remainingSeconds,600);
 });
 
 test('manual operations never count as a deadline or override the randomized schedule',()=>{
- const f=fixture();f.dead.add(2);f.under.add(2);f.lowered.add(2);f.clock.start();f.setNow(300);
- f.hoists.movingIndex=2;assert.equal(f.rounds.update(300),null);
- f.hoists.movingIndex=null;assert.deepEqual(f.rounds.update(301),{type:'lower',index:0});
- assert.equal(f.rounds.scheduledDrops,0);f.submerge(0);f.rounds.update(310);f.rounds.update(312);assert.equal(f.rounds.scheduledDrops,1);
+ const f=fixture();f.dead.add(2);f.under.add(2);f.lowered.add(2);f.clock.start();f.setNow(600);
+ f.hoists.movingIndex=2;assert.equal(f.rounds.update(600),null);
+ f.hoists.movingIndex=null;assert.deepEqual(f.rounds.update(601),{type:'lower',index:0});
+ assert.equal(f.rounds.scheduledDrops,0);f.submerge(0);f.rounds.update(610);f.rounds.update(612);assert.equal(f.rounds.scheduledDrops,1);
 });
 
 test('other camera actions defer the deadline; reset clears every victim and pending ending',()=>{
- const f=fixture();f.clock.start();f.setNow(300);
- assert.equal(f.rounds.update(300,true),null);assert.deepEqual(f.calls,[]);
- f.rounds.update(301);f.submerge(0);f.rounds.reset();f.clock.reset();
+ const f=fixture();f.clock.start();f.setNow(600);
+ assert.equal(f.rounds.update(600,true),null);assert.deepEqual(f.calls,[]);
+ f.rounds.update(601);f.submerge(0);f.rounds.reset();f.clock.reset();
  assert.equal(f.rounds.active,false);assert.equal(f.rounds.index,null);assert.equal(f.rounds.blackout(600),0);
  assert.equal(f.dead.size,0);assert.equal(f.rounds.update(600),null);
- f.clock.start();f.setNow(600);assert.deepEqual(f.rounds.update(600),{type:'lower',index:0});
+ f.clock.start();f.setNow(1200);assert.deepEqual(f.rounds.update(1200),{type:'lower',index:0});
 });
 
 test('manual transformations alone cannot trigger the scheduled game over',()=>{

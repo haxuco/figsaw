@@ -14,7 +14,7 @@ import { createOffice } from './office.js?v=fewer-faster';
 import { createFigpalBubbles, createHangingPleas, createFigpalLoweringDialogue } from './figpal-finale.js?v=silent-skeletons';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
-import { formatCountdown } from './countdown-clock.js';
+import { FIGPAL_INTERVAL_SECONDS,formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
 import {createSceneRaycaster} from './scene-picking.js';
 import {createAttemptTracker} from './attempts.js';
@@ -402,11 +402,11 @@ const arrivalDialogue=document.querySelector('#figsaw-dialogue');
 const dialogueAnnouncement=document.querySelector('#dialogue-announcement');
 const countdownReadout=document.querySelector('#game-countdown');
 const countdownAnnouncement=document.querySelector('#countdown-announcement');
-let countdownStartTime=null,lastCountdownSeconds=300;
+let countdownStartTime=null,lastCountdownSeconds=FIGPAL_INTERVAL_SECONDS;
 const dialogueLines=[
  'I want to play a game...',
  "Those who don't appreciate design do not deserve it.",
- 'Complete the design challenges to escape... but every 5 minutes one of your Figpals will be dropped into the tank of acid.',
+ 'Complete the design challenges to escape... but every 10 minutes one of your Figpals will be dropped into the tank of acid.',
  'Let the games begin...'
 ];
 let dialogueLineIndex=-1,nextDialogueAt=Infinity;
@@ -825,7 +825,7 @@ let figpalRoundFinished=false;
 function updateFigpalRound(time){
  if(countdownStartTime!==null&&time>=countdownStartTime){
   countdown.start();countdownStartTime=null;
-  countdownAnnouncement.textContent='The five-minute countdown has started.';
+  countdownAnnouncement.textContent='The ten-minute countdown has started.';
  }
  const event=figpalRounds.update(time,rescueChairs.state.pulling||chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying);
  if(event?.type==='lower'){
@@ -836,7 +836,7 @@ function updateFigpalRound(time){
  }else if(event?.type==='return'){
   loweringDialogue.reset();figpalCamera.restore(time);
  }else if(event?.type==='restart'){
-  countdownAnnouncement.textContent=`The timer resets to five minutes. ${event.remaining} Figpal${event.remaining===1?' remains':'s remain'}.`;
+  countdownAnnouncement.textContent=`The timer resets to ten minutes. ${event.remaining} Figpal${event.remaining===1?' remains':'s remain'}.`;
  }else if(event?.type==='ending'){
   releaseControls();chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;
   countdownAnnouncement.textContent='The second deadline has passed. Your time is up.';
@@ -890,16 +890,16 @@ function resetView({skipIntro=false}={}){
  arrivalDialogue.hidden=true;arrivalDialogue.classList.remove('long-dialogue');dialogueAnnouncement.textContent='';dialogueSpeech=null;
  dialogueLineIndex=skipIntro?dialogueLines.length-1:-1;nextDialogueAt=Infinity;
  state.jaw=0;state.talkUntil=0;nextDialogueVisibilityCheck=0;
- countdownStartTime=null;countdown.reset();countdownHUD.hide();lastCountdownSeconds=300;
- countdownReadout.textContent='05:00';countdownAnnouncement.textContent='';
+ countdownStartTime=null;countdown.reset();countdownHUD.hide();lastCountdownSeconds=FIGPAL_INTERVAL_SECONDS;
+ countdownReadout.textContent=formatCountdown(FIGPAL_INTERVAL_SECONDS);countdownAnnouncement.textContent='';
  if(skipIntro){
   // Resume at the completed introduction, without replaying speech or the ride.
-  // Use the same exact arrival view and give this attempt a fresh five minutes.
+  // Use the same exact arrival view and give this attempt a fresh ten minutes.
   arrivalDialogue.querySelector('.dialogue-bubble span').textContent=dialogueLines[dialogueLineIndex];
   arrivalCameraMove.start(state.time,cameraPosition,state);
   arrivalCameraMove.update(state.time,cameraPosition,state,true);
   updateEntrance(state.time);departure.schedule(state.time);
-  countdown.start();countdownAnnouncement.textContent='The five-minute countdown has started.';
+  countdown.start();countdownAnnouncement.textContent='The ten-minute countdown has started.';
  }
 }
 

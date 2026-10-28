@@ -30,9 +30,9 @@ test('last five seconds pulse once per second independently of floor visibility,
 });
 test('inspection overlays retain a corner timer; retry and reduced motion have predictable warning states',()=>{
  const {hud,timer,corner,warning}=setup(true);
- timer.status='waiting';hud.update(0,300);assert.equal(corner.hidden,true);assert.equal(warning.hidden,true);
+ timer.status='waiting';hud.update(0,600);assert.equal(corner.hidden,true);assert.equal(warning.hidden,true);
  timer.status='running';hud.update(1,5,{forceCorner:true});assert.equal(corner.hidden,false);assert.equal(warning.hidden,false);
  hud.update(1.9,5);assert.equal(warning.hidden,false,'reduced motion leaves the warning steady');
  hud.hide();assert.equal(corner.hidden,true);assert.equal(warning.hidden,true);
- hud.update(2,300);assert.equal(warning.hidden,true);assert.equal(corner.textContent,'05:00');
+ hud.update(2,600);assert.equal(warning.hidden,true);assert.equal(corner.textContent,'10:00');
 });
