@@ -18,7 +18,8 @@ import { formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
 import {createSceneRaycaster} from './scene-picking.js';
 import {createAttemptTracker} from './attempts.js';
-import {createGameOverShare} from './game-over-share.js';
+import {createGameOverShare,createVictoryShare} from './game-over-share.js';
+import {captureVictoryResult} from './victory-result.js';
 import {createLaptopProgram} from './laptop-program.js';
 import { createDialogueSpeech, dialogueMouthAmount } from './dialogue-speech.js';
 import { figsawIdlePose } from './character-motion.js';
@@ -481,13 +482,14 @@ const restartGame=document.querySelector('#restart-game'),mugEyeImpact=document.
 const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
 const deathTransition=createGameOverTransition(document.querySelector('#death-blood'));
 const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
-gameOver.addEventListener('keydown',event=>{
+const escapeScreen=document.querySelector('#escaped');
+const victoryShare=createVictoryShare(document.querySelector('#victory-share'));
+for(const dialog of[gameOver,escapeScreen])dialog.addEventListener('keydown',event=>{
  if(event.key!=='Tab')return;
- const buttons=[...gameOver.querySelectorAll('button:not([hidden]):not(:disabled)')],index=buttons.indexOf(document.activeElement);
+ const buttons=[...dialog.querySelectorAll('button:not([hidden]):not(:disabled)')],index=buttons.indexOf(document.activeElement);
  event.preventDefault();event.stopPropagation();buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();
 });
 let gameEnded=false,gameWon=false,escapedAt=0;
-const escapeScreen=document.querySelector('#escaped');
 document.querySelector('#new-game').addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
@@ -591,11 +593,14 @@ function inspectDocument(hit){
 }
 function escapeRoom(){
  laptopProgram.cancel();
- if(gameEnded||gameWon)return;testingMode.update({hidden:true});testingHighlights.group.visible=false;equippedModel.group.visible=false;exitDoor.unlock();gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;escapedAt=state.time;
+ if(gameEnded||gameWon)return;
+ const result=captureVictoryResult({attempt:attempts.count,remainingSeconds:countdown.update(),rescue:rescueChairs.state});
+ testingMode.update({hidden:true});testingHighlights.group.visible=false;equippedModel.group.visible=false;exitDoor.unlock();gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;escapedAt=state.time;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  const target=exitDoor.object.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,1.1,0)),direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=1;
  camera.position.copy(cameraPosition);camera.lookAt(cameraPosition.clone().add(direction));camera.fov=homeCamera.fov;camera.updateProjectionMatrix();
  restraintStatus.textContent='The code works. The door opens. You escaped.';
+ victoryShare.prepare(result);
 }
 function inspectMobile(){
  if(sawBusy()||mobilePuzzle.active)return;
@@ -869,7 +874,7 @@ let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
  laptopProgram.reset();
- attempts.next();gameOverShare.reset();
+ attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();

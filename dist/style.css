@@ -174,7 +174,15 @@ body.inspecting-mobile #scene{cursor:grab}body.inspecting-mobile #scene:active{c
 #fire-warning{position:fixed;inset:0;z-index:65;background:radial-gradient(ellipse at center,#bd101c66 10%,#bd101c 100%);pointer-events:none}
 #fire-warning[hidden],body.game-over #fire-warning{display:none}
 
-#escaped{position:fixed;inset:0;z-index:100;background:#081008ee;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#d4dcc9;text-align:center;padding:20px}#escaped[hidden]{display:none}#escaped h1{font-family:'Grenze Gotisch',Georgia,serif;font-size:clamp(64px,12vw,120px);margin:0;color:#bfd6aa}#escaped p{font:16px Georgia,serif;color:#9cae91}#escaped button{margin-top:30px;background:none;color:#d4dcc9;border:1px solid #56694b;padding:12px 28px;font:18px Georgia,serif;cursor:pointer}
+#escaped{position:fixed;inset:0;z-index:100;background:#081008f5;display:grid;place-items:center;overflow:auto;box-sizing:border-box;color:#d4dcc9;text-align:center;padding:16px}
+#escaped[hidden]{display:none}
+.escaped-content{width:min(100%,600px);margin:auto}
+#escaped h1{font:500 clamp(48px,10vw,80px)/1.1 'Grenze Gotisch',Georgia,serif;margin:0 0 12px;color:#bfd6aa}
+#victory-share{width:min(100%,440px);margin:0 auto}
+.victory-graphic{width:min(100%,calc(100dvh - 245px))}
+#escaped .game-over-attempt,#escaped .game-over-share-status{color:#9cae91}
+#escaped .game-over-share-actions button{background:#121b13;color:#d4dcc9;border-color:#56694b}
+#escaped .game-over-share-actions button:hover:not(:disabled),#escaped .game-over-share-actions button:focus-visible{border-color:#bfd6aa;outline-color:#bfd6aa55}
 
 #inventory-button,#equipped-item{position:fixed;z-index:24;bottom:max(22px,env(safe-area-inset-bottom));right:22px;font:12px Arial,sans-serif;color:#ddd7c7;background:#151614ed;border:1px solid #514c40;border-radius:3px;padding:11px 15px;box-shadow:0 4px 18px #0009}
 #inventory-button{cursor:pointer}#equipped-item{right:150px;display:flex;align-items:center;gap:15px}#equipped-item[hidden],#inventory-panel[hidden]{display:none}#equipped-item button{background:none;border:0;color:#b9b19b;text-decoration:none;cursor:pointer;font:inherit}#equipped-item button:hover{color:#fff}
