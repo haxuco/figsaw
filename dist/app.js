@@ -639,7 +639,7 @@ function escapeRoom(){
  putEquipmentAway();inventoryUI.setHidden(true);document.body.classList.add('escape-active');
  puzzleHints.reset();figpalBubbles.hide();
  escapeCinematic.start(state.time);victoryParade.start(state.time);
- restraintStatus.textContent='The code works. The door opens. You escaped.';
+ restraintStatus.textContent='You escaped. The rescued Figpals roll out on their chairs.';
  victoryShare.prepare(result);leaderboardUI.close();leaderboardUI.showResult(result);
 }
 function inspectMobile(){
@@ -1199,8 +1199,8 @@ function render(){
  lastRenderAt=cpuStart;
  const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(gameWon){
-  const revealed=escapeCinematic.update(t,reducedMotion);exitDoor.update(t,reducedMotion);
-  if(revealed&&rescueChairs.state.towPhase==='at-door'&&rescueChairs.exit(t)){escapeCinematic.beginParade(t);escapeCinematic.update(t,reducedMotion);exitDoor.update(t,reducedMotion);}
+  escapeCinematic.update();exitDoor.update(t,reducedMotion);
+  if(rescueChairs.state.towPhase==='at-door')rescueChairs.exit(t);
   rescueChairs.update(t,reducedMotion);
   victoryParade.update(t,camera.position,reducedMotion);
   const finished=victoryParade.readyForResults(t,rescueChairs.state.towPhase==='escaped',reducedMotion);

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createExitDoorMotion,createEscapeCinematic,escapeDoorAngle,ESCAPE_DURATION} from '../dist/escape-cinematic.js';
+import {createExitDoorMotion,createEscapeCinematic,escapeDoorAngle} from '../dist/escape-cinematic.js';
 
 function fixture(aspect=16/9){
  const frame=new THREE.Group(),hinge=new THREE.Group();frame.position.set(-1.2,0,4.43);frame.rotation.y=Math.PI;frame.add(hinge);
@@ -10,15 +10,15 @@ function fixture(aspect=16/9){
  const shot=createEscapeCinematic({camera,position,state,door,baseFov:62});return {frame,hinge,light,door,camera,position,state,shot};
 }
 
-test('the door holds while the camera frames it, swings past ninety degrees, rebounds and settles before results',()=>{
- const f=fixture();f.shot.start(10);
- f.door.update(10.9);assert.equal(f.hinge.rotation.y,0);
- f.door.update(11.4);assert.ok(f.hinge.rotation.y>0&&f.hinge.rotation.y<.11);
- f.door.update(12.25);assert.ok(f.hinge.rotation.y>Math.PI/2);
- const peak=f.hinge.rotation.y;f.door.update(12.8);assert.ok(f.hinge.rotation.y<peak,'the leaf rebounds after its strong opening swing');
- f.door.update(14);assert.equal(f.hinge.rotation.y,1.84);assert.ok(f.light.intensity>0);
- assert.equal(f.shot.update(10+ESCAPE_DURATION-.01),false);assert.equal(f.shot.update(10+ESCAPE_DURATION+.01),true);
- f.door.reset();f.shot.reset();assert.equal(f.hinge.rotation.y,0);assert.equal(f.light.intensity,0);assert.equal(f.shot.active,false);
+test('winning cuts straight to the hallway with the door fully open on the first frame',()=>{
+ const f=fixture();assert.equal(f.shot.update(),false);f.shot.start(10);
+ assert.ok(f.camera.position.z>8.5);assert.equal(f.hinge.rotation.y,1.84);assert.ok(f.light.intensity>2.4);
+ const pose=f.camera.quaternion.clone(),position=f.position.clone();
+ for(const time of [10,10.1,10.9,11.4,12.25,14.8]){
+  assert.equal(f.shot.update(time),true,'the chair exit can begin immediately');f.door.update(time);
+  assert.equal(f.hinge.rotation.y,1.84,'the door never shuts or replays its opening');assert.ok(f.position.distanceTo(position)<1e-9);assert.ok(f.camera.quaternion.angleTo(pose)<1e-7);
+ }
+ f.door.reset();f.shot.reset();assert.equal(f.hinge.rotation.y,0);assert.equal(f.light.intensity,0);assert.equal(f.shot.active,false);assert.equal(f.shot.update(),false);
 });
 
 test('door and camera motion depend on elapsed time instead of desktop or mobile frame counts',()=>{
@@ -27,23 +27,10 @@ test('door and camera motion depend on elapsed time instead of desktop or mobile
  assert.equal(escapeDoorAngle(0),0);assert.equal(escapeDoorAngle(100),1.84);
 });
 
-test('the camera leans back and keeps the doorway and exit sign framed on portrait and landscape screens',()=>{
- for(const aspect of [.4,.55,1,16/9]){
-  const f=fixture(aspect);f.shot.start(0);f.shot.update(1.15);const near=f.position.clone();f.shot.update(1.8);f.camera.updateMatrixWorld(true);
-  const target=f.frame.localToWorld(new THREE.Vector3(0,1.28,0));
-  assert.ok(f.position.distanceTo(target)>near.distanceTo(target),'the lean pulls away from the doorway');
-  assert.ok(f.position.y>1.05);const upright=new THREE.PerspectiveCamera();upright.position.copy(f.position);upright.lookAt(f.frame.localToWorld(new THREE.Vector3(0,1.43,0)));assert.ok(f.camera.quaternion.angleTo(upright.quaternion)>.01,'the shot includes a small cinematic tilt');
-  for(const local of [[-.65,.02,0],[.65,.02,0],[-.65,2.85,0],[.65,2.85,0]]){
-   const projected=f.frame.localToWorld(new THREE.Vector3(...local)).project(f.camera);assert.ok(Math.abs(projected.x)<1&&Math.abs(projected.y)<1,'the full doorway stays on screen');
-  }
- }
-});
-
-test('reduced motion uses a steady camera, opens the door immediately and retains a short reveal',()=>{
- const f=fixture();f.shot.start(20);f.door.update(20,true);assert.equal(f.hinge.rotation.y,1.84);
- assert.equal(f.shot.update(20,true),false);const pose=f.camera.quaternion.clone(),position=f.position.clone();
- assert.equal(f.shot.update(20.84,true),false);assert.ok(position.distanceTo(f.position)<1e-9);assert.ok(pose.angleTo(f.camera.quaternion)<1e-7);const upright=new THREE.PerspectiveCamera();upright.position.copy(f.position);upright.lookAt(f.frame.localToWorld(new THREE.Vector3(0,1.43,0)));assert.ok(upright.quaternion.angleTo(f.camera.quaternion)<1e-7);
- assert.equal(f.shot.update(20.86,true),true);
+test('reduced motion also starts outside immediately with a steady hallway camera',()=>{
+ const f=fixture();f.shot.start(20);assert.equal(f.shot.update(20,true),true);f.door.update(20,true);assert.equal(f.hinge.rotation.y,1.84);
+ const pose=f.camera.quaternion.clone(),position=f.position.clone();assert.ok(position.z>8.5);
+ assert.equal(f.shot.update(20.5,true),true);assert.ok(position.distanceTo(f.position)<1e-9);assert.ok(pose.angleTo(f.camera.quaternion)<1e-7);
 });
 
 test('the outward door sweep clears all waiting chairs and the settled leaf clears the whole exit route',async()=>{
@@ -87,14 +74,14 @@ test('hallway walls and ceiling begin beyond the rear wall so they cannot peek i
 
 test('the hallway shot keeps both passengers visible on portrait and landscape screens before showing results',()=>{
  for(const aspect of [.4,.55,1,16/9]){
-  const f=fixture(aspect);f.shot.start(0);f.shot.update(4.8);f.shot.beginParade(4.8);f.shot.update(7);f.door.update(7);f.camera.updateMatrixWorld(true);
+  const f=fixture(aspect);f.shot.start(0);f.shot.update(0);f.door.update(0);f.camera.updateMatrixWorld(true);
   assert.ok(f.camera.position.z>8.5,'the victory camera watches the riders from inside the hallway');
   for(const z of [5.78,6.94])for(const y of [.55,1.35]){const p=new THREE.Vector3(-1.2,y,z).project(f.camera);assert.ok(Math.abs(p.x)<.95&&Math.abs(p.y)<.95,'both saved characters fit in the shot');}
   assert.ok(f.light.intensity>2.4,'the existing doorway light now illuminates their faces');f.door.reset();assert.equal(f.light.intensity,0);assert.ok(f.light.position.equals(new THREE.Vector3()));
  }
 });
 
-test('winning still shows the opening when the keypad was unlocked earlier',()=>{
+test('winning keeps an already-unlocked door open while cutting to the hallway',()=>{
  const f=fixture();f.door.unlock(0);f.door.update(8);assert.equal(f.hinge.rotation.y,1.84);
- f.shot.start(10);f.door.update(10.5);assert.equal(f.hinge.rotation.y,0);f.door.update(12.25);assert.ok(f.hinge.rotation.y>Math.PI/2);
+ f.shot.start(10);assert.ok(f.camera.position.z>8.5);f.door.update(10);assert.equal(f.hinge.rotation.y,1.84);f.door.update(12.25);assert.equal(f.hinge.rotation.y,1.84);
 });

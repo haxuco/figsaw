@@ -3,7 +3,6 @@ import * as THREE from './vendor/three.module.js';
 export const ESCAPE_DURATION=4.8;
 export const EXIT_DOOR_HINGE=[-.53,0,.06];
 export const EXIT_DOOR_LEAF_OFFSET=[.53,0,-.06];
-const wrap=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 const ease=(time,start,end)=>THREE.MathUtils.smootherstep(time,start,end);
 
 // A held latch, a brief crack, then a forceful swing and a small rebound.
@@ -37,43 +36,22 @@ export function createExitDoorMotion({object,frame,light,scenery=null}){
 }
 
 export function createEscapeCinematic({camera,position,state,door,baseFov}){
- let shot=null,paradeStarted=null;
- const destination=new THREE.Vector3(),target=new THREE.Vector3(),away=new THREE.Vector3(),direction=new THREE.Vector3();
+ let active=false;
+ const destination=new THREE.Vector3(),target=new THREE.Vector3(),direction=new THREE.Vector3();
  function start(time){
-  paradeStarted=null;
-  door.getEscapeView(destination,target);away.subVectors(destination,target).setY(0).normalize();
-  shot={time,from:position.clone(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom};
-  // A code entered earlier may already have unlocked the door. Replay the
-  // opening for the actual victory reveal, before any chairs cross it.
-  door.unlock(time,{restart:true});
+  // Begin outside with the doorway clear; do not replay the interior opening.
+  active=true;door.unlock(time-ESCAPE_DURATION,{restart:true});door.lightParade?.();door.update(time);
+  update();
  }
- function update(time,reducedMotion=false){
-  if(!shot)return false;
-  if(paradeStarted!==null){
-   // Cut to a three-quarter hallway shot: faces and the chair seats stay in
-   // view instead of disappearing behind their mesh backs in the doorway.
-   door.getParadeView(destination,target);
-   if(camera.aspect<.8){const extra=(.8-camera.aspect)*2.2;destination.z+=extra;destination.x-=extra*.15;}
-   position.copy(destination);camera.position.copy(position);camera.lookAt(target);
-   direction.subVectors(target,position).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=.90;
-   camera.fov=baseFov*state.zoom;camera.updateProjectionMatrix();return true;
-  }
-  const age=Math.max(0,time-shot.time),progress=reducedMotion?1:ease(age,0,1.15),lean=reducedMotion?1:ease(age,.35,1.65);
-  door.getEscapeView(destination,target);
-  // Pull farther back on narrow screens so the full frame and swinging leaf fit.
-  const eyeHeight=destination.y,distance=Math.max(2.25,1.05/(Math.tan(THREE.MathUtils.degToRad(baseFov*1.04)/2)*Math.max(.35,camera.aspect)));
-  destination.copy(target).addScaledVector(away,distance+.45*lean);destination.y=eyeHeight+.14*lean;
-  position.lerpVectors(shot.from,destination,progress);
-  target.y+=.15*lean;direction.subVectors(target,position).normalize();
-  state.yaw=shot.yaw+wrap(Math.atan2(-direction.x,-direction.z)-shot.yaw)*progress;
-  state.pitch=THREE.MathUtils.lerp(shot.pitch,Math.asin(direction.y),progress);
-  state.zoom=THREE.MathUtils.lerp(shot.zoom,1.04,progress);
-  camera.position.copy(position);
-  direction.set(-Math.sin(state.yaw)*Math.cos(state.pitch),Math.sin(state.pitch),-Math.cos(state.yaw)*Math.cos(state.pitch));
-  camera.lookAt(target.copy(position).add(direction));
-  if(!reducedMotion)camera.rotateZ(-.045*lean*(1-.65*ease(age,2.25,3.6)));
+ function update(){
+  if(!active)return false;
+  // Keep the saved Figpals' faces and seats visible as they roll outside.
+  door.getParadeView(destination,target);
+  if(camera.aspect<.8){const extra=(.8-camera.aspect)*2.2;destination.z+=extra;destination.x-=extra*.15;}
+  position.copy(destination);camera.position.copy(position);camera.lookAt(target);
+  direction.subVectors(target,position).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=.90;
   camera.fov=baseFov*state.zoom;camera.updateProjectionMatrix();
-  return age>=(reducedMotion?.85:ESCAPE_DURATION);
+  return true;
  }
- return {start,update,beginParade(time){paradeStarted=time;door.lightParade?.();},reset(){shot=null;paradeStarted=null;},get active(){return shot!==null;}};
+ return {start,update,reset(){active=false;},get active(){return active;}};
 }
