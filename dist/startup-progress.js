@@ -11,7 +11,7 @@ export function createStartupProgress(root,frame=callback=>requestAnimationFrame
   if(index>=0){value=Math.max(value,Math.round((index+1)/(stages.length+1)*100));bar.value=value;}
   bar.setAttribute('aria-valuetext',message);
  }
- function fail(){failed=true;root.hidden=false;root.setAttribute('aria-busy','false');label.textContent='The room could not load. Please reload to try again.';bar.hidden=true;}
+ function fail(){failed=true;root.hidden=false;root.setAttribute('aria-busy','false');label.hidden=false;label.textContent='The room could not load. Please reload to try again.';bar.hidden=true;}
  function finish(){
   if(failed||finished)return;finished=true;bar.value=100;bar.setAttribute('aria-valuetext','Ready');label.textContent='Ready';root.setAttribute('aria-busy','false');
   // Paint the completed bar, then uncover the already-rendered room. No delay.

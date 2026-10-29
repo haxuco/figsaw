@@ -16,6 +16,7 @@ import {createPerformanceReport} from './performance-report.js';
 import {createFrameRateCounter} from './frame-rate.js';
 import { createOffice } from './office.js?v=fewer-faster';
 import { createFigpalBubbles, createHangingPleas, createFigpalLoweringDialogue } from './figpal-finale.js?v=silent-skeletons';
+import { createFigpalHints } from './figpal-hints.js';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { FIGPAL_INTERVAL_SECONDS,formatCountdown } from './countdown-clock.js';
@@ -517,6 +518,7 @@ const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:fig
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
 const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,figpalHoists.safeDescent);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
+const figpalHints=createFigpalHints({hoists:figpalHoists,bubbles:figpalBubbles,acidLeaks,rescue:rescueChairs,puzzle:escapePuzzle});
 // Diffuse mobile materials do not sample a reflection environment. Avoid the
 // panorama conversion, render targets and PMREM shader compilation on phones.
 if(!quality.mobile){const displayEnvironment=createRoomReflections(renderer);setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);}
@@ -924,7 +926,7 @@ function resetView({skipIntro=false}={}){
  document.body.classList.remove('game-over','death-active');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
- figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);releaseControls();
+ figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();releaseControls();
  resetting=!skipIntro;departure.reset();cornerReaction.reset();canvas.classList.remove('over-figsaw');
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
@@ -947,7 +949,7 @@ function resetView({skipIntro=false}={}){
 const diagnosticView={capture:()=>({position:cameraPosition.toArray(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom}),restore(value){figpalCamera.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;cameraPosition.fromArray(value.position);state.yaw=value.yaw;state.pitch=value.pitch;state.zoom=value.zoom;}};
 const diagnosticProps={capture:()=>({saw:handsaw.visible,axe:fireAxe.object.visible}),restore(value){handsaw.visible=value.saw;fireAxe.object.visible=value.axe;},hideCollected(){handsaw.visible=false;fireAxe.object.visible=false;}};
 const prepareDiagnosticTimer=()=>{countdownStartTime=null;};prepareDiagnosticTimer.capture=()=>({delay:countdownStartTime===null?null:countdownStartTime-state.time,announcement:countdownAnnouncement.textContent});
-const diagnosticActions=createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
+const diagnosticActions=createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
 const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
  onActivate(){diagnosticRunUsed=true;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
  onExit(){testingMode.setEnabled(false);testingHighlights.group.visible=false;canvas.focus({preventScroll:true});},
@@ -1183,6 +1185,8 @@ function render(){
  const physicalPosition=chairSeat.occupied?chairSeat.hazardPosition:documentViewer.origin;
  const acidFinished=!hazardFrame.paused&&!fireAlarm.dying&&acidLeaks.update(hazardFrame.time,hazardFrame.dt,physicalPosition,camera,reducedMotion,{protectedFromAcid:chairSeat.protectedFromAcid});
  const fireFinished=!hazardFrame.paused&&fireHazard.update(hazardFrame.time,hazardFrame.dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
+ const fireMessage=fireHazard.takeMessage();
+ if(fireMessage&&fireHazard.phase==='extinguished'&&acidLeaks.neutralized)inventoryUI.notify('The acid has been neutralized.');
  const fireWarningOpacity=fireHazard.warningOpacity(hazardFrame.time,reducedMotion);fireWarning.hidden=fireWarningOpacity<=0;fireWarning.style.opacity=String(fireWarningOpacity);
  const alarmFinished=!hazardFrame.paused&&fireAlarm.update(hazardFrame.time,camera,reducedMotion);
  if(acidLeaks.dying||fireHazard.dying||fireAlarm.dying)releaseControls();
@@ -1227,7 +1231,9 @@ function render(){
  renderer.render(scene,camera);
  countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active||laptopProgram.active});
  frameRate.frame(performance.now());
- updateArrivalDialogue(t);loweringDialogue.update(t);hangingPleas.update(t,documentViewer.active||laptopProgram.active||mobilePuzzle.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
+ updateArrivalDialogue(t);loweringDialogue.update(t);
+ const figpalDialogueBlocked=documentViewer.active||laptopProgram.active||mobilePuzzle.active||inventoryUI.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying;
+ figpalHints.update(t,figpalDialogueBlocked);hangingPleas.update(t,figpalDialogueBlocked);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
   if(frameSamples>30&&slowFrames/frameSamples>.65&&requestedPixelRatio>quality.minPixelRatio){requestedPixelRatio=Math.max(quality.minPixelRatio,requestedPixelRatio-.2);resize();}
