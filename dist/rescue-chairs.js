@@ -99,7 +99,11 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   if(!route){message='That chair route is blocked.';return false;}
   state.place(index,tank);rolls.set(index,{route,q:o.quaternion.clone(),toQ:slot.q.clone(),at:lastTime,duration:Math.max(1.5,route.length/1.8)});cancelMove();return true;
  }
- function prepare(tank,alive=true){if(rolls.size||transfers.size)return false;return state.reserve(tank,tank,{alive});}
+ function prepare(tank,alive=true){
+  // Another Figpal can descend or hop without occupying this waiting chair.
+  const index=state.chairAt(tank);if(index<0||rolls.has(index)||transfers.has(tank))return false;
+  return state.reserve(tank,tank,{alive});
+ }
  function board(tank,hanger,alive=true){const index=state.chairAt(tank);if(index<0||rolls.has(index))return false;const chosen=state.board(tank,tank,{alive});if(chosen<0)return false;
   const object=objects[index],source=tanks[tank],from=source.worldToLocal(hanger.getWorldPosition(new THREE.Vector3())),to=source.worldToLocal(object.localToWorld(new THREE.Vector3(0,CHAIR_PASSENGER_HEIGHT,0)));
   group.attach(hanger);const toQ=group.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(object.getWorldQuaternion(new THREE.Quaternion()));

@@ -65,19 +65,35 @@ test('real hoists retain acid, require preparation before descent, and hop both 
  }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
 });
 
-test('a normal-speed Pudding rescue releases the winch lock so Maki can lower next',()=>{
+test('both manual winches lower living Figpals onto separate waiting chairs concurrently',()=>{
  const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
  try{
   const f=fixture(createEscapePuzzle(()=>.9));f.breakTanks();f.prepareChairs();
   assert.match(f.vats.toggleHoist(0),/lowering/);
-  assert.equal(f.vats.toggleHoist(1),null,'only one hoist moves during Pudding’s descent');
-  for(let frame=0;frame<1200&&!f.vats.isSettled(0);frame++)f.update(1/60);
-  assert.equal(f.vats.isRescued(0),true);assert.equal(f.vats.movingIndex,null,'a seated Figpal must release the global winch lock');
-  assert.match(f.vats.toggleHoist(1),/lowering/,'Maki’s control works after Pudding lands');
-  for(let frame=0;frame<1200&&!f.vats.isSettled(1);frame++)f.update(1/60);
-  assert.equal(f.vats.isRescued(1),true);assert.equal(f.vats.movingIndex,null);
+  assert.match(f.vats.toggleHoist(1),/lowering/,'Maki starts before Pudding finishes');
+  assert.deepEqual(f.rescue.state.chairs.map(c=>c.reservation),[0,1]);
+  f.update(.1);for(const rig of f.vats.rigs.slice(0,2)){assert.equal(rig.rescuePlanned,true);assert.ok(rig.height<rig.homeHeight);}
+  let sharedHop=false;
+  for(let frame=0;frame<1200&&(!f.vats.isSettled(0)||!f.vats.isSettled(1));frame++){
+   f.update(1/60);if(f.vats.rigs[0].escaping&&f.vats.rigs[1].escaping){sharedHop=true;assert.equal(f.rescue.canTow(),false,'chairs cannot leave during either hop');}
+  }
+  assert.equal(sharedHop,true,'both hop animations run together');
+  for(let i=0;i<2;i++){assert.equal(f.vats.isRescued(i),true);assert.equal(f.vats.rigs[i].hanger.parent,f.rescue.objects[i]);assert.equal(f.vats.rigs[i].transformation.damaged,false);assert.equal(f.vats.lower(i),false);}
+  assert.equal(captureVictoryResult({rescue:f.rescue.state}).figpalsSaved,2);assert.equal(f.vats.movingIndex,null);
   const saved=f.vats.capture(0);saved.rigs[0].height+=.008;f.vats.restore(saved,0);
   assert.equal(f.vats.movingIndex,null,'a rescued checkpoint with a residual height difference cannot relock the winches');
+ }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
+});
+
+test('a second rescue can start during the first hop without losing its chair reservation',()=>{
+ const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
+ try{
+  const f=fixture(createEscapePuzzle(()=>.9));f.breakTanks();f.prepareChairs();f.vats.lower(0);f.update(20,true);
+  assert.equal(f.vats.rigs[0].escaping,true);assert.equal(f.vats.toggleHoist(0),null,'the first Figpal cannot reverse in mid-hop');
+  assert.match(f.vats.toggleHoist(1),/lowering/);assert.equal(f.vats.rigs[1].rescuePlanned,true);assert.equal(f.rescue.state.chairs[1].reservation,1);
+  assert.match(f.vats.toggleHoist(1),/rising/);assert.equal(f.rescue.state.chairs[1].reservation,null);assert.equal(f.rescue.state.chairs[0].passenger,0,'cancelling one descent does not change the other rescue');
+  assert.match(f.vats.toggleHoist(1),/lowering/);f.update(20,true);f.update(20,true);f.update(20,true);
+  assert.equal(f.vats.isRescued(0),true);assert.equal(f.vats.isRescued(1),true);assert.equal(f.rescue.state.ready,true);
  }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
 });
 

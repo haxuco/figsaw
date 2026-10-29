@@ -260,11 +260,11 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   rig.lowered=true;rig.targetHeight=rig.rescuePlanned?RESCUE_HEIGHT:leaks?.outflowFinished(rig.index)?.43:.65;
  }
  function lower(index){
-  const rig=rigs[index],moving=movingIndex();if(!rig||rig.rescued||rig.escaping||(moving!==null&&moving!==index))return false;
+  const rig=rigs[index];if(!rig||rig.rescued||rig.escaping)return false;
   beginLowering(rig);return true;
  }
  function toggleHoist(index){
-  const rig=rigs[index],moving=movingIndex();if(!rig||(moving!==null&&moving!==index)||rig.escaping)return null;
+  const rig=rigs[index];if(!rig||rig.escaping)return null;
   if(rig.rescued)return 'The Figpal is seated on the rescue chair.';
   if(rig.lowered){rig.lowered=false;rig.rescuePlanned=false;rescue?.cancelPreparation(index);rig.targetHeight=rig.homeHeight;}
   else beginLowering(rig);

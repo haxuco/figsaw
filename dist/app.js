@@ -960,7 +960,7 @@ function updateGameOver(time){
 }
 function operateHoist(index){
  if(chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- const message=toggleHoist(index);if(!message){document.querySelector('#hoist-status').textContent='Wait for the moving hoist to stop before operating another.';return;}
+ const message=toggleHoist(index);if(!message){document.querySelector('#hoist-status').textContent='This Figpal is still moving onto the chair.';return;}
  const lowering=figpalHoists.isLowered(index);
  const line=lowering?loweringDialogue.show(index,state.time):null;if(!lowering)loweringDialogue.hide(index);
  document.querySelector('#hoist-status').textContent=line?`${message} ${line}`:message;
