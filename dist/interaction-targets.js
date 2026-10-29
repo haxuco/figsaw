@@ -35,6 +35,7 @@ export function createInteractionTargets({office,model,restraint,laptop,catMug,h
  add(restraint.target.getObjectByName('Close-fitting oval wrist cuff')??restraint.target,{kind:'shackle'},()=>restraint.locked);
  for(const [id,object]of Object.entries(fallenMobile.pieces))add(object,{kind:'pickup',item:id});
  add(mobileInspection.assembly,{kind:'mobile'},()=>mobileInspection.hung);
+ add(mobileInspection.hookTarget,{kind:'mobile-mount'},()=>!mobileInspection.hung);
  for(const animal of stuffedAnimals)add(animal.object,{kind:'plush'},()=>inventory.equipped==='saw'&&plushCut.canCut(animal.object));
  figpalHoists.rigs.forEach((rig,index)=>add(rig.vat,{kind:'tank',index},()=>inventory.equipped==='axe'&&!figpalHoists.tanks[index].broken||!!rig.vat.userData.fishClue&&figpalHoists.fishClueReady));
  return [...entries.values()];

@@ -635,6 +635,7 @@ function leaveInspection(){
 }
 inspectionBack.addEventListener('click',leaveInspection);
 function inventoryModelFor(id){
+ if(id==='mobile')return {object:mobileInspection.inventoryModel(),rotation:[.15,-.35,-.08]};
  if(fallenMobile.pieces[id])return {object:fallenMobile.pieces[id],rotation:[.45,-.3,-.15]};
  const supply=mobileSupplies.objects[id];
  if(supply)return {object:supply,rotation:id==='mobileKit'?[.7,-.35,-.2]:[.12,-.3,-.55]};
@@ -723,9 +724,12 @@ function takeMobileSupply(item){
 function takeMobilePiece(id){
  if(sawBusy())return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
- const wasHung=mobilePuzzle.hung;
  mobilePuzzle.collectPiece(id,inventory);mobileInspection.update(state.time,reducedMotion);
- if(!wasHung&&mobilePuzzle.hung)inventoryUI.notify('Animal mobile assembled and hung.');
+}
+function hangMobile(){
+ if(sawBusy())return;
+ if(restraint.locked){restraint.requestReach(state.time);return;}
+ if(mobilePuzzle.hang(inventory))mobileInspection.update(state.time,reducedMotion);
 }
 function syncSupplies(){mobileSupplies.sync({has:id=>inventory.has(id),phase:mobilePuzzle.phase});}
 
@@ -1073,7 +1077,8 @@ canvas.addEventListener('pointerup',event=>{
   else if(hit?.userData.wallDocument||hit?.userData.fishClue)inspectDocument(hit);
   else if(hit?.userData.supplyAction)takeMobileSupply(hit.userData.supplyAction);
   else if(hit?.userData.mobilePiece&&!mobilePuzzle.hung)takeMobilePiece(hit.userData.mobilePiece);
-  else if(hit?.userData.mobileMount||hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)inspectMobile();
+  else if(hit?.userData.mobileMount)hangMobile();
+  else if(hit?.userData.mobilePuzzle||hit?.userData.stuffedAnimal)inspectMobile();
   else if(hit?.userData.exitKeypad||hit?.userData.keypadKey)useDoorKeypad();
   else if(hit?.userData.keyAction)useKeyObject(hit.userData.keyAction);
   else if(hit?.userData.fireAlarm)pullFireAlarm();

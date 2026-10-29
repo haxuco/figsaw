@@ -11,7 +11,7 @@ export function createMobileInspection({mobile,state}){
  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.07,24),ivory);hub.position.y=.30;assembly.add(hub);
  const targets=[[-.36,-.22,.25],[.36,-.22,.25],[-.36,-.22,-.25],[.36,-.22,-.25]];
  const hangingQ=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,0,0));
- const cleanStrings=new THREE.Group(),knots=new THREE.Group();assembly.add(cleanStrings,knots);
+ const cleanStrings=new THREE.Group(),knots=new THREE.Group();cleanStrings.visible=false;assembly.add(cleanStrings,knots);
  const mountedAnimals=mobile.animals.map((animal,i)=>{
   const object=animal.object,home={parent:object.parent,position:object.position.clone(),quaternion:object.quaternion.clone(),scale:object.scale.clone()};
   const target=new THREE.Vector3(...targets[i]),start=new THREE.Vector3((i%2?1:-1)*.15,-.10+i*.015,(i<2?1:-1)*.10);
@@ -39,12 +39,15 @@ export function createMobileInspection({mobile,state}){
  }
  const scissors=createScissors();scissors.group.scale.setScalar(1.7);assembly.add(scissors.group);scissors.group.visible=false;
  const ceilingY=3.20-group.position.y;
- const hanger=tube([[0,ceilingY-.28,0],[0,.34,0]],.004,cord);hanger.visible=false;
- const hookTarget=new THREE.Group();hookTarget.name='Ceiling hook for the animal mobile';group.add(hookTarget);
- const hookMetal=new THREE.MeshStandardMaterial({color:0xabb19f,metalness:.55,roughness:.55,emissive:0x434c35,emissiveIntensity:.28});
- const stem=new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,.25,8),hookMetal);stem.position.set(0,ceilingY-.12,0);hookTarget.add(stem);
- const hook=new THREE.Mesh(new THREE.TorusGeometry(.05,.007,6,18),hookMetal);hook.position.set(0,ceilingY-.28,0);hookTarget.add(hook);
- const mount=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.018,16),metal);mount.position.set(0,ceilingY+.035,0);hookTarget.add(mount);
+ const hanger=tube([[0,ceilingY-.405,0],[0,.34,0]],.004,cord);hanger.visible=false;
+ const hookTarget=new THREE.Group();hookTarget.name='Ceiling hook for the animal mobile';hookTarget.userData.mobileMount=true;group.add(hookTarget);
+ const hookMetal=new THREE.MeshStandardMaterial({color:0xd0b572,metalness:.65,roughness:.46,emissive:0x65522a,emissiveIntensity:.22});
+ const plateMaterial=new THREE.MeshStandardMaterial({color:0xc2ab66,metalness:.35,roughness:.75});
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.013,.016,.29,10),hookMetal);stem.position.set(0,ceilingY-.145,0);hookTarget.add(stem);
+ const hook=new THREE.Mesh(new THREE.TorusGeometry(.075,.015,8,24,Math.PI*1.65),hookMetal);hook.name='Large brass ceiling J hook';hook.rotation.z=Math.PI*.85;hook.position.set(0,ceilingY-.33,0);hookTarget.add(hook);
+ const mount=new THREE.Mesh(new THREE.CylinderGeometry(.11,.11,.035,20),plateMaterial);mount.name='Aged brass ceiling hook plate';mount.position.set(0,ceilingY-.018,0);hookTarget.add(mount);
+ for(const x of[-.07,.07]){const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.013,.013,.012,6),metal);bolt.position.set(x,ceilingY-.041,0);hookTarget.add(bolt);}
+ const hookPick=new THREE.Mesh(new THREE.BoxGeometry(.34,.48,.34),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));hookPick.name='Animal mobile hanging target';hookPick.position.set(0,ceilingY-.23,0);hookTarget.add(hookPick);
  for(const c of mountedAnimals)c.patch.visible=false;
  const lamp=new THREE.PointLight(0xe3d4ad,2,2.5,2);lamp.position.set(0,-.80,0);lamp.userData.mobileEssential=true;group.add(lamp);
  function getTarget(out){return out.copy(group.position).add(new THREE.Vector3(0,-.18,0));}
@@ -52,7 +55,7 @@ export function createMobileInspection({mobile,state}){
   const done=state.update(time,reducedMotion);
   if(!state.hung&&hung)reset();
   if(state.hung&&!hung){hung=true;for(const c of mountedAnimals){assembly.add(c.object);c.object.scale.setScalar(1.08);c.object.visible=true;}}
-  group.visible=true;assembly.visible=hung;hookTarget.visible=true;hanger.visible=hung;mobile.group.visible=!hung&&!state.collectedAll;lamp.visible=state.active;
+  group.visible=true;assembly.visible=hung;hookTarget.visible=true;hookTarget.userData.mobileMount=hookPick.visible=!hung;hanger.visible=hung;mobile.group.visible=!hung&&!state.collectedAll;lamp.visible=state.active;
   if(!hung){
    for(const [id,object]of Object.entries(mobile.pieces))object.visible=!state.hasPiece(id);
    for(const animal of mobile.animals){animal.shadow.visible=animal.string.visible=!state.hasPiece('mobile'+animal.kind);animal.patch.visible=false;}
@@ -66,8 +69,17 @@ export function createMobileInspection({mobile,state}){
   else knots.scale.setScalar(1);
   return done;
  }
- function reset(){hung=false;group.visible=true;assembly.visible=hanger.visible=false;hookTarget.visible=true;mobile.group.visible=true;for(const c of mountedAnimals){c.home.parent.add(c.object);c.object.position.copy(c.home.position);c.object.quaternion.copy(c.home.quaternion);c.object.scale.copy(c.home.scale);c.headPose.rotation.x=0;c.patch.visible=false;}for(const object of Object.values(mobile.pieces))object.visible=true;for(const animal of mobile.animals)animal.shadow.visible=animal.string.visible=true;}
- return {group,assembly,hookTarget,update,getTarget,reset,get hung(){return hung;}};
+ let inventoryPreview=null;
+ function inventoryModel(){
+  if(inventoryPreview)return inventoryPreview;
+  inventoryPreview=new THREE.Group();inventoryPreview.name='Assembled animal mobile';
+  // Borrow existing meshes without moving any world animals into the ceiling.
+  for(const child of assembly.children){if(child===scissors.group||child===hanger||mountedAnimals.some(c=>c.object===child))continue;const copy=child.clone(true);copy.visible=child!==cleanStrings;inventoryPreview.add(copy);}
+  for(const c of mountedAnimals){const copy=c.object.clone(true);copy.visible=true;copy.position.copy(c.start);copy.quaternion.copy(c.startQ);copy.scale.setScalar(1.08);inventoryPreview.add(copy);}
+  return inventoryPreview;
+ }
+ function reset(){hung=false;group.visible=true;assembly.visible=hanger.visible=false;hookTarget.visible=hookPick.visible=hookTarget.userData.mobileMount=true;mobile.group.visible=true;for(const c of mountedAnimals){c.home.parent.add(c.object);c.object.position.copy(c.home.position);c.object.quaternion.copy(c.home.quaternion);c.object.scale.copy(c.home.scale);c.headPose.rotation.x=0;c.patch.visible=false;}for(const object of Object.values(mobile.pieces))object.visible=true;for(const animal of mobile.animals)animal.shadow.visible=animal.string.visible=true;}
+ return {group,assembly,hookTarget,update,getTarget,reset,inventoryModel,get hung(){return hung;}};
 }
 
 export function createMobileInspectionUI({state,time,equipped=()=>null}){

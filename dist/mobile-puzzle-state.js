@@ -35,9 +35,10 @@ export function createMobilePuzzleState(){
   collectPiece(id,bag,{locked=false}={}){
    if(locked||hung||!MOBILE_PIECES[id]||pieces.has(id)||!bag.add(id))return false;
    pieces.add(id);
-   if(complete()){phase='tangled';hung=true;for(const piece of Object.keys(MOBILE_PIECES))bag.remove(piece);}
+   if(complete()){phase='tangled';for(const piece of Object.keys(MOBILE_PIECES))bag.remove(piece);bag.add('mobile');}
    return true;
   },
+  hang(bag,{locked=false}={}){if(locked||hung||!complete()||bag.equipped!=='mobile'||!bag.has('mobile'))return false;bag.remove('mobile');hung=true;return true;},
   inspect(locked=false){if(locked||!hung||active)return false;active=true;return true;},
   close(force=false){if(action&&!force)return false;active=false;return true;},
   collect(item,{locked=false,drawerReady=false}={}){if(locked||!drawerReady||item!=='mobileKit'||inventory.has(item)||phase==='repaired')return false;inventory.add(item);return true;},

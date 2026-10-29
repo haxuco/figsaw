@@ -23,7 +23,7 @@ export function createDiagnosticActions({time,hazardTime,inventory,mobilePuzzle,
   action('timer-five','Jump countdown to 00:05',['timer',...environment,'rounds','view'],()=>{prepareTimer();countdown.setRemaining(5);}),
   action('items','Collect all inventory items',['inventory','mobilePuzzle','rescueChairs','hoists','key','props'],()=>{
    for(const id of Object.keys(rescueChairs.parts))if(!inventory.has(id))rescueChairs.collectPart(id,inventory);
-   for(const id of Object.keys(ITEMS))if(!MOBILE_PIECES[id])inventory.add(id);
+   for(const id of Object.keys(ITEMS))if(!MOBILE_PIECES[id]&&id!=='mobile')inventory.add(id);
    for(const id of Object.keys(MOBILE_PIECES))mobilePuzzle.collectPiece(id,inventory);
    mobilePuzzle.collect('mobileKit',{drawerReady:true});ketchupKey.grant(time());props.hideCollected();
   }),
