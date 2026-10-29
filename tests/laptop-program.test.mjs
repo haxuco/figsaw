@@ -64,21 +64,21 @@ test('laptop views preserve progress and keep diagnostic answer editing and copy
   program.restore({...program.capture(),positions:layouts[0].positions});reopen(1);
   const initial=program.capture().positions[1],key=(value,shiftKey=false)=>root.listeners.keydown({key:value,shiftKey,target:word.children[1],preventDefault(){},stopPropagation(){}});
   key('ArrowRight');assert.equal(program.capture().positions[1],initial+1);key('ArrowLeft',true);assert.equal(program.capture().positions[1],initial-9);
-  nudge[0].onclick();assert.equal(program.capture().positions[1],initial-10);
+  for(let i=0;i<21;i++)nudge[0].onclick();assert.equal(program.capture().positions[1],initial-30);
   const saved=program.capture();program.cancel();assert.equal(laptop.isOpen,false);assert.equal(laptop.isMoving,true);assert.equal(program.completed,false);assert.ok(camera.position.distanceTo(start)<1e-9);assert.ok(camera.quaternion.angleTo(rotation)<1e-7);assert.equal(camera.fov,62);
   laptop.update(1);assert.equal(laptop.openProgress,0);assert.equal(program.start(),false,'a closed lid cannot enter the screen view');
   reopen(2);assert.deepEqual(program.capture(),saved);check.onclick();assert.equal(program.completed,false);assert.match(status.textContent,/Try again/);assert.doesNotMatch(status.textContent,/score|[0-9]/i);
   const untouched=program.capture();diagnostic=true;program.update(.1,2.1);assert.equal(answer.hidden,false);assert.equal(answerLabel.hidden,false);assert.deepEqual(program.capture(),untouched,'viewing the answer cannot change spacing or pass a word');
-  assert.equal(editor.hidden,false);await copyButton.onclick();assert.equal(copies[0].word,'TYPE');assert.deepEqual(copies[0].positions,untouched.positions.map(x=>Number(x.toFixed(6))));
+  assert.equal(editor.hidden,false);await copyButton.onclick();assert.equal(copies[0].word,'SACRIFICE');assert.deepEqual(copies[0].positions,untouched.positions.map(x=>Number(x.toFixed(6))));
   wordInput.value='Figma';editor.listeners.submit({preventDefault(){}});assert.equal(word.children.map(node=>node.textContent).join(''),'Figma');assert.ok(word.children.every(node=>node.tagName==='BUTTON'),'all draft letters, including both ends, are adjustable');
   const first=parseFloat(word.children[0].style.left);nudge[1].onclick();assert.equal(parseFloat(word.children[0].style.left),first+1);await copyButton.onclick();assert.equal(copies.at(-1).word,'Figma');assert.equal(copies.at(-1).positions[0],Number((first+1).toFixed(6)));assert.equal(copies.at(-1).typeface.family,'Arial, sans-serif');assert.deepEqual(program.capture(),untouched);
   const preview=word.children.map(node=>node.style.left);root.listeners.keydown({key:'ArrowLeft',target:wordInput,preventDefault(){throw new Error('Text input must retain arrow keys');}});assert.deepEqual(word.children.map(node=>node.style.left),preview);
   wordInput.value='Figma UI';await copyButton.onclick();assert.equal(copies.at(-1).word,'Figma UI','copy applies a newly typed word even without clicking Edit');assert.equal(copies.at(-1).positions.length,8);
   failCopy=true;await copyButton.onclick();assert.equal(exportText.hidden,false);assert.equal(exportText.selected,true);assert.equal(JSON.parse(exportText.value).word,'Figma UI');failCopy=false;
-  check.onclick();assert.deepEqual(program.capture(),untouched);assert.equal(wordInput.value,'TYPE');assert.equal(check.textContent,'Submit spacing');
+  check.onclick();assert.deepEqual(program.capture(),untouched);assert.equal(wordInput.value,'SACRIFICE');assert.equal(check.textContent,'Submit spacing');
   wordInput.value='Preview';editor.listeners.submit({preventDefault(){}});
   diagnostic=false;program.update(.1,2.2);assert.equal(answer.hidden,true);assert.equal(answerLabel.hidden,true);diagnostic=true;program.update(.1,2.3);
-  assert.equal(wordInput.value,'TYPE','leaving diagnostics restores the scored word');assert.deepEqual(program.capture(),untouched);
+  assert.equal(wordInput.value,'SACRIFICE','leaving diagnostics restores the scored word');assert.deepEqual(program.capture(),untouched);
   for(let r=0;r<3;r++){
    const targets=layouts[r].positions;
    assert.equal(answer.hidden,false);assert.equal(answer.children.map(node=>node.textContent).join(''),layouts[r].word);assert.equal(answer.style.font,layouts[r].font);assert.deepEqual(answer.children.map(node=>parseFloat(node.style.left)),targets,'each answer uses the exact layout scored for its own word');

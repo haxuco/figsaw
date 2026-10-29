@@ -1,8 +1,8 @@
 export const KERNING_PASS_SCORE=90;
 export const KERNING_WORDS=Object.freeze([
- Object.freeze({word:'TYPE',family:'Arial, sans-serif',weight:'700',style:'normal',fontSize:148,label:'Arial / Bold'}),
- Object.freeze({word:'VECTOR',family:'Georgia, serif',weight:'400',style:'normal',fontSize:132,label:'Georgia / Regular'}),
- Object.freeze({word:'DESIGN',family:'Georgia, serif',weight:'400',style:'italic',fontSize:132,label:'Georgia / Italic'})
+ Object.freeze({word:'SACRIFICE',family:'Arial, sans-serif',weight:'700',style:'normal',fontSize:148,label:'Arial / Bold'}),
+ Object.freeze({word:'PRODUCT',family:'Georgia, serif',weight:'400',style:'normal',fontSize:132,label:'Georgia / Regular'}),
+ Object.freeze({word:'MANAGER',family:'Georgia, serif',weight:'400',style:'italic',fontSize:132,label:'Georgia / Italic'})
 ]);
 
 // Score only movable glyph origins, normalized to the actual rendered type size.
