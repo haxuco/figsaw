@@ -63,6 +63,7 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 .figpal-speech{position:absolute;left:0;top:0;box-sizing:border-box;width:max-content;max-width:132px;padding:5px 7px;border:0;border-radius:7px 6px 8px 3px;background:#000;color:#fff;filter:drop-shadow(0 3px 5px #0008);font:650 italic 12px/1.2 system-ui,-apple-system,sans-serif;text-align:center;will-change:transform}
 .figpal-speech-tail{position:absolute;top:calc(100% - 1px);left:50%;width:12px;height:15px;transform:translateX(-50%);overflow:visible;fill:#000;stroke:none}
 .figpal-speech-text{display:block;animation:figpal-panic .19s steps(2,end) infinite}
+.figpal-hint .figpal-speech-text{animation:none}
 @keyframes figpal-panic{0%,100%{transform:rotate(-1.4deg) translateY(0)}50%{transform:rotate(1.2deg) translateY(-1px)}}
 @media(prefers-reduced-motion:reduce){.figpal-speech-text{animation:none}}
 .entering-laptop #figpal-dialogues{visibility:hidden}

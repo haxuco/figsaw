@@ -102,13 +102,16 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
   const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M 0 0 L 12 0 L 6 15 Z');tail.append(path);
   wrapper.append(text,tail);container.append(wrapper);return wrapper;
  });
- const point=new THREE.Vector3(),startedAt=bubbles.map(()=>null),durations=bubbles.map(()=>15);
+ const point=new THREE.Vector3(),startedAt=bubbles.map(()=>null),durations=bubbles.map(()=>15),lines=bubbles.map(()=>null);
+ let hint=null;
+ function setHint(index,line){if(canSpeak(index))hint={index,line};}
+ function clearHint(){hint=null;}
  function show(index,time,line=FIGPAL_PLEAS[index],duration=15){
   if(!bubbles[index])return;
   if(!canSpeak(index)){hide(index);return;}
-  startedAt[index]=time;durations[index]=duration;bubbles[index].children[0].textContent=line;
+  startedAt[index]=time;durations[index]=duration;lines[index]=line;
  }
- function isActive(time){return startedAt.some((start,index)=>canSpeak(index)&&start!==null&&time>=start&&time<start+durations[index]);}
+ function isActive(time){return !!(hint&&canSpeak(hint.index))||startedAt.some((start,index)=>canSpeak(index)&&start!==null&&time>=start&&time<start+durations[index]);}
  function showAll(time){for(let i=0;i<bubbles.length;i++)show(i,time);}
  function hide(index){
   if(Number.isInteger(index)){if(bubbles[index]){startedAt[index]=null;bubbles[index].hidden=true;}return;}
@@ -122,9 +125,13 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
    // Becoming a skeleton ends an existing plea and prevents every later trigger.
    if(!canSpeak(i)){hide(i);continue;}
    const bubble=bubbles[i],elapsed=startedAt[i]===null?-1:time-startedAt[i];
-   const duration=durations[i];
-   if(elapsed<0||elapsed>=duration){bubble.hidden=true;if(elapsed>=duration)startedAt[i]=null;continue;}
-   bubble.style.opacity=String(1-THREE.MathUtils.smoothstep(elapsed,duration-1,duration));
+   const duration=durations[i],transient=elapsed>=0&&elapsed<duration;
+   if(elapsed>=duration)startedAt[i]=null;
+   if(!transient&&hint?.index!==i){bubble.hidden=true;continue;}
+   const line=transient?lines[i]:hint.line;
+   if(bubble.children[0].textContent!==line)bubble.children[0].textContent=line;
+   bubble.classList.toggle('figpal-hint',!transient);
+   bubble.style.opacity=transient?String(1-THREE.MathUtils.smoothstep(elapsed,duration-1,duration)):'1';
    anchors[i].getWorldPosition(point);
    // Last words remain just above the water rather than vanishing behind the vat.
    point.y=Math.max(point.y,1.32);point.project(camera);
@@ -136,5 +143,5 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true){
   }
   container.hidden=visible===0;
  }
- hide();return {update,hide,show,showAll,isActive};
+ hide();return {update,hide,show,showAll,isActive,setHint,clearHint};
 }

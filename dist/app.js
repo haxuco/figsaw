@@ -18,6 +18,7 @@ import {createFrameRateCounter} from './frame-rate.js';
 import { createOffice } from './office.js?v=fewer-faster';
 import { createFigpalBubbles, createHangingPleas, createFigpalLoweringDialogue } from './figpal-finale.js?v=silent-skeletons';
 import { createFigpalHints } from './figpal-hints.js';
+import { createPuzzleHints } from './puzzle-hints.js';
 import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { FIGPAL_INTERVAL_SECONDS,formatCountdown } from './countdown-clock.js';
@@ -524,6 +525,22 @@ const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpal
 const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,figpalHoists.safeDescent);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 const figpalHints=createFigpalHints({hoists:figpalHoists,bubbles:figpalBubbles,acidLeaks,rescue:rescueChairs,puzzle:escapePuzzle});
+const hintProjection=new THREE.Vector3();
+const puzzleHints=createPuzzleHints({hoists:figpalHoists,bubbles:figpalBubbles,chooseSpeaker(eligible,last){
+ // Pick a readable Figpal when the hint starts; keep the bubble anchored to
+ // that character rather than making it chase the viewport as the player pans.
+ let best=null,bestScore=Infinity;
+ for(const index of eligible){figpalHoists.speechAnchors[index].getWorldPosition(hintProjection);hintProjection.project(camera);
+  const visible=hintProjection.z>=-1&&hintProjection.z<=1&&Math.abs(hintProjection.x)<.78&&Math.abs(hintProjection.y)<.85;
+  const score=(visible?0:10)+Math.abs(hintProjection.x)+Math.abs(hintProjection.y)*.3+(index===last?.05:0);
+  if(score<bestScore){best=index;bestScore=score;}
+ }return best;
+},getProgress:()=>({
+ locked:restraint.locked,keyCollected:ketchupKey.hasKey||inventory.has('key'),
+ laptopPowered:chargingKit.canUse,chargerDamaged:chargingKit.phase==='damaged',laptopComplete:laptopProgram.completed,
+ pmRevealed:figpalHoists.fishClueReady,mobileRepaired:mobilePuzzle.phase==='repaired',
+ revision:[inventory.revision,ketchupKey.phase,chargingKit.phase,chargingKit.drawerOpen,laptop.isOpen,mobilePuzzle.phase,mobilePuzzle.hung].join('|')
+})});
 // Diffuse mobile materials do not sample a reflection environment. Avoid the
 // panorama conversion, render targets and PMREM shader compilation on phones.
 if(!quality.mobile){const displayEnvironment=createRoomReflections(renderer);setDisplayEnvironment(displayEnvironment.texture);restraint.setEnvironment(displayEnvironment.texture);}
@@ -606,8 +623,8 @@ function syncChairButton(){
 }
 function inspectDocument(hit){
  if(sawBusy())return;
- if(hit?.userData.wallDocument)documentViewer.show(hit);
- else if(hit?.userData.fishClue&&figpalHoists.fishClueReady)documentViewer.show(figpalHoists.fishInspectionTarget);
+ if(hit?.userData.wallDocument){puzzleHints.inspect(hit.userData.wallDocument,performance.now()/1000);documentViewer.show(hit);}
+ else if(hit?.userData.fishClue&&figpalHoists.fishClueReady){puzzleHints.inspect('skull',performance.now()/1000);documentViewer.show(figpalHoists.fishInspectionTarget);}
 }
 function escapeRoom(){
  if(gameEnded||gameWon)return;
@@ -618,6 +635,7 @@ function escapeRoom(){
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;
  putEquipmentAway();inventoryUI.setHidden(true);document.body.classList.add('escape-active');
+ puzzleHints.reset();figpalBubbles.hide();
  escapeCinematic.start(state.time);victoryParade.start(state.time);
  restraintStatus.textContent='The code works. The door opens. You escaped.';
  victoryShare.prepare(result);leaderboardUI.close();leaderboardUI.showResult(result);
@@ -917,7 +935,7 @@ function updateFigpalRound(time){
 
 function endGame(cause='objective'){
  if(diagnostics.invulnerable){diagnostics.report(`Invulnerability prevented: ${gameOverReason(cause)}`);return;}
- if(gameEnded)return;leaderboardUI.close();laptopProgram.cancel();gameEnded=true;countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
+ if(gameEnded)return;leaderboardUI.close();laptopProgram.cancel();gameEnded=true;puzzleHints.reset();countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion);
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;loweringDialogue.reset();
@@ -954,7 +972,7 @@ function resetView({skipIntro=false}={}){
  document.body.classList.remove('game-over','death-active');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
- figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();releaseControls();
+ figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();puzzleHints.reset();releaseControls();
  resetting=!skipIntro;departure.reset();cornerReaction.reset();canvas.classList.remove('over-figsaw');
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
@@ -977,7 +995,7 @@ function resetView({skipIntro=false}={}){
 const diagnosticView={capture:()=>({position:cameraPosition.toArray(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom}),restore(value){figpalCamera.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;cameraPosition.fromArray(value.position);state.yaw=value.yaw;state.pitch=value.pitch;state.zoom=value.zoom;}};
 const diagnosticProps={capture:()=>({saw:handsaw.visible,axe:fireAxe.object.visible}),restore(value){handsaw.visible=value.saw;fireAxe.object.visible=value.axe;},hideCollected(){handsaw.visible=false;fireAxe.object.visible=false;}};
 const prepareDiagnosticTimer=()=>{countdownStartTime=null;};prepareDiagnosticTimer.capture=()=>({delay:countdownStartTime===null?null:countdownStartTime-state.time,announcement:countdownAnnouncement.textContent});
-const diagnosticActions=typeof __FIGSAW_PRODUCTION__!=='undefined'&&__FIGSAW_PRODUCTION__?[]:createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
+const diagnosticActions=typeof __FIGSAW_PRODUCTION__!=='undefined'&&__FIGSAW_PRODUCTION__?[]:createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();puzzleHints.reset();figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
 const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
  onActivate(){diagnosticRunUsed=true;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
  onExit(){testingMode.setEnabled(false);testingHighlights.group.visible=false;canvas.focus({preventScroll:true});},
@@ -1093,6 +1111,7 @@ canvas.addEventListener('pointerup',event=>{
  if(pointerDistance<6){
   if(rescueChairs.towing)return;
   const hit=interactionAt(event);
+  if(hit)puzzleHints.activity(performance.now()/1000);
   if(useRescueObject(hit))return;
   if(axeInteraction.held)swingFireAxe(hit);
   else if(hit?.userData.chairSeat)sitOnChair();
@@ -1275,7 +1294,8 @@ function render(){
  frameRate.frame(performance.now());
  updateArrivalDialogue(t);loweringDialogue.update(t);
  const figpalDialogueBlocked=documentViewer.active||laptopProgram.active||mobilePuzzle.active||inventoryUI.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying;
- figpalHints.update(t,figpalDialogueBlocked);hangingPleas.update(t,figpalDialogueBlocked);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
+ puzzleHints.update(performance.now()/1000,{enabled:departure.active&&!gameEnded&&!gameWon,blocked:figpalDialogueBlocked,dialogueTime:t});
+ figpalHints.update(t,figpalDialogueBlocked||puzzleHints.active);hangingPleas.update(t,figpalDialogueBlocked||puzzleHints.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
   if(frameSamples>30&&slowFrames/frameSamples>.65&&requestedPixelRatio>quality.minPixelRatio){requestedPixelRatio=Math.max(quality.minPixelRatio,requestedPixelRatio-.2);resize();}
