@@ -27,10 +27,11 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
  }
  function draw(entries){for(const target of [board,dialogBoard])renderBoard(target,entries,currentEntry?.id,repository.persistent);}
  function close(){if(dialog.open)dialog.close();}
+ function update(){if(!dialog.open)return;const seconds=getCountdown(),clock=dialog.querySelector('[data-live-countdown]'),text=seconds===null?'':formatCountdown(seconds);if(clock.textContent!==text)clock.textContent=text;}
  dialog.querySelector('button').onclick=close;
  dialog.addEventListener('close',()=>{onClose();if(lastFocus?.isConnected)lastFocus.focus({preventScroll:true});});
  button.onclick=async()=>{
-  if(!canOpen())return;lastFocus=document.activeElement;onOpen();dialog.showModal();dialog.querySelector('button').focus({preventScroll:true});
+  if(dialog.open||!canOpen())return;lastFocus=document.activeElement;dialog.showModal();onOpen();update();dialog.querySelector('button').focus({preventScroll:true});
   try{draw(await repository.list());}catch{dialogBoard.querySelector('[data-empty]').textContent='The top 10 could not load. Try opening it again.';}
  };
  input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});
@@ -65,5 +66,5 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
   if(event.key!==null&&event.key!==LEADERBOARD_STORAGE_KEY||!dialog.open&&!run)return;const ticket=revision;
   try{const entries=await repository.list();if(ticket!==revision)return;draw(entries);if(currentEntry){const index=entries.findIndex(entry=>entry.id===currentEntry.id);celebrate(index<0?null:index+1,currentEntry.name);}}catch{}
  });
- return {showResult,reset,close,focusResult(){if(form.hidden)return false;input.focus({preventScroll:true});return true;},update(){if(!dialog.open)return;const seconds=getCountdown(),clock=dialog.querySelector('[data-live-countdown]'),text=seconds===null?'':formatCountdown(seconds);if(clock.textContent!==text)clock.textContent=text;},get active(){return dialog.open;},get rank(){return currentRank;}};
+ return {showResult,reset,close,focusResult(){if(form.hidden)return false;input.focus({preventScroll:true});return true;},update,get active(){return dialog.open;},get rank(){return currentRank;}};
 }

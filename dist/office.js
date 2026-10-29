@@ -31,7 +31,7 @@ import {createDoorKeypad} from './door-keypad.js';
 import { createFireAxe } from './fire-axe.js';
 import { createFireAlarm } from './fire-alarm.js';
 
-export async function createOffice(renderer,viewerPosition,onProgress=async()=>{},puzzle=null){
+export async function createOffice(renderer,viewerPosition,onProgress=async()=>{},puzzle=null,powerClock){
  const office=new THREE.Group();office.name='Abandoned technology office';
  const documents=await createWallDocuments(puzzle);
  const wallDecay=createWallDecay();
@@ -733,7 +733,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  await onProgress('Preparing the tanks…');
  const figpalVats=createFigpalVats({floorSupport,puzzle});figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
  const acidLeaks=createTankLeaks({valves:figpalVats.valves,floorSupport});office.add(acidLeaks.group);
- const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
+ const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel,powerClock});office.add(chargingKit.group);
  const mobileSupplies=createMobileSupplies(chargingKit.drawer);
  const rescueChairs=createRescueChairs({objects:rescueObjects,parts:{caster:looseCaster,seat:looseSeat,base:looseBase},player:refugeChair,tanks:figpalVats.rigs.map(r=>r.vat),floorSupport,puzzle});office.add(rescueChairs.group);figpalVats.bindRescue(rescueChairs,acidLeaks);
  acidLeaks.onSpill(rescueChairs.state.noteFlood);

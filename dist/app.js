@@ -1,6 +1,7 @@
 import {createVictoryParade} from './victory-parade.js';
 import {createLocalLeaderboard,captureRankedEscape} from './leaderboard.js';
 import {createLeaderboardUI} from './leaderboard-ui.js';
+import {createGamePause} from './game-pause.js';
 import {createDiagnostics,createDiagnosticUI} from './diagnostics.js';
 import {createDiagnosticActions} from './diagnostic-actions.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
@@ -465,7 +466,8 @@ function reactToFigsaw(){
 profiler.mark('characterBuilt');
 await yieldStartup('Building the office…');
 const escapePuzzle=createEscapePuzzle(),inventory=createInventory();
-const {group:office,rescueChairs,chairRefuge,documents,laptop,catMug,handsaw,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=await createOffice(renderer,homePosition,yieldStartup,escapePuzzle);scene.add(office);
+const leaderboardPause=createGamePause();
+const {group:office,rescueChairs,chairRefuge,documents,laptop,catMug,handsaw,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=await createOffice(renderer,homePosition,yieldStartup,escapePuzzle,leaderboardPause.now);scene.add(office);
 const countdownHUD=createCountdownHUD({timer:countdown,camera,occluders:[office,model],corner:document.querySelector('#timer-hud'),warning:document.querySelector('#countdown-warning'),reducedMotion});
 profiler.mark('officeBuilt');
 await yieldStartup('Preparing the room…');
@@ -496,7 +498,11 @@ const gameOverShare=createGameOverShare(document.querySelector('#game-over-share
 const escapeScreen=document.querySelector('#escaped');
 let diagnosticRunUsed=false;
 const victoryShare=createVictoryShare(document.querySelector('#victory-share'));
-const leaderboardUI=createLeaderboardUI({repository:createLocalLeaderboard(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},onClose(){canvas.focus({preventScroll:true});},getCountdown:()=>countdown.status==='waiting'?null:lastCountdownSeconds,onRank:result=>victoryShare.prepare(result)});
+const leaderboardUI=createLeaderboardUI({repository:createLocalLeaderboard(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){
+ leaderboardPause.pause(countdown);releaseControls();chainMenu.hide();sawMenu.hide();itemHover.clear();fireAlarm.silence();frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;
+},onClose(){
+ leaderboardPause.resume();lastRenderAt=0;clock.getDelta();scheduleFrame();canvas.focus({preventScroll:true});
+},getCountdown:()=>countdown.status==='waiting'?null:countdown.update(),onRank:result=>victoryShare.prepare(result)});
 for(const dialog of[gameOver,escapeScreen])dialog.addEventListener('keydown',event=>{
  if(event.key!=='Tab')return;
  const buttons=[...dialog.querySelectorAll('button,input,select,textarea')].filter(control=>!control.disabled&&!control.closest('[hidden]')),index=buttons.indexOf(document.activeElement);
@@ -625,8 +631,8 @@ function syncChairButton(){
 }
 function inspectDocument(hit){
  if(sawBusy())return;
- if(hit?.userData.wallDocument){puzzleHints.inspect(hit.userData.wallDocument,performance.now()/1000);documentViewer.show(hit);}
- else if(hit?.userData.fishClue&&figpalHoists.fishClueReady){puzzleHints.inspect('skull',performance.now()/1000);documentViewer.show(figpalHoists.fishInspectionTarget);}
+ if(hit?.userData.wallDocument){puzzleHints.inspect(hit.userData.wallDocument,leaderboardPause.now());documentViewer.show(hit);}
+ else if(hit?.userData.fishClue&&figpalHoists.fishClueReady){puzzleHints.inspect('skull',leaderboardPause.now());documentViewer.show(figpalHoists.fishInspectionTarget);}
 }
 function escapeRoom(){
  if(gameEnded||gameWon)return;
@@ -782,7 +788,7 @@ function hangMobile(){
 }
 function syncSupplies(){mobileSupplies.sync({has:id=>inventory.has(id),phase:mobilePuzzle.phase});}
 
-function useDoorKeypad(){if(sawBusy())return;prepareSawAction();doorKeypadUI.show();if(doorKeypadUI.active)puzzleHints.inspect('keypad',performance.now()/1000);}
+function useDoorKeypad(){if(sawBusy())return;prepareSawAction();doorKeypadUI.show();if(doorKeypadUI.active)puzzleHints.inspect('keypad',leaderboardPause.now());}
 function putAxeBack(){axeInteraction.reset();fireAxe.object.visible=!inventory.has('axe');if(inventory.equipped==='axe')inventory.putAway();cancelAxeSelection.hidden=true;canvas.classList.remove('over-axe','over-tank');}
 function takeFireAxe(){
  if(sawBusy())return;
@@ -1118,7 +1124,7 @@ canvas.addEventListener('pointerup',event=>{
  if(pointerDistance<6){
   if(rescueChairs.towing)return;
   const hit=interactionAt(event);
-  if(hit)puzzleHints.activity(performance.now()/1000);
+  if(hit)puzzleHints.activity(leaderboardPause.now());
   if(useRescueObject(hit))return;
   // Equipped tools override only their own targets, not every room interaction.
   if(axeInteraction.held&&Number.isInteger(hit?.userData.tankIndex))swingFireAxe(hit);
@@ -1189,10 +1195,10 @@ function resize(){
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
 let contextLost=false,sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
-function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.hidden)frameRequest=requestAnimationFrame(render);}
+function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.hidden&&!leaderboardPause.active)frameRequest=requestAnimationFrame(render);}
 document.addEventListener('visibilitychange',()=>{frameRate.reset();if(document.hidden){fireAlarm.silence();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
- frameRequest=0;if(document.hidden||contextLost)return;
+ frameRequest=0;if(document.hidden||contextLost||leaderboardPause.active)return;
  const cpuStart=performance.now();
  const frameInterval=lastRenderAt?cpuStart-lastRenderAt:0;
  if(lastRenderAt&&frameInterval<1000/quality.maxFps-1){scheduleFrame();return;}
@@ -1303,7 +1309,7 @@ function render(){
  frameRate.frame(performance.now());
  updateArrivalDialogue(t);loweringDialogue.update(t);
  const figpalDialogueBlocked=documentViewer.active||laptopProgram.active||mobilePuzzle.active||inventoryUI.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying;
- puzzleHints.update(performance.now()/1000,{enabled:departure.active&&!gameEnded&&!gameWon,blocked:figpalDialogueBlocked,dialogueTime:t});
+ puzzleHints.update(leaderboardPause.now(),{enabled:departure.active&&!gameEnded&&!gameWon,blocked:figpalDialogueBlocked,dialogueTime:t});
  figpalHints.update(t,figpalDialogueBlocked||puzzleHints.active);hangingPleas.update(t,figpalDialogueBlocked||puzzleHints.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
