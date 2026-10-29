@@ -1197,7 +1197,7 @@ function render(){
  const alarmFinished=!hazardFrame.paused&&fireAlarm.update(hazardFrame.time,camera,reducedMotion);
  if(acidLeaks.dying||fireHazard.dying||fireAlarm.dying)releaseControls();
  const mugFinished=mugTrap.update(t,reducedMotion);
- restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion));
+ restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion),inventory.equipped==='key'&&restraint.locked);
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
  const failureCause=diagnostics.invulnerable?null:resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0});

@@ -110,8 +110,8 @@ export function createPlayerRestraint(camera,options={}){
  const chainedReach=new THREE.Vector3(.15,-.31,-.77),freeReach=new THREE.Vector3(-.08,-.32,-.83),worldPoint=new THREE.Vector3();
  const reachElbow=new THREE.Vector3(.43,-.66,-.54),freeElbow=new THREE.Vector3(.22,-.68,-.58),shoulderOffset=new THREE.Vector3(.12,-.34,-.05),boneAxis=new THREE.Vector3(0,0,-1);
  const releasedWrist=new THREE.Vector3(),releasedCuffPosition=new THREE.Vector3(),releasedElbow=new THREE.Vector3(),releasedRotation=new THREE.Quaternion(),releasedCuffRotation=new THREE.Quaternion();
- let hasReleasePose=false;
- const gripPosition=new THREE.Vector3(),gripOffset=new THREE.Vector3(),gripWrist=new THREE.Vector3(),gripElbow=new THREE.Vector3();
+ let hasReleasePose=false,focusedPose=false,releaseFocus=false;
+ const gripPosition=new THREE.Vector3(),gripOffset=new THREE.Vector3(),gripWrist=new THREE.Vector3(),gripElbow=new THREE.Vector3(),focusOffset=new THREE.Vector3();
  const gripRotation=new THREE.Quaternion(),cameraInverse=new THREE.Quaternion();
  let chainLength=3;
  const sideways=new THREE.Vector3(1,0,0),samples=Array.from({length:49},()=>new THREE.Vector3());
@@ -125,12 +125,17 @@ export function createPlayerRestraint(camera,options={}){
   }
   links.instanceMatrix.needsUpdate=true;pickLinks.instanceMatrix.needsUpdate=true;
  }
- function update(time,reducedMotion=false,keepVisible=false,lidHand=null,sawLift=0){
+ function update(time,reducedMotion=false,keepVisible=false,lidHand=null,sawLift=0,interactionFocus=false){
   const pose=state.sample(time,keepVisible),reach=pose.reach;
   // The entire arm follows translation, yaw AND pitch; the far chain end remains
   // physically attached to the room's pipe. FOV changes preserve the framing.
   space.position.copy(camera.position);space.quaternion.copy(camera.quaternion);
   const framing=Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/Math.tan(THREE.MathUtils.degToRad(62/2));
+  // Equipping the key presents the cuff above the bottom HUD. A narrow view
+  // shifts the rig inward instead of cropping the lock off the right edge.
+  // The pipe anchor stays in world space, so the chain remains attached.
+  focusedPose=pose.locked?interactionFocus&&!lidHand:hasReleasePose&&releaseFocus&&pose.releaseElapsed<1.8;
+  if(focusedPose){focusOffset.set(-Math.max(0,.31-camera.aspect*.20)*framing,.11*framing,0).applyQuaternion(camera.quaternion);space.position.add(focusOffset);}
   space.scale.set(framing,framing,1);space.updateWorldMatrix(true,false);
   space.visible=pose.visible;
   arm.visible=pose.locked;
@@ -204,11 +209,12 @@ export function createPlayerRestraint(camera,options={}){
  function detach(time){
   if(!state.locked)return false;
   releasedWrist.copy(wrist);releasedElbow.copy(elbow);releasedRotation.copy(hand.quaternion);releasedCuffRotation.copy(cuff.quaternion);releasedCuffPosition.copy(cuff.position);hasReleasePose=true;
+  releaseFocus=focusedPose;
   const detached=state.detach(time);
   if(detached)arm.visible=false;
   return detached;
  }
- function reset(){state.reset();hasReleasePose=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
+ function reset(){state.reset();hasReleasePose=focusedPose=releaseFocus=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
  update(0,true);
  return {group,target:restraint,state,update,reset,setLocked(value,time){if(value){reset();return;}state.setLocked(false,time);arm.visible=false;},getSawContact:out=>sawContact.getWorldPosition(out),endReach:()=>state.endReach(),setEnvironment(map){for(const mat of[iron,edge,cuffSteel,polished]){mat.envMap=map;mat.envMapIntensity=mat===polished?1.65:1.15;mat.needsUpdate=true;}},get locked(){return state.locked;},requestReach:time=>state.requestReach(time),detach};
 }
