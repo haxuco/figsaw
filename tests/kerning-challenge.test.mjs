@@ -53,3 +53,25 @@ test('fresh attempts never start already solved, even with deterministic random 
   for(let i=0;i<3;i++){assert.ok(scoreKerning(game.positions,data[i])<90);arrange(game,data[i]);game.check();game.next();}
  }
 });
+
+
+test('the final summary retains all accepted arrangements across reopening and reset',()=>{
+ const data=layouts(),game=createLaptopChallenge(data),submitted=[];
+ for(let round=0;round<3;round++){
+  assert.deepEqual(game.completedWords,[],'unfinished games do not expose solutions');
+  arrange(game,data[round],round+1);submitted.push(game.positions);assert.equal(game.check(),true);
+  if(round<2)game.next();
+ }
+ const saved=game.capture();
+ assert.deepEqual(game.completedWords.map(word=>word.positions),submitted);
+ assert.deepEqual(game.completedWords.map(word=>word.word),['TYPE','VECTOR','DESIGN']);
+ const copy=game.completedWords;copy[0].positions[1]=999;copy[1].widths[0]=999;
+ assert.deepEqual(game.completedWords.map(word=>word.positions),submitted);
+ assert.equal(game.completedWords[1].widths[0],60);
+ game.reset();assert.deepEqual(game.completedWords,[]);assert.equal(game.restore(saved),true);
+ saved.solutions[0][1]=999;assert.deepEqual(game.completedWords.map(word=>word.positions),submitted);
+ const invalid=game.capture();invalid.solutions[0][1]=NaN;
+ assert.equal(game.restore(invalid),false);assert.deepEqual(game.completedWords,[]);
+ const legacy={round:2,positions:data[2].positions,accepted:true,checked:true,passed:[true,true,true]};
+ assert.equal(game.restore(legacy),true);assert.deepEqual(game.completedWords.map(word=>word.positions),data.map(word=>word.positions));
+});

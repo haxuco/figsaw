@@ -21,10 +21,20 @@ export function measureKerningLayout(context,spec,{fit=true}={}){
  const positions=widths.map((width,i)=>left+context.measureText(letters.slice(0,i+1).join('')).width-width);
  return {...spec,font:font(),fontSize,widths,positions};
 }
-function paintProgram(canvas,challenge,view=challenge.view){
+function completedRow(layout){
+ const scale=.6,first=layout.positions[0],width=(layout.positions.at(-1)+layout.widths.at(-1)-first)*scale;
+ return {...layout,font:layout.font.replace(/(\d*\.?\d+)px/,`${layout.fontSize*scale}px`),positions:layout.positions.map(x=>(WIDTH-width)/2+(x-first)*scale)};
+}
+function paintProgram(canvas,challenge,view=challenge.view,showCompleted=true){
  const c=canvas.getContext('2d');
  c.fillStyle='#252b30';c.fillRect(0,0,WIDTH,HEIGHT);c.fillStyle='#1c2226';c.fillRect(0,0,WIDTH,44);
  c.textBaseline='alphabetic';c.fillStyle='#a9b4b7';c.font='16px Arial';c.fillText('kerning.fig',26,28);
+ if(challenge.completed&&showCompleted){
+  c.textAlign='center';c.fillStyle='#c9d4c9';c.font='bold 14px Arial';c.fillText('03 / 03 ACCEPTED',400,82);
+  c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText('Spacing approved.',400,126);c.textAlign='left';
+  challenge.completedWords.forEach((layout,index)=>{const row=completedRow(layout);c.font=row.font;c.fillStyle='#f1f1e9';[...row.word].forEach((letter,i)=>c.fillText(letter,row.positions[i],202+index*76));});
+  c.fillStyle='#c1d0b3';c.fillRect(268,378,264,56);c.fillStyle='#202b23';c.font='bold 20px Arial';c.textAlign='center';c.fillText('Return to room',400,412);c.textAlign='left';return;
+ }
  c.fillStyle='#c9d4c9';c.font='bold 14px Arial';c.fillText(`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`,48,86);
  c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText(challenge.completed?'Spacing approved.':'Fix the kerning.',48,132);
  c.fillStyle='#a1adb0';c.font='19px Arial';c.fillText('Drag the inner letters. First and last stay fixed.',48,163);
@@ -56,6 +66,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  const play=root.querySelector('[data-play]'),result=root.querySelector('[data-result]'),status=root.querySelector('[data-status]'),check=root.querySelector('[data-check]');
  const wordArea=root.querySelector('[data-word]'),roundLabel=root.querySelector('[data-round]'),typeLabel=root.querySelector('[data-typeface]'),progress=[...root.querySelectorAll('[data-progress]')];
  const returnButton=root.querySelector('[data-return]'),power=root.querySelector('[data-power]'),nudgeButtons=[...root.querySelectorAll('[data-nudge]')];
+ const completedWords=root.querySelector('[data-completed-words]');
  const answer=root.querySelector('[data-answer]'),answerLabel=root.querySelector('[data-answer-label]'),answerToggle=root.querySelector('[data-kern-outlines]');
  const editor=root.querySelector('[data-kern-editor]'),wordInput=root.querySelector('[data-kern-type]'),copyButton=root.querySelector('[data-kern-copy]'),exportText=root.querySelector('[data-kern-export]'),editorStatus=root.querySelector('[data-kern-status]'),instruction=root.querySelector('[data-instruction]');
  const center=new THREE.Vector3(),normal=new THREE.Vector3(),up=new THREE.Vector3(),rotation=new THREE.Quaternion(),startRotation=new THREE.Quaternion(),targetRotation=new THREE.Quaternion(),startPosition=new THREE.Vector3(),destination=new THREE.Vector3(),lookMatrix=new THREE.Matrix4();
@@ -73,7 +84,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   answer.hidden=answerLabel.hidden=!show;answerVisible=show;
  }
  answerToggle.onchange=()=>syncAnswer(phase==='playing'&&isDiagnostic()&&answerToggle.checked&&(!challenge.completed||!!draft));
- function paint(){paintProgram(screenMap.image,challenge,currentView());screenMap.needsUpdate=true;}
+ function paint(){paintProgram(screenMap.image,challenge,currentView(),!draft);screenMap.needsUpdate=true;}
  function selection(){letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&(!!draft||!challenge.accepted)));}
  function sync({texture=true}={}){
   const view=currentView(),accepted=!draft&&challenge.accepted;
@@ -90,6 +101,12 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   roundLabel.textContent=`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`;typeLabel.textContent=view.label;
   progress.forEach((node,i)=>node.classList.toggle('passed',challenge.passed[i]));
   play.hidden=challenge.completed&&!draft;result.hidden=!challenge.completed||!!draft;check.hidden=challenge.completed&&!draft;
+  completedWords.replaceChildren();
+  if(!result.hidden)challenge.completedWords.forEach(layout=>{
+   const row=completedRow(layout),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
+   svg.setAttribute('viewBox','0 0 800 76');svg.setAttribute('role','img');svg.setAttribute('aria-label',row.word);svg.classList.add('kern-completed-word');
+   [...row.word].forEach((letter,i)=>{const glyph=document.createElementNS('http://www.w3.org/2000/svg','text');glyph.setAttribute('x',row.positions[i]);glyph.setAttribute('y',64);glyph.setAttribute('aria-hidden','true');glyph.style.font=row.font;glyph.textContent=letter;svg.append(glyph);});completedWords.append(svg);
+  });
   nudgeButtons.forEach(button=>button.disabled=accepted);status.textContent=draft?'Layout preview':challenge.message;status.classList.toggle('accepted',accepted);
   check.textContent=draft?'Return to game':challenge.accepted?'Next word →':'Submit spacing';
   instruction.textContent=draft?'Drag any letter. Copy settings when ready.':'Drag the inner letters. First and last stay fixed.';

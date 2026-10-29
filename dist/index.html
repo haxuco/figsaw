@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=8898ccd8c53f">
-  <link rel="modulepreload" href="./game.bundle.js?v=abbfbd43a82b">
+  <link rel="stylesheet" href="./style.css?v=ce6063641890">
+  <link rel="modulepreload" href="./game.bundle.js?v=e2de196a9edd">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -61,8 +61,9 @@
       <div class="kern-progress" aria-label="Word progress"><span data-progress></span><span data-progress></span><span data-progress></span></div>
     </main>
     <main data-result hidden>
-      <div class="program-check" aria-hidden="true">✓</div><p class="program-eyebrow">03 / 03 ACCEPTED</p>
-      <h1>Spacing approved.</h1><p>All three words passed.</p>
+      <p class="program-eyebrow">03 / 03 ACCEPTED</p>
+      <h1>Spacing approved.</h1>
+      <div class="kern-completed-words" data-completed-words aria-label="Completed words"></div>
       <button type="button" data-return>Return to room</button>
     </main>
     <footer><div class="kern-nudge"><button type="button" data-nudge="-1" aria-label="Nudge selected letter left">←</button><button type="button" data-nudge="1" aria-label="Nudge selected letter right">→</button></div><p data-status role="status" aria-live="polite"></p><button type="button" data-check>Submit spacing</button></footer>
@@ -140,6 +141,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=abbfbd43a82b"></script>
+  <script type="module" src="./boot.js?v=e2de196a9edd"></script>
 </body>
 </html>

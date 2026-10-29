@@ -17,7 +17,8 @@ export function scoreKerning(positions,layout){
 export function createLaptopChallenge(sourceLayouts,{random=Math.random}={}){
  if(sourceLayouts.length!==3)throw new Error('The kerning challenge requires three words.');
  const layouts=sourceLayouts.map(layout=>({...layout,positions:[...layout.positions],widths:[...layout.widths]}));
- let round=0,positions=[],accepted=false,checked=false,passed=[false,false,false];
+ let round=0,positions=[],accepted=false,checked=false,passed=[false,false,false],solutions=[null,null,null];
+ const validPositions=(p,layout)=>Array.isArray(p)&&p.length===layout.positions.length&&p.every(Number.isFinite)&&p[0]===layout.positions[0]&&p.at(-1)===layout.positions.at(-1)&&p.every((x,i)=>i===0||x>p[i-1]);
  const clamp=(value,min,max)=>Math.max(min,Math.min(max,value));
  function scrambled(layout){
   const result=[...layout.positions],gap=layout.fontSize*.12;
@@ -31,7 +32,7 @@ export function createLaptopChallenge(sourceLayouts,{random=Math.random}={}){
   }
   return result;
  }
- function reset(){round=0;accepted=checked=false;passed=[false,false,false];positions=scrambled(layouts[0]);}
+ function reset(){round=0;accepted=checked=false;passed=[false,false,false];solutions=[null,null,null];positions=scrambled(layouts[0]);}
  function move(index,x){
   if(accepted||!Number.isInteger(index)||index<1||index>=positions.length-1||!Number.isFinite(x))return false;
   const gap=layouts[round].fontSize*.12,next=clamp(x,positions[index-1]+gap,positions[index+1]-gap);
@@ -41,20 +42,24 @@ export function createLaptopChallenge(sourceLayouts,{random=Math.random}={}){
  function check(){
   if(accepted)return true;checked=true;
   accepted=scoreKerning(positions,layouts[round])>=KERNING_PASS_SCORE;
-  if(accepted)passed[round]=true;return accepted;
+  if(accepted){passed[round]=true;solutions[round]=[...positions];}return accepted;
  }
  function next(){if(!accepted||round===2)return false;round++;accepted=checked=false;positions=scrambled(layouts[round]);return true;}
  reset();return {
   move,check,next,reset,
-  capture(){return {round,positions:[...positions],accepted,checked,passed:[...passed]};},
+  capture(){return {round,positions:[...positions],accepted,checked,passed:[...passed],solutions:solutions.map(p=>p?[...p]:null)};},
   restore(value){
    const layout=layouts[value?.round],p=value?.positions,history=value?.passed;
    if(!Number.isInteger(value?.round)||!layout||!Array.isArray(p)||p.length!==layout.positions.length||p.some(x=>!Number.isFinite(x))||p[0]!==layout.positions[0]||p.at(-1)!==layout.positions.at(-1)||p.some((x,i)=>i>0&&x<=p[i-1])||!Array.isArray(history)||history.length!==3||history.some((x,i)=>typeof x!=='boolean'||i<value.round&&!x||i>value.round&&x)||!!value.accepted!==history[value.round]||value.accepted&&scoreKerning(p,layout)<KERNING_PASS_SCORE){reset();return false;}
-   round=value.round;positions=[...p];accepted=!!value.accepted;checked=!!value.checked;passed=[...history];return true;
+   // Older diagnostic checkpoints did not retain previous arrangements.
+   const restored=value.solutions??history.map((done,i)=>done?[...(i===value.round?p:layouts[i].positions)]:null);
+   if(!Array.isArray(restored)||restored.length!==3||restored.some((solution,i)=>history[i]? !validPositions(solution,layouts[i])||scoreKerning(solution,layouts[i])<KERNING_PASS_SCORE:solution!==null)||value.accepted&&restored[value.round].some((x,i)=>x!==p[i])){reset();return false;}
+   round=value.round;positions=[...p];accepted=!!value.accepted;checked=!!value.checked;passed=[...history];solutions=restored.map(solution=>solution?[...solution]:null);return true;
   },
-  complete(){round=2;positions=[...layouts[2].positions];accepted=checked=true;passed=[true,true,true];},
+  complete(){round=2;positions=[...layouts[2].positions];accepted=checked=true;passed=[true,true,true];solutions=layouts.map(layout=>[...layout.positions]);},
   get round(){return round;},get accepted(){return accepted;},get completed(){return passed.every(Boolean);},
   get positions(){return [...positions];},get passed(){return [...passed];},
+  get completedWords(){return passed.every(Boolean)?layouts.map((layout,i)=>({...layout,widths:[...layout.widths],positions:[...solutions[i]]})):[];},
   get view(){const {word,font,fontSize,label,widths}=layouts[round];return {word,font,fontSize,label,widths:[...widths],positions:[...positions]};},
   get message(){return accepted?(passed.every(Boolean)?'All three words accepted.':'Word accepted.'):(checked?'Not quite. Try again.':'');}
  };
