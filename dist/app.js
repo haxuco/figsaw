@@ -693,6 +693,7 @@ function updateTestingMode(time){
  const counts=testingHighlights.update(time,{enabled:testingMode.enabled&&!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!mobilePuzzle.action&&!sawMenu.active,showInteractive:testingMode.showInteractive,showMatching:testingMode.showMatching,item:inventory.equipped,revision,context});
  testingMode.update({hidden:!diagnostics.enabled||gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
  equippedModel.update(inventory.equipped,time,!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.action);
+ axeInteraction.group.visible=!laptopProgram.active&&!laptopOpening.active&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.active&&!gameEnded&&!gameWon;
 }
 let movePromptChair=null;
 const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;
@@ -1048,9 +1049,7 @@ document.addEventListener('keydown',event=>{
   return;
  }
  if(axeInteraction.held&&event.code==='Escape'){event.preventDefault();putAxeBack();return;}
- if(axeInteraction.held&&!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyR'].includes(event.code))return;
  if(selectingAnimal&&event.code==='Escape'){event.preventDefault();clearSawSelection();return;}
- if(selectingAnimal&&!['ArrowLeft','ArrowRight','ArrowUp','ArrowDown','KeyR'].includes(event.code))return;
  if(event.target.closest('input,textarea,select,[contenteditable="true"]')||event.metaKey||event.ctrlKey||event.altKey)return;
  if(event.code==='Escape'&&drawerCamera.active){event.preventDefault();leaveInspection();return;}
  if(event.code==='Escape'&&chairSeat.seated){event.preventDefault();leaveChair();return;}
@@ -1099,7 +1098,7 @@ canvas.addEventListener('pointermove',event=>{
  if(chairSeat.moving||laptopProgram.active||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(documentViewer.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);documentViewer.drag(dx,dy);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
- if(dragPointer===null){const hit=interactionAt(event);itemHover.set(event.pointerType!=='touch'&&canHoverItems()?hit:null);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);if(Number.isInteger(hit?.userData.rescueChair)&&rescueChairs.canMove(hit.userData.rescueChair))movePromptChair=hit.userData.rescueChair;hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair||Number.isInteger(hit?.userData.rescueChair));hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.mobileMount||!!hit?.userData.mobilePiece||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad||!!hit?.userData.salvagePart||Number.isInteger(hit?.userData.rescueSlot));canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
+ if(dragPointer===null){const hit=interactionAt(event);itemHover.set(event.pointerType!=='touch'&&canHoverItems()?hit:null);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);if(Number.isInteger(hit?.userData.rescueChair)&&rescueChairs.canMove(hit.userData.rescueChair))movePromptChair=hit.userData.rescueChair;hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair||Number.isInteger(hit?.userData.rescueChair));hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.mobileMount||!!hit?.userData.mobilePiece||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad||!!hit?.userData.salvagePart||Number.isInteger(hit?.userData.rescueSlot));canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&Number.isInteger(hit?.userData.tankIndex));canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
  if(pointerDistance>=6&&chairDragCandidate!==null&&rescueChairs.moving===null)beginChairMove(chairDragCandidate);
@@ -1121,10 +1120,11 @@ canvas.addEventListener('pointerup',event=>{
   const hit=interactionAt(event);
   if(hit)puzzleHints.activity(performance.now()/1000);
   if(useRescueObject(hit))return;
-  if(axeInteraction.held)swingFireAxe(hit);
+  // Equipped tools override only their own targets, not every room interaction.
+  if(axeInteraction.held&&Number.isInteger(hit?.userData.tankIndex))swingFireAxe(hit);
   else if(hit?.userData.chairSeat)sitOnChair();
   else if(hit?.userData.fireAxe)takeFireAxe();
-  else if(selectingAnimal)cutStuffedAnimal(hit);
+  else if(selectingAnimal&&hit?.userData.stuffedAnimal)cutStuffedAnimal(hit);
   else if(hit?.userData.wallDocument||hit?.userData.fishClue)inspectDocument(hit);
   else if(hit?.userData.supplyAction)takeMobileSupply(hit.userData.supplyAction);
   else if(hit?.userData.mobilePiece&&!mobilePuzzle.hung)takeMobilePiece(hit.userData.mobilePiece);

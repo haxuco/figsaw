@@ -12,6 +12,11 @@ const ancestor=(object,predicate)=>{for(let o=object;o;o=o.parent)if(predicate(o
 const visible=object=>!ancestor(object,o=>!o.visible);
 const chair=object=>ancestor(object,o=>Number.isInteger(o.userData.rescueChair)||o.userData.chairSeat);
 const within=(object,root)=>!!ancestor(object,o=>o===root);
+const tankControl=object=>ancestor(object,o=>Number.isInteger(o.userData.hoistIndex)||Number.isInteger(o.userData.valveIndex)||o.userData.fishClue&&!Number.isInteger(o.userData.tankIndex));
+const renderedTankControl=hit=>{
+ const material=Array.isArray(hit.object.material)?hit.object.material[hit.face?.materialIndex??0]:hit.object.material;
+ return tankControl(hit.object)&&hit.object.isMesh&&material?.colorWrite!==false&&material?.opacity!==0&&unclipped(hit);
+};
 // The prepared chain passes over chairs that are already clasped. Let the
 // next unlinked chair remain selectable through those forgiving chair boxes.
 export function preferChainChairHit(hit,hits,{chainHeld=false,links=[],canLink=()=>false}={}){
@@ -25,13 +30,13 @@ export function preferChainChairHit(hit,hits,{chainHeld=false,links=[],canLink=(
  }
  return hit;
 }
-// A breached tank's remaining glass and hardware must not block axe strikes
-// aimed at the next tank. Other tools keep the tank's normal interactions.
+// Skip breached glass and oversized pick volumes when aiming at the next tank,
+// while keeping visible winches, valves and skull clues usable with the axe held.
 export function firstInteractionHit(hits,{axeHeld=false,tanks=[]}={}){
  return hits.find(hit=>{
   if(!visible(hit.object))return false;
   const tank=axeHeld&&ancestor(hit.object,o=>Number.isInteger(o.userData.tankIndex));
-  return !tank||!tanks[tank.userData.tankIndex]?.broken;
+  return !tank||!tanks[tank.userData.tankIndex]?.broken||!!renderedTankControl(hit);
  });
 }
 function unclipped(hit){
@@ -52,6 +57,9 @@ export function preferAxeTankHit(hit,hits,{axeHeld=false,tanks=[],chairs=[]}={})
  if(!axeHeld||!parked(hit?.object))return hit;
  for(const candidate of hits){
   if(!visible(candidate.object)||!unclipped(candidate)||parked(candidate.object))continue;
+  // A control visible through a parked chair keeps its ordinary action even
+  // with an axe equipped, including controls attached to a breached tank.
+  if(renderedTankControl(candidate))return candidate;
   const tank=ancestor(candidate.object,o=>Number.isInteger(o.userData.tankIndex));
   if(!tank)return hit;
   const state=tanks[tank.userData.tankIndex];

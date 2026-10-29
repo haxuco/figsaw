@@ -113,6 +113,17 @@ test('parked chairs and previously broken tanks do not shield the next intact ta
  f.options.tanks[2].broken=true;assert.equal(preferAxeTankHit(hits[0],hits,f.options),hits[0],'no intact tank means no strike target');
 });
 
+for(const data of [{hoistIndex:1},{valveIndex:1},{fishClue:true}])test(`holding an axe preserves ${Object.keys(data)[0]} interactions on broken tanks and behind chairs`,()=>{
+ const f=tankBehindParkedChair(),control=new THREE.Group();control.userData=data;control.position.z=-.4;
+ const button=new THREE.Mesh(new THREE.BoxGeometry(.2,.2,.1),new THREE.MeshBasicMaterial());control.add(button);f.tank.add(control);
+ for(const broken of [false,true]){
+  f.options.tanks[1].broken=broken;
+  let hits=f.hitsAt();assert.equal(preferAxeTankHit(hits[0],hits,f.options).object,button,'the control stays an interaction instead of an axe strike');
+  f.chair.visible=false;hits=f.hitsAt();assert.equal(firstInteractionHit(hits,f.options).object,button,'a breached tank must not hide its controls');
+  f.chair.visible=true;
+ }
+});
+
 
 test('the equipped chain reaches an unlinked chair behind a linked chair, but never through walls',()=>{
  const room=new THREE.Group(),front=new THREE.Group(),back=new THREE.Group();front.userData.rescueChair=0;back.userData.rescueChair=1;front.position.z=1;

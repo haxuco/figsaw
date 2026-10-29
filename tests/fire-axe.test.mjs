@@ -61,8 +61,10 @@ test('axe clicks pass through each broken tank to the next intact tank, while no
  const pick=(axeHeld=true)=>firstInteractionHit(hits(),{axeHeld,tanks});
  const index=hit=>{for(let o=hit?.object;o;o=o.parent)if(Number.isInteger(o.userData.tankIndex))return o.userData.tankIndex;return -1;};
  assert.equal(index(pick()),0);
- tanks[0].break(0);assert.equal(index(pick()),1,'rear glass and valve pick volumes of the broken left tank no longer intercept the axe');
- assert.equal(pick(false).object,control,'putting away the axe restores the valve interaction');
+ tanks[0].break(0);assert.equal(pick().object,control,'a visible valve remains usable while the axe is equipped');
+ control.material.opacity=0;control.material.colorWrite=false;
+ assert.equal(index(pick()),1,'rear glass and invisible valve pick volumes of the broken left tank no longer intercept the axe');
+ assert.equal(pick(false).object,control,'ordinary interactions retain the generous valve pick volume');
  const wall=new THREE.Mesh(new THREE.BoxGeometry(1,1,.1),new THREE.MeshBasicMaterial());wall.position.set(0,.72,-.7);scene.add(wall);
  assert.equal(pick().object,wall,'only broken tank descendants are skipped; unrelated surfaces still occlude');scene.remove(wall);
  tanks[1].break(1);assert.equal(index(pick()),2,'the broken middle tank no longer intercepts the right tank');
