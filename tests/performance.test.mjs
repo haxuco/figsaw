@@ -90,7 +90,7 @@ test('partial draw ranges are not expanded by batching',()=>{
 test('key and restraint sequence survives coarse mobile update intervals',()=>{
  const key=createKetchupKeyState(),cuff=createRestraintState({canDetach:()=>key.hasKey});
  assert.equal(cuff.detach(0),false);assert.equal(key.collect(),false);
- key.pour(1);key.update(4.3);assert.equal(key.collect(),false);
+ key.pour(1);key.update(3.3);assert.equal(key.collect(),false);
  key.update(4.5);assert.equal(key.collect(),true);assert.equal(cuff.detach(4.5),true);
  assert.equal(cuff.sample(4.8).handFree,0);assert.ok(cuff.sample(5.1).hingeOpen>.99);
  assert.equal(cuff.requestReach(6),true);assert.equal(cuff.sample(6.6).openLaptop,true);

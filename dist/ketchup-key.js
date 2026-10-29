@@ -1,5 +1,5 @@
 import * as THREE from './vendor/three.module.js';
-import {createKetchupKeyState} from './ketchup-key-state.js';
+import {createKetchupKeyState,KEY_REVEAL_DELAY} from './ketchup-key-state.js';
 import {createBottleLiquid} from './bottle-liquid.js';
 import {KETCHUP_MOUTH_Y} from './ketchup-closure.js';
 
@@ -57,11 +57,11 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
   bottle.updateWorldMatrix(true,true);bottle.children[0].localToWorld(spout.set(0,KETCHUP_MOUTH_Y,0));
   stream.visible=t>.8&&t<3.3;
   if(stream.visible){mid.copy(spout).add(landing).multiplyScalar(.5);flowDirection.subVectors(spout,landing);stream.position.copy(mid);stream.quaternion.setFromUnitVectors(up,flowDirection.clone().normalize());const pulse=reducedMotion?1:1+Math.sin(t*21)*.12;stream.scale.set(.012*pulse,flowDirection.length(),.012*pulse);}
-  key.visible=t>=2.5&&!state.hasKey;
-  if(key.visible){const fall=smooth((t-2.5)/.9);key.position.copy(spout).lerp(landing,fall);key.position.y+=Math.sin(fall*Math.PI)*.065;key.rotation.set((1-fall)*2,fall*.50,(1-fall)*3);brass.emissiveIntensity=reducedMotion?.22:.22+.10*Math.sin(time*3);}
+  key.visible=state.phase==='revealed';
+  if(key.visible){const fall=smooth((t-KEY_REVEAL_DELAY)/.9);key.position.copy(spout).lerp(landing,fall);key.position.y+=Math.sin(fall*Math.PI)*.065;key.rotation.set((1-fall)*2,fall*.50,(1-fall)*3);brass.emissiveIntensity=reducedMotion?.22:.22+.10*Math.sin(time*3);}
  }
  return {group,bottle,key,update,reset,capture:state.capture,restore(value,time){reset();state.restore(value,time);update(time,true);},grant(time){state.grant(time);update(time,true);},get hasKey(){return state.hasKey;},get phase(){return state.phase;},
-  pour:time=>state.pour(time),collect:()=>state.collect(),
+  pour:time=>state.pour(time),collect(time){if(!state.collect(time))return false;key.visible=false;return true;},
   hint(action){if(action==='collect'&&!state.hasKey)return state.phase==='revealed'?'Pick up the shackle key':'A key is sliding out…';if(action==='pour')return state.phase==='sealed'?'Pour out the ketchup':state.phase==='pouring'?'Pouring ketchup…':state.hasKey?'The bottle is empty':'Pick up the key in the ketchup';return '';}
  };
 }

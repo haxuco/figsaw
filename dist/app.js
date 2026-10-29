@@ -467,7 +467,7 @@ const {group:office,rescueChairs,chairRefuge,documents,laptop,catMug,handsaw,stu
 const countdownHUD=createCountdownHUD({timer:countdown,camera,occluders:[office,model],corner:document.querySelector('#timer-hud'),warning:document.querySelector('#countdown-warning'),reducedMotion});
 profiler.mark('officeBuilt');
 await yieldStartup('Preparing the room…');
-const restraint=createPlayerRestraint(camera,{canDetach:()=>ketchupKey.hasKey});scene.add(restraint.group);
+const restraint=createPlayerRestraint(camera,{canDetach:()=>inventory.has('key')});scene.add(restraint.group);
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
 const drawerCamera=createDrawerCamera({position:cameraPosition,state,getView:chargingKit.getDrawerView});
 const acidCamera=createAcidCamera({position:cameraPosition,state});
@@ -478,7 +478,7 @@ const victoryParade=createVictoryParade({rigs:figpalHoists.rigs});
 const escapeCinematic=createEscapeCinematic({camera,position:cameraPosition,state,door:exitDoor,baseFov:homeCamera.fov});
 const hazardClock=createHazardClock(state.time);
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
-const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>ketchupKey.hasKey});
+const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>inventory.has('key')});
 const axeInteraction=createAxeInteraction({axe:fireAxe,camera,tanks:figpalHoists.tanks,onBreak(index,time,outlet){
  acidLeaks.breach(index,hazardClock.time,outlet);
 }});scene.add(axeInteraction.group);
@@ -514,10 +514,10 @@ const cancelSawSelection=document.querySelector('#cancel-saw-selection');
 cancelSawSelection.addEventListener('click',()=>{clearSawSelection();canvas.focus({preventScroll:true});});
 let hoveredChair=false,hoveredDocument=null,hoveredFish=false,hoveredSupply=null,hoveredMobile=false,hoveredKeypad=false,hoveredAlarm=false,hoveredKeyAction=null,hoveredChargingAction=null;
 const chainMenu=createRestraintMenu(()=>{
- if(!ketchupKey.hasKey){return;}
+ if(!inventory.has('key')){return;}
  if(restraint.detach(state.time)){inventory.remove('key');inventoryUI.sync();restraintStatus.textContent='Your wrist is free.';canvas.classList.remove('over-chain');}
-},{canDetach:()=>ketchupKey.hasKey});
-const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!ketchupKey.hasKey,canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
+},{canDetach:()=>inventory.has('key')});
+const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!inventory.has('key'),canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
@@ -663,7 +663,7 @@ const testingMode=createTestingModeUI();
 rescueChairs.setHighlightsEnabled(false);
 const testingHighlights=createTestingHighlights({entries:createInteractionTargets({office,model,restraint,laptop,catMug,handsaw,fireAxe,chairRefuge,rescueChairs,mobileInspection,fallenMobile,stuffedAnimals,inventory,chargingKit,ketchupKey,figpalHoists,doorKeypadUI,plushCut})});scene.add(testingHighlights.group);
 function updateTestingMode(time){
- const context={locked:restraint.locked,hasKey:ketchupKey.hasKey,mobilePhase:mobilePuzzle.phase,mobileHung:mobilePuzzle.hung,chargingPhase:chargingKit.phase,chairs:rescueChairs.state.chairs,chainLinks:rescueChairs.state.links,chainFlooded:rescueChairs.state.flooded,pmIndex:escapePuzzle.pmIndex,brokenTanks:figpalHoists.tanks.map(t=>t.broken),canCut:plushCut.canCut,selectingAnimal};
+ const context={locked:restraint.locked,hasKey:inventory.has('key'),mobilePhase:mobilePuzzle.phase,mobileHung:mobilePuzzle.hung,chargingPhase:chargingKit.phase,chairs:rescueChairs.state.chairs,chainLinks:rescueChairs.state.links,chainFlooded:rescueChairs.state.flooded,pmIndex:escapePuzzle.pmIndex,brokenTanks:figpalHoists.tanks.map(t=>t.broken),canCut:plushCut.canCut,selectingAnimal};
  const revision=[inventory.revision,mobilePuzzle.phase,mobilePuzzle.hung,mobilePuzzle.action,chargingKit.phase,chargingKit.drawerOpen,ketchupKey.phase,restraint.locked,doorKeypadUI.active,context.brokenTanks.join(),context.chainLinks.join(),context.chainFlooded,context.chairs.map(c=>[c.step,c.installed.join(),c.repaired,c.tank,c.passenger].join(':')).join('|'),figpalHoists.fishClueReady].join(';');
  const counts=testingHighlights.update(time,{enabled:testingMode.enabled&&!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!mobilePuzzle.action&&!sawMenu.active,showInteractive:testingMode.showInteractive,showMatching:testingMode.showMatching,item:inventory.equipped,revision,context});
  testingMode.update({hidden:!diagnostics.enabled||gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
@@ -779,7 +779,7 @@ function useKeyObject(action){
  arrivalCameraMove.cancel();resetting=false;
  if(action==='pour'){
   ketchupKey.pour(state.time);
- }else if(action==='collect'&&ketchupKey.collect()){
+ }else if(action==='collect'&&ketchupKey.collect(state.time)){
   inventory.add('key');
   restraint.requestReach(state.time);
  }
@@ -845,7 +845,7 @@ function grabSaw(){
  putAxeBack();clearSawSelection();prepareSawAction();sawMenu.show();
 }
 function sawShackle(){
- if(sawBusy()||ketchupKey.hasKey||!restraint.locked)return;
+ if(sawBusy()||inventory.has('key')||!restraint.locked)return;
  handsaw.visible=true;if(!sawTrap.start(state.time))return;
  prepareSawAction();canvas.classList.remove('over-saw');
  restraintStatus.textContent='You try to saw through the shackle, but the blade slips against your wrist.';

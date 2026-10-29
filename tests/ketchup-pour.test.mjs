@@ -53,3 +53,24 @@ test('key lands in the spill and Try again can refill and reseal the bottle',()=
  assert.deepEqual(contents.geometry.attributes.position.array,original);
  assert.equal(key.pour(10),true);key.update(11.5,false);assert.equal(key.group.getObjectByName('Downward ketchup stream').visible,true);
 });
+
+test('the key can be caught as soon as it appears, and stays collected when pouring finishes',()=>{
+ for(const start of [0,30])for(const age of [2.5,2.55,3.39,3.4,4.5]){
+  const {key}=fixture();key.pour(start);key.update(start+age,false);
+  assert.equal(key.key.visible,true);
+  assert.equal(key.collect(start+age),true,`visible key must be collectible at ${age}s`);
+  assert.equal(key.key.visible,false,'pickup immediately removes the world target');
+  for(const later of [5,10,60]){
+   key.update(start+later,false);assert.equal(key.hasKey,true);assert.equal(key.key.visible,false);
+   assert.equal(key.collect(start+later),false,'a repeated click cannot collect a duplicate');
+  }
+ }
+});
+
+test('a hidden key cannot be collected, even between updates at the reveal boundary',()=>{
+ const {key}=fixture();assert.equal(key.collect(0),false);
+ key.pour(10);key.update(12.49,false);
+ assert.equal(key.key.visible,false);assert.equal(key.collect(12.49),false);
+ assert.equal(key.collect(12.5),true,'pickup checks the current clock, not the previous render');
+ key.reset();assert.equal(key.hasKey,false);assert.equal(key.collect(20),false);
+});
