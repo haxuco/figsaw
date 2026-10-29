@@ -119,7 +119,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
  }
  // Keep the small wooden bars attached to the music-box base as one clear pickup.
  const wood=new THREE.MeshStandardMaterial({color:0x81745a,map:fabricMap,roughness:1});
- const frame=new THREE.Group();frame.name='Attached mobile crossbars and music box base';frame.userData.mobilePiece='mobileFrame';frame.position.set(-.18,0,1.30);frame.rotation.y=-.18;group.add(frame);pieces.mobileFrame=frame;
+ const frame=new THREE.Group();frame.name='Attached mobile crossbars and music box base';frame.userData.mobilePiece='mobileFrame';frame.position.set(3.0,0,1.30);frame.rotation.y=-.18;group.add(frame);pieces.mobileFrame=frame;
  for(let i=0;i<2;i++){
   const bar=new THREE.Group();bar.name=`Attached mobile crossbar ${i+1}`;bar.position.y=.050+i*.024;bar.rotation.y=i*Math.PI/2;frame.add(bar);
   rod([-.33,0,0],[.33,0,0],.012,wood,bar).name='Mobile wooden crossbar';

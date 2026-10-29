@@ -714,6 +714,16 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }
  for(const wire of floorCables)drapeFloorCable(wire,floorSupport);
  const fallenMobile=createFallenMobile(viewerPosition,floorSupport,puzzle);office.add(fallenMobile.group);
+ // Give the assembled frame a clear patch beside the laptop. Keep the toys
+ // scattered in their existing positions, with loose junk outside the pickup.
+ const frameClearance=new THREE.Box3().setFromObject(fallenMobile.pieces.mobileFrame).expandByVector(new THREE.Vector3(.14,0,.14));
+ for(const debris of office.children){
+  if(!['Paper resting on the floor','Fallen casing fragment','Loose circuit board','Broken key cap'].includes(debris.name))continue;
+  const bounds=new THREE.Box3().setFromObject(debris);
+  if(bounds.max.x<frameClearance.min.x||bounds.min.x>frameClearance.max.x||bounds.max.z<frameClearance.min.z||bounds.min.z>frameClearance.max.z)continue;
+  debris.position.x+=frameClearance.max.x-bounds.min.x+.08;
+  settleOnFloor(debris,floorSupport);
+ }
  const stuffedAnimals=fallenMobile.animals,plushCut=createPlushCut({saw:handsaw.group,animals:stuffedAnimals,floorSupport});office.add(plushCut.group);
  await onProgress('Preparing the tanks…');
  const figpalVats=createFigpalVats({floorSupport,puzzle});figpalVats.group.userData.ignoreAcid=true;office.add(figpalVats.group);
