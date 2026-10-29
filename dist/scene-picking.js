@@ -44,3 +44,23 @@ export function preferSkullInspection(hit,hits,target,ready=false){
  }
  return {...skull,object:target};
 }
+
+// Parked chairs can cover the scattered mobile animals with their generous
+// click volumes. Only an aim on the collectible's rendered geometry takes
+// priority; empty space in its pickup box still belongs to the chair.
+export function preferMobilePickup(hit,hits,enabled=true){
+ if(!enabled||!chair(hit?.object))return hit;
+ const rendered=h=>{
+  const material=Array.isArray(h.object.material)?h.object.material[h.face?.materialIndex??0]:h.object.material;
+  return h.object.isMesh&&visible(h.object)&&unclipped(h)&&material?.colorWrite!==false&&material?.opacity!==0;
+ };
+ const pickup=hits.find(h=>ancestor(h.object,o=>o.userData.mobilePiece)&&rendered(h));
+ if(!pickup)return hit;
+ const target=ancestor(pickup.object,o=>o.userData.mobilePiece);
+ for(const other of hits){
+  if(other.distance>=pickup.distance)break;
+  if(!visible(other.object)||!unclipped(other)||chair(other.object)||within(other.object,target))continue;
+  return hit; // Other furniture, walls and tank glass retain their occlusion.
+ }
+ return {...pickup,object:target};
+}

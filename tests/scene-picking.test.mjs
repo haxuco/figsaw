@@ -1,7 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createSceneRaycaster,preferSkullInspection} from '../dist/scene-picking.js';
+import {createSceneRaycaster,preferSkullInspection,preferMobilePickup} from '../dist/scene-picking.js';
+import {createInventory} from '../dist/inventory.js';
+import {createMobilePuzzleState} from '../dist/mobile-puzzle-state.js';
 
 test('thin table lines do not block a visible character beside them, while real surfaces still do',()=>{
  const outline=new THREE.LineSegments(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(.4,-1,0),new THREE.Vector3(.4,1,0)]),new THREE.LineBasicMaterial());
@@ -47,4 +49,33 @@ test('dissolution clipping planes cannot turn still-hidden skull geometry into a
  const {skull,bone,hitsAt}=skullBehindChair();bone.material.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,-1,0),-.1)];
  let hits=hitsAt();assert.equal(preferSkullInspection(hits[0],hits,skull,true),hits[0]);
  bone.material.clippingPlanes[0].constant=.1;hits=hitsAt();assert.equal(preferSkullInspection(hits[0],hits,skull,true).object,skull);
+});
+
+function mobileBehindChair(){
+ const {room,chair,pick,hitsAt}=skullBehindChair();
+ room.children.filter(o=>o!==chair).forEach(o=>room.remove(o));
+ const tiger=new THREE.Group();tiger.userData.mobilePiece='mobileTiger';tiger.position.z=-1;
+ const body=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12),new THREE.MeshBasicMaterial());
+ const target=new THREE.Mesh(new THREE.BoxGeometry(.7,.7,.7),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false}));
+ tiger.add(body,target);room.add(tiger);return {room,chair,pick,tiger,body,hitsAt};
+}
+
+test('mobile animals remain collectible through a chair frame and its oversized click volume',()=>{
+ const {chair,pick,tiger,hitsAt}=mobileBehindChair(),hits=hitsAt();assert.equal(hits[0].object,pick);
+ assert.equal(preferMobilePickup(hits[0],hits).object,tiger);
+ assert.equal(preferMobilePickup({object:chair},hits).object,tiger,'diagnostic chair targets cannot steal an aimed pickup');
+ const rail=new THREE.Mesh(new THREE.BoxGeometry(.1,.5,.1),new THREE.MeshBasicMaterial());rail.position.z=1.4;chair.add(rail);
+ const solidHits=hitsAt();assert.equal(solidHits[0].object,rail);assert.equal(preferMobilePickup(solidHits[0],solidHits).object,tiger);
+ const bag=createInventory(),puzzle=createMobilePuzzleState();
+ assert.equal(puzzle.collectPiece(preferMobilePickup(solidHits[0],solidHits).object.userData.mobilePiece,bag),true);assert.deepEqual(bag.items,['mobileTiger']);
+});
+
+test('the mobile priority is confined to real visible pieces, and preserves walls, other objects and ordinary chair clicks',()=>{
+ const {room,tiger,body,hitsAt}=mobileBehindChair();
+ let hits=hitsAt(.3);assert.equal(preferMobilePickup(hits[0],hits),hits[0],'empty space inside an animal pickup box stays a chair click');
+ hits=hitsAt();assert.equal(preferMobilePickup(hits[0],hits,false),hits[0],'hung mobiles do not claim floor pickups');
+ tiger.visible=false;hits=hitsAt();assert.equal(preferMobilePickup(hits[0],hits),hits[0],'collected animals no longer intercept clicks');tiger.visible=true;
+ body.material.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,-1,0),-.2)];hits=hitsAt();assert.equal(preferMobilePickup(hits[0],hits),hits[0]);body.material.clippingPlanes=[];
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(1,1,.1),new THREE.MeshBasicMaterial());room.add(wall);hits=hitsAt();assert.equal(preferMobilePickup(hits[0],hits),hits[0],'a wall between chair and animal blocks pickup');
+ wall.position.z=2;hits=hitsAt();assert.equal(hits[0].object,wall);assert.equal(preferMobilePickup(hits[0],hits),hits[0],'ordinary foreground interactions keep their priority');
 });

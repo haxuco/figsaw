@@ -21,7 +21,7 @@ import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { FIGPAL_INTERVAL_SECONDS,formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
-import {createSceneRaycaster,firstInteractionHit,preferSkullInspection} from './scene-picking.js';
+import {createSceneRaycaster,firstInteractionHit,preferSkullInspection,preferMobilePickup} from './scene-picking.js';
 import {createAttemptTracker} from './attempts.js';
 import {createGameOverShare,createVictoryShare} from './game-over-share.js';
 import {createLaptopProgram} from './laptop-program.js';
@@ -571,7 +571,8 @@ function interactionAt(event){
  // Testing highlights are explicit click targets for the equipped item, even
  // when unrelated clutter is in front of its matching chair or tool socket.
  const matchedHit=testingMode.enabled&&inventory.equipped?testingHighlights.pickMatching(interactionRay)??sceneHit:sceneHit;
- const hit=preferSkullInspection(matchedHit,sceneHits,figpalHoists.fishInspectionTarget,figpalHoists.fishClueReady);
+ const skullHit=preferSkullInspection(matchedHit,sceneHits,figpalHoists.fishInspectionTarget,figpalHoists.fishClueReady);
+ const hit=preferMobilePickup(skullHit,sceneHits,!mobilePuzzle.hung);
  for(let object=hit?.object;object;object=object.parent){
   const chairIndex=Number.isInteger(object.userData.chainAnchor)?object.userData.chainAnchor:object.userData.rescueChair;
   if(Number.isInteger(chairIndex))return rescueChairs.canInteract(chairIndex,inventory.equipped)?object:null;
