@@ -761,7 +761,7 @@ function useCharging(action){
  if(restraint.locked)restraint.requestReach(state.time);
  if(!(action==='charger'&&chargingKit.phase==='drawer'&&!chargingKit.drawerReady&&!restraint.locked))chargingKit.use(action,state.time,restraint.locked);
  if(previousPhase==='drawer'&&chargingKit.phase==='carrying')inventory.add('charger');
- if(previousPhase==='powered'&&chargingKit.phase==='charging')inventory.remove('charger');
+ if(previousPhase!=='charging'&&chargingKit.phase==='charging')inventory.remove('charger');
  arrivalCameraMove.cancel();resetting=false;
  if(!restraint.locked){
   if(action==='drawer'&&!wasOpen&&chargingKit.drawerOpen){acidCamera.cancel();alarmCamera.cancel();releaseControls();drawerCamera.start(state.time);}

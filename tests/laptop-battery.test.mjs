@@ -4,7 +4,7 @@ import * as THREE from '../dist/vendor/three.module.js';
 import {createChargingState} from '../dist/charging-state.js';
 import {createChargingKit} from '../dist/charging-kit.js';
 
-const connect=state=>{for(const action of ['drawer','charger','strip','laptop'])state.use(action);};
+const connect=state=>{for(const action of ['drawer','charger','strip'])state.use(action);};
 
 test('battery waits for opening, then expires at exactly 60 real seconds',()=>{
  const state=createChargingState();state.update(1000);assert.equal(state.battery,8);assert.equal(state.started,false);
@@ -22,11 +22,11 @@ test('closing, reopening and missed frames cannot refill or pause the battery',(
  state.update(20,{opened:true});assert.equal(state.canUse,false,'time cannot run backwards');
 });
 
-test('the strip alone is insufficient; both connections restore power and keep 0% forever',()=>{
+test('plugging into the strip connects the laptop too and keeps external power at 0% forever',()=>{
  const state=createChargingState();state.update(0,{opened:true});state.update(60,{opened:true});
  for(const action of ['drawer','charger','strip'])state.use(action);
- assert.equal(state.phase,'powered');assert.equal(state.canUse,false);
- state.use('laptop');assert.equal(state.canUse,true);assert.equal(state.battery,0);
+ assert.equal(state.phase,'charging');assert.equal(state.canUse,true);assert.equal(state.battery,0);assert.equal(state.nextAction,null);
+ state.use('strip');assert.equal(state.phase,'charging','repeated clicks do not restart the connection');
  state.update(900,{opened:true});assert.equal(state.battery,0);assert.equal(state.canUse,true);
  state.damageCable();assert.equal(state.canUse,false);assert.match(state.use('laptop'),/burned through/);
 });
@@ -52,8 +52,13 @@ test('the real charging kit hides screen overlays on shutdown and restores 0% on
   const warning=screen.getObjectByName('Sixty-second battery warning'),readout=screen.getObjectByName('MacBook battery charge readout');
   assert.equal(warning.visible,true);assert.ok(text.some(value=>value.includes('1:00')));assert.match(kit.takePowerMessage(),/60 seconds/);
   now=960;kit.update(3,true);assert.equal(laptop.isPowered,false);assert.equal(warning.visible,false);assert.equal(readout.visible,false);assert.match(kit.takePowerMessage(),/run out/);
-  for(const action of ['drawer','charger','strip','laptop'])kit.use(action,4);
+  for(const action of ['drawer','charger','strip'])kit.use(action,4);
+  assert.equal(kit.phase,'charging');assert.equal(laptop.isPowered,true);assert.equal(kit.nextAction,null);
   kit.update(5,true);assert.equal(laptop.isPowered,true);assert.equal(readout.visible,true);assert.equal(warning.visible,false);assert.equal(kit.battery,0);assert.ok(text.includes('⚡ 0%'));assert.match(kit.hint(null),/External power/);
+  const connector=kit.group.getObjectByName('Connected MacBook charging cable'),wire=kit.group.getObjectByName('Charging cable resting across the floor'),port=object.getObjectByName('MacBook charging port');
+  assert.equal(connector.visible,true);assert.ok(wire);assert.equal(kit.drawer.getObjectByName('Coiled charger cable').visible,false,'the collected coil stays hidden in the drawer');
+  const expected=port.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(-.032,0,0).applyQuaternion(connector.quaternion));
+  assert.ok(connector.position.distanceTo(expected)<1e-7,'the same strip action seats the cable in the actual laptop port');assert.ok(kit.cablePoints.length>0,'the connected floor cable is available to the acid/fire interaction');
   now=2000;kit.update(6,true);assert.equal(kit.battery,0);
   kit.meltCable(new THREE.Vector3(),1);kit.update(7,true);assert.equal(laptop.isPowered,false);assert.equal(readout.visible,false);
   kit.reset();laptop.isReady=false;laptop.openProgress=0;kit.update(8,true);assert.equal(kit.battery,8);assert.equal(laptop.isPowered,true);assert.equal(warning.visible,false);

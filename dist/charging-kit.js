@@ -91,11 +91,10 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
   syncPower();const before=state.phase,message=state.use(action,locked);laptop.setPower(state.canUse);
   if(locked)return message;
   if(before==='drawer'&&state.phase==='carrying'){brick.visible=false;coil.visible=false;}
-  if(before==='carrying'&&state.phase==='powered'){
+  if(before==='carrying'&&state.phase==='charging'){
    strip.add(brick);brick.visible=true;brick.rotation.set(0,0,0);brick.position.copy(adapterSeat.position);plugStarted=time;
-   group.add(coil);coil.visible=true;coil.rotation.set(0,.4,0);coil.position.set(1.70,floorSupport(1.70,3.42)+.008,3.42);sampleCable(coilWire.geometry,coilWire);
   }
-  if(before==='powered'&&state.phase==='charging'){powerMessage='';connectStarted=time;connector.visible=true;adapterPlug.visible=true;coil.visible=false;}
+  if(before!=='charging'&&state.phase==='charging'){powerMessage='';connectStarted=time;connector.visible=true;adapterPlug.visible=true;coil.visible=false;}
   return message;
  }
  function update(time,reducedMotion=false,powerTime=powerClock()){

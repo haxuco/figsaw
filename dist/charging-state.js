@@ -25,7 +25,7 @@ export function createChargingState(){
   }
   if(action==='strip'){
    if(phase==='drawer')return 'The power strip is on. Find the charger in the Supplies drawer.';
-   if(phase==='carrying'){phase='powered';return 'Charger plugged in. Connect its cable to the MacBook.';}
+   if(phase==='carrying'){phase='charging';battery=0;depleted=true;return 'Charger and cable connected. The MacBook is running on external power. Battery: 0%.';}
    return phase==='charging'?'The MacBook is running on external power. Battery: 0%.':'The charger has power. Connect the MacBook.';
   }
   if(action==='laptop'){
