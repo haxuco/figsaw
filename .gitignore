@@ -4,3 +4,4 @@
 .openai/*.local.*
 
 node_modules/
+dist/client/

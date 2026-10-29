@@ -1,5 +1,9 @@
 // This mode is deliberately session-only; ordinary games never retain cheats.
-export function createDiagnosticTrigger(activate,{now=()=>performance.now(),timeout=1600}={}){
+export const isLocalDiagnosticHost=hostname=>['localhost','127.0.0.1','::1','[::1]'].includes(hostname);
+const localDiagnostics=()=>typeof window==='undefined'||isLocalDiagnosticHost(globalThis.location?.hostname);
+export const createDiagnosticTrigger=typeof __FIGSAW_PRODUCTION__!=='undefined'&&__FIGSAW_PRODUCTION__?()=>()=>false:createLocalTrigger;
+function createLocalTrigger(activate,{now=()=>performance.now(),timeout=1600,available=localDiagnostics()}={}){
+ if(!available)return ()=>false;
  let typed='',last=-Infinity;
  return event=>{
   if(event.repeat||event.ctrlKey||event.metaKey||event.altKey||event.isComposing||event.target?.closest?.('input,textarea,select,[contenteditable="true"]')){typed='';return false;}
@@ -10,7 +14,10 @@ export function createDiagnosticTrigger(activate,{now=()=>performance.now(),time
  };
 }
 
-export function createDiagnostics({clock,actions,onActivate=()=>{},onExit=()=>{},onInvulnerability=()=>{},canRun=()=>true,historyLimit=12}){
+function disabledDiagnostics(){return {activate(){},exit(){},setInvulnerable(){},toggleTimer(){},run(){return false;},undo(){return false;},clearHistory(){},report(){},enabled:false,invulnerable:false,message:'',undoLabel:null};}
+export const createDiagnostics=typeof __FIGSAW_PRODUCTION__!=='undefined'&&__FIGSAW_PRODUCTION__?disabledDiagnostics:createLocalDiagnostics;
+function createLocalDiagnostics({clock,actions,onActivate=()=>{},onExit=()=>{},onInvulnerability=()=>{},canRun=()=>true,historyLimit=12,available=localDiagnostics()}){
+ if(!available)return disabledDiagnostics();
  let enabled=false,invulnerable=false,message='',history=[];
  function immunity(value){invulnerable=enabled&&!!value;onInvulnerability(invulnerable);}
  function activate(){if(enabled)return;enabled=true;immunity(true);onActivate();message='Diagnostic mode on. Invulnerability enabled.';}
@@ -36,7 +43,9 @@ export function createDiagnostics({clock,actions,onActivate=()=>{},onExit=()=>{}
  };
 }
 
-export function createDiagnosticUI({mode,clock,actions,testingMode,focusScene=()=>{}}){
+export const createDiagnosticUI=typeof __FIGSAW_PRODUCTION__!=='undefined'&&__FIGSAW_PRODUCTION__?()=>({sync(){},close(){}}):createLocalDiagnosticUI;
+function createLocalDiagnosticUI({mode,clock,actions,testingMode,focusScene=()=>{},available=localDiagnostics()}){
+ if(!available)return {sync(){},close(){}};
  const root=document.createElement('details');root.id='diagnostic-tools';root.hidden=true;
  root.innerHTML='<summary>Diagnostics <span data-badge>Invulnerable</span></summary><div class="diagnostic-panel"><label><input type="checkbox" data-pause> Pause countdown</label><label><input type="checkbox" data-immune> Invulnerability</label><label class="diagnostic-field">Action<select data-action></select></label><label class="diagnostic-field" data-target-label>Target<select data-target><option value="0">Tank / Figpal 01</option><option value="1">Tank / Figpal 02</option><option value="2">Tank / Figpal 03</option></select></label><div class="diagnostic-actions"><button type="button" data-run>Run action</button><button type="button" data-undo>Undo last action</button></div><p data-status role="status" aria-live="polite"></p><button type="button" data-exit>Exit diagnostics</button></div>';document.body.append(root);
  if(testingMode)root.querySelector('.diagnostic-panel').prepend(testingMode.element);

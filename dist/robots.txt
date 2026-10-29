@@ -1,0 +1,7 @@
+# Crawler opt-out only. This is not authentication or protection against
+# screenshots, browser extensions, or clients that ignore robots.txt.
+User-agent: *
+Disallow: /
+
+User-agent: Google-Extended
+Disallow: /
