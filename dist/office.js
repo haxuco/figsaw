@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
-import {createExitDoorMotion} from './escape-cinematic.js';
+import {createExitDoorMotion,EXIT_DOOR_HINGE,EXIT_DOOR_LEAF_OFFSET} from './escape-cinematic.js';
+import {createCoworkingHallway,entranceWallOverlayGeometry} from './coworking-hallway.js';
 import {artCanvas,fitTextureImage} from './texture-budget.js';
 import {renderQuality as quality} from './render-quality.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
@@ -603,9 +604,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  box([4.54,3.35,.16],[-1.63,1.675,-.08],rearPlaster,rear);
  box([2.14,3.35,.16],[2.83,1.675,-.08],rearPlaster,rear);
  box([1.12,.99,.16],[1.20,2.855,-.08],rearPlaster,rear);
- box([1.10,2.35,.018],[1.20,1.175,-.30],new THREE.MeshBasicMaterial({color:0x80927c}),rear);
- const rearGrime=dirtOverlay(7.8,3.35,rear);rearGrime.position.set(0,1.675,.004);
- box([7.8,.14,.045],[0,.07,.024],black,rear);
+
+ const rearGrime=dirtOverlay(7.8,3.35,rear);rearGrime.position.set(0,1.675,.004);rearGrime.geometry.dispose();rearGrime.geometry=entranceWallOverlayGeometry();
+ for(const [width,x]of[[4.54,-1.63],[2.14,2.83]])box([width,.14,.045],[x,.07,.024],black,rear);
  box([7.8,.026,.023],[0,2.87,.03],steel,rear);
  // Water leaks, missing paint and narrow plaster cracks gather around the old door frame.
  const[cRear,rearWear]=canvas(1024);
@@ -618,10 +619,10 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(let i=0;i<10;i++){
   let x=random()*1024,y=range(60,850);rearWear.strokeStyle='rgba(28,34,26,.75)';rearWear.lineWidth=.8;rearWear.beginPath();rearWear.moveTo(x,y);for(let j=0;j<8;j++){x+=range(-9,12);y+=range(5,16);rearWear.lineTo(x,y);}rearWear.stroke();
  }
- const rearScars=mesh(new THREE.PlaneGeometry(7.8,3.35),new THREE.MeshStandardMaterial({map:texture(cRear),transparent:true,depthWrite:false,roughness:1}),rear);rearScars.position.set(0,1.675,.007);rearScars.castShadow=false;
+ const rearScars=mesh(entranceWallOverlayGeometry(),new THREE.MeshStandardMaterial({map:texture(cRear),transparent:true,depthWrite:false,roughness:1}),rear);rearScars.position.set(0,1.675,.007);rearScars.castShadow=false;
  const door=new THREE.Group();door.name='Scuffed service door and illuminated red exit sign';door.position.set(1.20,0,.05);rear.add(door);
- const doorHinge=new THREE.Group();doorHinge.position.set(-.53,0,.06);door.add(doorHinge);
- const doorLeaf=new THREE.Group();doorLeaf.position.set(.53,0,-.06);doorHinge.add(doorLeaf);doorLeaf.userData.exitKeypad=true;
+ const doorHinge=new THREE.Group();doorHinge.position.set(...EXIT_DOOR_HINGE);door.add(doorHinge);
+ const doorLeaf=new THREE.Group();doorLeaf.position.set(...EXIT_DOOR_LEAF_OFFSET);doorHinge.add(doorLeaf);doorLeaf.userData.exitKeypad=true;
  const doorPaint=material(0x697368,.88,metalMap,.22);
  box([1.12,2.34,.042],[0,1.17,0],black,doorLeaf);
  box([1.035,2.27,.048],[0,1.153,.022],doorPaint,doorLeaf);
@@ -642,8 +643,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   const aged=ctx.createLinearGradient(0,0,0,128);aged.addColorStop(0,'rgba(30,33,19,.7)');aged.addColorStop(.30,'rgba(81,60,27,.12)');aged.addColorStop(.70,'rgba(81,60,27,.08)');aged.addColorStop(1,'rgba(25,31,17,.7)');ctx.fillStyle=aged;ctx.fillRect(0,0,512,128);ctx.fillStyle='rgba(33,39,22,.30)';for(let k=0;k<18;k++)ctx.fillRect((k*137)%512,0,2+k%3,14+(k*43)%55);
   const label=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture(c),roughness:.9}),parent);label.position.set(...pos);label.castShadow=false;return label;
  }
- const escapeLight=new THREE.PointLight(0xc6d3ac,0,3.5,2);escapeLight.position.set(0,1.65,.48);escapeLight.userData.mobileEssential=true;door.add(escapeLight);
- const exitDoor=createExitDoorMotion({object:doorHinge,frame:door,light:escapeLight});
+ const hallway=createCoworkingHallway();door.add(hallway);
+ const escapeLight=new THREE.PointLight(0xffedce,0,3.5,2);escapeLight.position.set(0,1.65,.48);escapeLight.userData.mobileEssential=true;door.add(escapeLight);
+ const exitDoor=createExitDoorMotion({object:doorHinge,frame:door,light:escapeLight,scenery:hallway});
  const doorKeypad=createDoorKeypad();doorKeypad.group.position.set(1.96,1.22,.085);rear.add(doorKeypad.group);
  const exitSign=new THREE.Group();exitSign.name='Illuminated red EXIT fixture';exitSign.position.set(0,2.69,.035);door.add(exitSign);
  const exitCase=material(0xd6d0bc,.76,plasticMap,.12);

@@ -538,7 +538,7 @@ for(const animal of stuffedAnimals){
  batchStaticScenery(animal.object,{exclude:[animal.headPose,animal.object.getObjectByName('Split fabric seam and exposed stuffing')],minObjects:2,palette:quality.mobile});
 }
 batchStaticScenery(chairRefuge.object,{minObjects:2,palette:quality.mobile});
-batchStaticScenery(office,{exclude:[rescueChairs.group,...rescueChairs.objects,...Object.values(rescueChairs.parts),chairRefuge.object,laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object,...documents.targets],minObjects:2,palette:quality.mobile});
+batchStaticScenery(office,{exclude:[rescueChairs.group,...rescueChairs.objects,...Object.values(rescueChairs.parts),chairRefuge.object,laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object,exitDoor.scenery,...documents.targets],minObjects:2,palette:quality.mobile});
 const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
 profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){

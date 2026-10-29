@@ -1,28 +1,33 @@
 import * as THREE from './vendor/three.module.js';
 
 export const ESCAPE_DURATION=4.8;
+export const EXIT_DOOR_HINGE=[-.53,0,.06];
+export const EXIT_DOOR_LEAF_OFFSET=[.53,0,-.06];
 const wrap=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 const ease=(time,start,end)=>THREE.MathUtils.smootherstep(time,start,end);
 
 // A held latch, a brief crack, then a forceful swing and a small rebound.
 // Use elapsed time so the mobile frame rate cannot slow the ending down.
 export function escapeDoorAngle(age,reducedMotion=false){
- if(reducedMotion)return -1.84;
+ // Positive rotation opens into the hallway, clear of the waiting chair train.
+ if(reducedMotion)return 1.84;
  if(age<1.05)return 0;
- if(age<1.45)return -.10*ease(age,1.05,1.45);
- if(age<2.25){const u=THREE.MathUtils.clamp((age-1.45)/.80,0,1);return THREE.MathUtils.lerp(-.10,-1.98,1-(1-u)**3);}
- if(age<2.80)return THREE.MathUtils.lerp(-1.98,-1.76,ease(age,2.25,2.80));
- return THREE.MathUtils.lerp(-1.76,-1.84,ease(age,2.80,3.35));
+ if(age<1.45)return .10*ease(age,1.05,1.45);
+ if(age<2.25){const u=THREE.MathUtils.clamp((age-1.45)/.80,0,1);return THREE.MathUtils.lerp(.10,1.98,1-(1-u)**3);}
+ if(age<2.80)return THREE.MathUtils.lerp(1.98,1.76,ease(age,2.25,2.80));
+ return THREE.MathUtils.lerp(1.76,1.84,ease(age,2.80,3.35));
 }
 
-export function createExitDoorMotion({object,frame,light}){
+export function createExitDoorMotion({object,frame,light,scenery=null}){
  let started=null;
- return {object,
+ if(scenery)scenery.visible=false;
+ return {object,scenery,
   unlock(time=0){if(started===null)started=time;},
-  reset(){started=null;object.rotation.y=0;if(light)light.intensity=0;},
+  reset(){started=null;object.rotation.y=0;if(light)light.intensity=0;if(scenery)scenery.visible=false;},
   update(time,reducedMotion=false){
    const angle=started===null?0:escapeDoorAngle(Math.max(0,time-started),reducedMotion);
    object.rotation.y=angle;if(light)light.intensity=Math.min(2.4,Math.abs(angle)*1.5);
+   if(scenery)scenery.visible=angle>0;
   },
   getEscapeView(eye,target){frame.updateWorldMatrix(true,false);frame.localToWorld(eye.set(0,1.05,2.25));frame.localToWorld(target.set(0,1.28,0));}
  };
