@@ -2,7 +2,7 @@ import {shiftTime} from './diagnostic-time.js';
 const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
 // The bottom band sits below the axe opening and retains a hazardous heel.
 export const BREACHED_TANK_RESIDUAL=.20;
-const FLOOD_DURATION=4.8;
+const FLOOD_DURATION=1.8;
 // Finite reservoirs spread across the floor independently of the player's view.
 // Deterministic concentric lobes overlap into broad, persistent pools.
 export function createAcidFlow({speed=.38,maxPoints=180}={}){
@@ -24,7 +24,7 @@ export function createAcidFlow({speed=.38,maxPoints=180}={}){
   for(const leak of leaks){
    const age=Math.max(0,time-leak.openedAt),drainAge=Math.max(0,time-leak.drainStarted),delay=leak.breached?.04:.48,u=clamp((drainAge-delay)/leak.duration,0,1);
    const volume=leak.drainInitial-leak.drainFloor;
-   leak.progress=clamp(age/1.35,0,1);leak.remaining=Math.min(leak.remaining,leak.drainFloor+volume*(1-u)**1.5);
+   leak.progress=clamp(age/1.35,0,1);leak.remaining=Math.min(leak.remaining,leak.drainFloor+volume*(1-u)**(leak.breached?2:1.5));
    leak.drainingComplete=u>=1||volume<=.0001;
    leak.pouring=leak.drainingComplete?0:(leak.breached?clamp(drainAge/.16,0,1):leak.progress)*Math.sqrt((leak.remaining-leak.drainFloor)/volume);
    const spreadAge=leak.breached?drainAge:age;

@@ -142,7 +142,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const deposits=cylinder(.487,1.02,[0,.72,0],haze,vat,true);deposits.name='Condensation, mineral streaks and algae tide marks';deposits.castShadow=false;deposits.renderOrder=7;
   vat.add(createTankDecal());
   const breakage=createTankBreakage({vat,shell,deposits,index:i,floorSupport});
-  const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.castShadow=false;liquid.renderOrder=2;
+  const liquid=cylinder(.444,.865,[0,.64,0],fluid,vat,true);liquid.name='Tank acid volume';liquid.castShadow=false;liquid.renderOrder=2;
   const floatingBones=createFloatingBones(i);vat.add(floatingBones.group);
   for(const bone of floatingBones.group.children)batchRigid(bone,{minObjects:2,dispose:false});
   cylinder(.444,.018,[0,.215,0],liquidTop,vat);
@@ -151,8 +151,8 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   for(const side of[-1,1]){line([[side*.47,.96,0],[side*.58,.96,0],[side*.58,.74,0],[side*.48,.74,0]],.022,steel,vat);}
   // A wet, uneven open meniscus, rather than a solid lid.
   const surfaceGeometry=new THREE.RingGeometry(0,.444,quality.mobile?32:48,quality.mobile?6:10);surfaceGeometry.rotateX(-Math.PI/2);
-  const surface=mesh(surfaceGeometry,liquidTop,vat);surface.position.y=1.074;surface.castShadow=false;surface.renderOrder=4;
-  const meniscus=ring(.441,.006,1.075,liquidTop,vat);meniscus.renderOrder=4;
+  const surface=mesh(surfaceGeometry,liquidTop,vat);surface.name='Tank acid surface';surface.position.y=1.074;surface.castShadow=false;surface.renderOrder=4;
+  const meniscus=ring(.441,.006,1.075,liquidTop,vat);meniscus.name='Tank acid meniscus';meniscus.renderOrder=4;
   const bubbleData=Array.from({length:quality.mobile?18:48},()=>({x:(random()-.5)*.61,z:(random()-.5)*.61,r:.007+random()**2*.023,phase:random(),speed:.15+random()*.17}));
   const bubbles=new THREE.InstancedMesh(new THREE.SphereGeometry(1,12,8),bubbleMat,bubbleData.length);bubbles.name='Rising liquid bubbles';bubbles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);bubbles.frustumCulled=false;bubbles.renderOrder=3;vat.add(bubbles);
   const foam=[];for(let j=0;j<(quality.mobile?6:24);j++){const a=random()*TAU,r=j<18?.40+random()*.025:random()*.34,baseRadius=.006+random()*.016;const m=ball([Math.cos(a)*r,1.074,Math.sin(a)*r],[baseRadius,baseRadius*.65,baseRadius],foamMat,vat);m.castShadow=false;m.renderOrder=5;foam.push({mesh:m,baseRadius,phase:random()*TAU});}
