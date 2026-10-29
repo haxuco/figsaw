@@ -20,7 +20,7 @@ import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { FIGPAL_INTERVAL_SECONDS,formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
-import {createSceneRaycaster} from './scene-picking.js';
+import {createSceneRaycaster,preferSkullInspection} from './scene-picking.js';
 import {createAttemptTracker} from './attempts.js';
 import {createGameOverShare,createVictoryShare} from './game-over-share.js';
 import {createLaptopProgram} from './laptop-program.js';
@@ -564,13 +564,15 @@ function interactionAt(event){
  interactionPointer.set((event.clientX-rect.left)/rect.width*2-1,-(event.clientY-rect.top)/rect.height*2+1);
  interactionRay.setFromCamera(interactionPointer,camera);
  // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
- const sceneHit=interactionRay.intersectObjects([office,model,restraint.group,mobileInspection.group],true).find(hit=>{
+ const sceneHits=interactionRay.intersectObjects([office,model,restraint.group,mobileInspection.group],true);
+ const sceneHit=sceneHits.find(hit=>{
   for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
   return true;
  });
  // Testing highlights are explicit click targets for the equipped item, even
  // when unrelated clutter is in front of its matching chair or tool socket.
- const hit=testingMode.enabled&&inventory.equipped?testingHighlights.pickMatching(interactionRay)??sceneHit:sceneHit;
+ const matchedHit=testingMode.enabled&&inventory.equipped?testingHighlights.pickMatching(interactionRay)??sceneHit:sceneHit;
+ const hit=preferSkullInspection(matchedHit,sceneHits,figpalHoists.fishInspectionTarget,figpalHoists.fishClueReady);
  for(let object=hit?.object;object;object=object.parent){if(object===model&&departure.finished)return puppet;if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
