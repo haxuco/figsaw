@@ -8,7 +8,7 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=cb09c75d9470">
+  <link rel="stylesheet" href="./style.css?v=ea8e91f55dad">
   <link rel="modulepreload" href="./game.bundle.js?v=d82bd1d65994">
 </head>
 <body>
@@ -117,7 +117,13 @@
   <p id="dialogue-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <p id="game-countdown" class="sr-only" role="timer" aria-live="off" aria-label="Game countdown">10:00</p>
   <p id="countdown-announcement" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
-  <output id="timer-hud" aria-hidden="true" hidden>10:00</output>
+  <div id="mission-hud">
+    <output id="timer-hud" aria-hidden="true" hidden>10:00</output>
+    <ul id="objectives-hud" aria-label="Objectives">
+      <li>Escape the room in &lt; 20 minutes</li>
+      <li>Save at least 1 Figpal</li>
+    </ul>
+  </div>
   <output id="countdown-warning" aria-hidden="true" hidden>00:05</output>
   <p id="hoist-status" class="sr-only" role="status" aria-live="polite" aria-atomic="true"></p>
   <div class="view-tools">
