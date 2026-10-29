@@ -655,7 +655,7 @@ function updateTestingMode(time){
 }
 let movePromptChair=null;
 const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;
-rescueControls.innerHTML='<p data-move-label role="status"></p><div class="rescue-actions"><button type="button" data-move>Move chair</button><div data-destinations aria-label="Chair destinations"><button type="button" data-tank="0">Tank 01</button><button type="button" data-tank="1">Tank 02</button><button type="button" data-tank="2">Tank 03</button></div><button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button></div><small data-pan>Drag to look around · Esc to cancel</small>';document.body.append(rescueControls);
+rescueControls.innerHTML='<p data-move-label role="status"></p><div class="rescue-actions"><button type="button" data-move>Move chair</button><div data-destinations aria-label="Chair destinations"><button type="button" data-tank="0">Left tank</button><button type="button" data-tank="1">Middle tank</button><button type="button" data-tank="2">Right tank</button></div><button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button></div><small data-pan>Drag to look around · Esc to cancel</small>';document.body.append(rescueControls);
 const moveLabel=rescueControls.querySelector('[data-move-label]'),moveButton=rescueControls.querySelector('[data-move]'),destinations=rescueControls.querySelector('[data-destinations]'),panLabel=rescueControls.querySelector('[data-pan]');
 function beginChairMove(index){
  if(!rescueChairs.canMove(index))return false;
