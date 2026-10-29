@@ -22,7 +22,7 @@ export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=(
  const pickupNotice=document.createElement('p');pickupNotice.id='inventory-pickup-notice';pickupNotice.hidden=true;pickupNotice.setAttribute('role','status');pickupNotice.setAttribute('aria-live','polite');pickupNotice.setAttribute('aria-atomic','true');document.body.append(pickupNotice);
  let last=-1,active=false,lastFocus=null,lastPickup=null,pickupTimeout=null;
  function hidePickupNotice(){clearTimeout(pickupTimeout);pickupTimeout=null;pickupNotice.hidden=true;pickupNotice.textContent='';}
- function notify(message){if(!message||button.hidden)return;hidePickupNotice();lastPickup=inventory.lastPickup;pickupNotice.textContent=message;pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,3000);}
+ function notify(message){if(!message||button.hidden)return;hidePickupNotice();lastPickup=inventory.lastPickup;pickupNotice.textContent=message;pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,6000);}
  function close(){hidePickupNotice();panel.hidden=true;active=false;(lastFocus?.isConnected?lastFocus:button).focus({preventScroll:true});}
  function open(){if(!canOpen())return;hidePickupNotice();onOpen();lastFocus=document.activeElement;panel.hidden=false;active=true;sync();panel.querySelector('[data-back]').focus({preventScroll:true});}
  panel.querySelector('[data-back]').onclick=close;button.onclick=()=>active?close():open();
@@ -32,7 +32,7 @@ export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=(
   if(last===inventory.revision)return;last=inventory.revision;previews.clearPending();
   if(lastPickup!==inventory.lastPickup){
    lastPickup=inventory.lastPickup;hidePickupNotice();
-   if(lastPickup&&!active&&!button.hidden){pickupNotice.textContent=`${ITEMS[lastPickup.id].name} collected.\nEquip it from the inventory menu to use it.`;pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,4500);}
+   if(lastPickup&&!active&&!button.hidden){pickupNotice.textContent=`${ITEMS[lastPickup.id].name} collected.\nEquip it from the inventory menu to use it.`;pickupNotice.hidden=false;pickupTimeout=setTimeout(hidePickupNotice,7500);}
   }
   const grid=panel.querySelector('.inventory-grid');grid.replaceChildren();
   for(const id of inventory.items){const b=document.createElement('button');b.type='button';b.innerHTML=`<span class="inventory-model" aria-hidden="true"></span><span>${ITEMS[id].name}</span>`;b.setAttribute('aria-pressed',String(id===inventory.equipped));b.onclick=()=>{close();onEquip(id);sync();};grid.append(b);previews.attach(id,b.querySelector('.inventory-model'));}
