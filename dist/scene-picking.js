@@ -12,6 +12,15 @@ const ancestor=(object,predicate)=>{for(let o=object;o;o=o.parent)if(predicate(o
 const visible=object=>!ancestor(object,o=>!o.visible);
 const chair=object=>ancestor(object,o=>Number.isInteger(o.userData.rescueChair)||o.userData.chairSeat);
 const within=(object,root)=>!!ancestor(object,o=>o===root);
+// A breached tank's remaining glass and hardware must not block axe strikes
+// aimed at the next tank. Other tools keep the tank's normal interactions.
+export function firstInteractionHit(hits,{axeHeld=false,tanks=[]}={}){
+ return hits.find(hit=>{
+  if(!visible(hit.object))return false;
+  const tank=axeHeld&&ancestor(hit.object,o=>Number.isInteger(o.userData.tankIndex));
+  return !tank||!tanks[tank.userData.tankIndex]?.broken;
+ });
+}
 function unclipped(hit){
  const material=Array.isArray(hit.object.material)?hit.object.material[hit.face?.materialIndex??0]:hit.object.material;
  if(material?.visible===false)return false;

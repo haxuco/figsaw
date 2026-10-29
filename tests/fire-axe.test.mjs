@@ -5,6 +5,7 @@ import {createFireAxe,createAxeInteraction} from '../dist/fire-axe.js';
 import {createTankBreakage} from '../dist/tank-breakage.js';
 import {createTankLeaks} from '../dist/tank-leaks.js';
 import {batchStaticScenery} from '../dist/static-batching.js';
+import {createSceneRaycaster,firstInteractionHit} from '../dist/scene-picking.js';
 
 function fixture(){
  const scene=new THREE.Scene(),axe=createFireAxe(),camera=new THREE.PerspectiveCamera(62,1,.06,35);
@@ -50,6 +51,23 @@ test('held axe follows camera; reduced motion and retry preserve a reusable axe 
  interaction.strike(0,1);interaction.update(1.15,true);interaction.update(1.5,true);assert.equal(hits.length,1);assert.equal(interaction.active,false);
  interaction.reset();for(const t of tanks)t.reset();assert.equal(axe.object.parent,axe.mount);assert.ok(axe.object.position.equals(home));assert.ok(axe.object.quaternion.angleTo(homeQ)<1e-7);
  assert.equal(interaction.held,false);assert.ok(tanks.every(t=>!t.broken&&t.shell.visible));assert.equal(interaction.pickUp(2),true);
+});
+
+test('axe clicks pass through each broken tank to the next intact tank, while normal controls and walls keep their hit zones',()=>{
+ const {scene,tanks}=fixture(),ray=createSceneRaycaster();
+ tanks.forEach((tank,index)=>{tank.vat.position.set(0,0,-index*1.5);tank.vat.rotation.set(0,0,0);tank.vat.userData.tankIndex=index;});
+ const control=new THREE.Mesh(new THREE.BoxGeometry(.1,.1,.1),new THREE.MeshBasicMaterial());control.position.set(0,.72,.6);control.userData.valveIndex=0;tanks[0].vat.add(control);
+ const hits=()=>{scene.updateMatrixWorld(true);ray.set(new THREE.Vector3(0,.72,3),new THREE.Vector3(0,0,-1));return ray.intersectObject(scene,true);};
+ const pick=(axeHeld=true)=>firstInteractionHit(hits(),{axeHeld,tanks});
+ const index=hit=>{for(let o=hit?.object;o;o=o.parent)if(Number.isInteger(o.userData.tankIndex))return o.userData.tankIndex;return -1;};
+ assert.equal(index(pick()),0);
+ tanks[0].break(0);assert.equal(index(pick()),1,'rear glass and valve pick volumes of the broken left tank no longer intercept the axe');
+ assert.equal(pick(false).object,control,'putting away the axe restores the valve interaction');
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(1,1,.1),new THREE.MeshBasicMaterial());wall.position.set(0,.72,-.7);scene.add(wall);
+ assert.equal(pick().object,wall,'only broken tank descendants are skipped; unrelated surfaces still occlude');scene.remove(wall);
+ tanks[1].break(1);assert.equal(index(pick()),2,'the broken middle tank no longer intercepts the right tank');
+ tanks[2].break(2);assert.equal(pick(),undefined,'all broken tanks stop advertising axe targets');
+ tanks[0].reset();assert.equal(index(pick()),0,'retry and diagnostic undo restore an intact tank hit zone');
 });
 
 function canvasMock(){const gradient={addColorStop(){}};const ctx=new Proxy({createRadialGradient:()=>gradient,createLinearGradient:()=>gradient},{get:(t,k)=>k in t?t[k]:()=>{}});return {width:0,height:0,getContext:()=>ctx};}

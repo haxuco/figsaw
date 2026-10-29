@@ -20,7 +20,7 @@ import { createPlayerRestraint } from './player-restraint.js?v=key-lock';
 import { createRestraintMenu } from './restraint-menu.js?v=key-lock';
 import { FIGPAL_INTERVAL_SECONDS,formatCountdown } from './countdown-clock.js';
 import {createCountdownHUD} from './countdown-hud.js';
-import {createSceneRaycaster,preferSkullInspection} from './scene-picking.js';
+import {createSceneRaycaster,firstInteractionHit,preferSkullInspection} from './scene-picking.js';
 import {createAttemptTracker} from './attempts.js';
 import {createGameOverShare,createVictoryShare} from './game-over-share.js';
 import {createLaptopProgram} from './laptop-program.js';
@@ -565,10 +565,7 @@ function interactionAt(event){
  interactionRay.setFromCamera(interactionPointer,camera);
  // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
  const sceneHits=interactionRay.intersectObjects([office,model,restraint.group,mobileInspection.group],true);
- const sceneHit=sceneHits.find(hit=>{
-  for(let object=hit.object;object;object=object.parent)if(!object.visible)return false;
-  return true;
- });
+ const sceneHit=firstInteractionHit(sceneHits,{axeHeld:axeInteraction.held,tanks:figpalHoists.tanks});
  // Testing highlights are explicit click targets for the equipped item, even
  // when unrelated clutter is in front of its matching chair or tool socket.
  const matchedHit=testingMode.enabled&&inventory.equipped?testingHighlights.pickMatching(interactionRay)??sceneHit:sceneHit;
