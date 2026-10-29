@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {renderQuality} from './render-quality.js';
+import {isWorldVisible} from './testing-highlights.js';
 
 // One shared particle draw for all four toys; spent stuffing stays on the floor.
 export function createPlushCut({saw,animals,floorSupport}){
@@ -27,7 +28,7 @@ export function createPlushCut({saw,animals,floorSupport}){
  const upright=new THREE.Quaternion().setFromEuler(new THREE.Euler(Math.PI/2,Math.PI,0,'ZYX'));
  let active=null;
  function start(object,time,locked=false){
-  const record=records.get(object);if(locked||active||!record||record.startedAt!==null)return false;
+  const record=records.get(object);if(locked||active||!record||!isWorldVisible(object)||record.startedAt!==null)return false;
   record.startedAt=time;record.settled=false;object.localToWorld(record.origin.set(0,.16,-.025));active=record;
   saw.getWorldPosition(startPosition);saw.getWorldQuaternion(startQ);return true;
  }
@@ -66,5 +67,5 @@ export function createPlushCut({saw,animals,floorSupport}){
  }
  function reset(){active=null;saw.position.copy(home);saw.quaternion.copy(homeQ);for(const record of records.values()){record.startedAt=null;record.settled=false;record.cut.visible=false;}dummy.scale.setScalar(0);dummy.updateMatrix();for(let i=0;i<fluff.instanceMatrix.count;i++)fluff.setMatrixAt(i,dummy.matrix);fluff.instanceMatrix.needsUpdate=true;}
  reset();
- return {group,start,update,reset,canCut:object=>records.has(object)&&records.get(object).startedAt===null,get active(){return active!==null;}};
+ return {group,start,update,reset,canCut:object=>records.has(object)&&isWorldVisible(object)&&records.get(object).startedAt===null,get active(){return active!==null;}};
 }

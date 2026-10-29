@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createMobilePuzzleState,createDoorKeypadState,createEscapePuzzle,ANIMAL_DIGITS} from '../dist/mobile-puzzle-state.js';
+import {createMobilePuzzleState,createDoorKeypadState,createEscapePuzzle,ANIMAL_DIGITS,MOBILE_PIECES} from '../dist/mobile-puzzle-state.js';
+import {createInventory} from '../dist/inventory.js';
 import {createFallenMobile} from '../dist/fallen-mobile.js';
 import {createMobileInspection,createMobileInspectionUI} from '../dist/mobile-inspection.js';
 import {createMobileSupplies} from '../dist/mobile-supplies.js';
@@ -15,32 +16,33 @@ test('decorative axe grain does not intercept a ray aimed at the neighboring doo
  const ray=new THREE.Raycaster(origin,target.sub(origin).normalize());assert.equal(ray.intersectObject(axe.mount,true).length,0);
 });
 
-function collect(state){for(const item of['scissors','string'])assert.equal(state.collect(item,{drawerReady:true}),true);}
-test('mobile repairs work without a hint overlay and still require the correct equipped supply',()=>{
- const previous=globalThis.document,classes=new Set();
- globalThis.document={body:{classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}}}};
+function gather(state,bag=createInventory()){for(const id of Object.keys(MOBILE_PIECES))assert.equal(state.collectPiece(id,bag),true);return bag;}
+function hang(state){const bag=gather(state);assert.equal(state.hang(bag),true);return bag;}
+function collect(state){assert.equal(state.collect('mobileKit',{drawerReady:true}),true);}
+test('seven floor pieces combine into one inventory mobile only after the last pickup, preserving unrelated items',()=>{
+ const s=createMobilePuzzleState(),bag=createInventory(),ids=Object.keys(MOBILE_PIECES);bag.add('ratchet');
+ assert.equal(s.inspect(),false);assert.equal(s.hang(bag),false);assert.equal(s.collectPiece(ids[0],bag,{locked:true}),false);
+ for(const id of ids.slice(0,-1)){assert.equal(s.collectPiece(id,bag),true);assert.equal(bag.has(id),true);assert.equal(s.collectPiece(id,bag),false);assert.equal(bag.has('mobile'),false);}
+ bag.equip(ids[0]);assert.equal(s.collectPiece(ids.at(-1),bag),true);assert.deepEqual(bag.items,['ratchet','mobile']);assert.equal(bag.equipped,null);assert.equal(s.collectedAll,true);
+ assert.equal(s.hang(bag,{locked:true}),false);assert.equal(s.hang(bag),true);assert.equal(bag.has('mobile'),false);assert.equal(s.hang(bag),false);assert.equal(s.collectPiece(ids[0],bag),false);
+ assert.equal(s.inspect(),true);const saved=s.capture();s.reset();assert.equal(s.phase,'scattered');assert.equal(s.hung,false);s.restore(saved);assert.equal(s.hung,true);assert.equal(s.collectedAll,true);assert.equal(s.active,true);
+});
+test('the combined supply repairs the hung mobile in one use and never exposes a partial clue',()=>{
+ const previous=globalThis.document,classes=new Set();globalThis.document={body:{classList:{toggle(name,on){if(on)classes.add(name);else classes.delete(name);}}}};
  try{
-  const state=createMobilePuzzleState();let equipped=null,time=0;
-  const ui=createMobileInspectionUI({state,time:()=>time,equipped:()=>equipped});
-  collect(state);state.inspect();ui.sync();assert.ok(classes.has('inspecting-mobile'));
-  ui.activate();assert.equal(state.action,null);
-  equipped='string';ui.activate();assert.equal(state.action,null);
-  equipped='scissors';ui.activate();assert.equal(state.action,'cut');
-  time=2;state.update(time);ui.activate();assert.equal(state.action,null);
-  equipped='string';ui.activate();assert.equal(state.action,'restring');
-  time=5;state.update(time);assert.equal(state.phase,'repaired');assert.equal(state.has('string'),false);
+  const state=createMobilePuzzleState();let equipped=null,time=0;hang(state);collect(state);state.inspect();
+  const ui=createMobileInspectionUI({state,time:()=>time,equipped:()=>equipped});ui.sync();assert.ok(classes.has('inspecting-mobile'));
+  ui.activate();assert.equal(state.action,null);equipped='ratchet';ui.activate();assert.equal(state.action,null);
+  equipped='mobileKit';ui.activate();assert.equal(state.action,'repair');assert.equal(state.close(),false);assert.equal(state.repair(1),false);
+  assert.equal(state.update(1.6),null);assert.equal(state.phase,'tangled');assert.equal(state.update(3.3),'repair');assert.equal(state.phase,'repaired');assert.equal(state.has('mobileKit'),false);assert.equal(state.repair(4),false);
   state.close();ui.sync();assert.ok(!classes.has('inspecting-mobile'));
  }finally{globalThis.document=previous;}
 });
-test('supplies require a free wrist and an open ready drawer; cutting and restringing have distinct dependencies',()=>{
- const s=createMobilePuzzleState();assert.equal(s.inspect(true),false);assert.equal(s.collect('scissors',{locked:true,drawerReady:true}),false);assert.equal(s.collect('string'),false);assert.equal(s.collect('charger',{drawerReady:true}),false);
- assert.equal(s.inspect(),true);assert.equal(s.cut(0),false);assert.equal(s.restring(0),false);collect(s);assert.equal(s.collect('scissors',{drawerReady:true}),false);
- assert.equal(s.restring(1),false);assert.equal(s.cut(1),true);assert.equal(s.close(),false);assert.equal(s.cut(1.1),false);assert.equal(s.update(2),null);assert.equal(s.update(2.5),'cut');assert.equal(s.phase,'cut');assert.equal(s.has('string'),true);
- assert.equal(s.close(),true);assert.equal(s.restring(3),false);s.inspect();assert.equal(s.restring(3),true);assert.equal(s.update(4),null);assert.equal(s.update(5.1),'restring');assert.equal(s.phase,'repaired');assert.equal(s.has('string'),false);assert.equal(s.has('scissors'),true);assert.equal(s.restring(6),false);
- s.reset();assert.equal(s.phase,'tangled');assert.equal(s.active,false);assert.equal(s.action,null);assert.equal(s.has('scissors'),false);
-});
-test('reduced motion completes each repair step once, and interruption does not expose a half repaired clue',()=>{
- const s=createMobilePuzzleState();collect(s);s.inspect();s.cut(0);assert.equal(s.update(.25,true),'cut');assert.equal(s.update(.5,true),null);s.restring(1);s.close(true);assert.equal(s.active,false);assert.equal(s.phase,'cut');s.reset();assert.equal(s.phase,'tangled');s.inspect();assert.equal(s.cut(2),false);
+test('supplies require a free wrist and a ready drawer; repair and collection reset cleanly',()=>{
+ const s=createMobilePuzzleState();assert.equal(s.collect('mobileKit',{locked:true,drawerReady:true}),false);assert.equal(s.collect('mobileKit'),false);assert.equal(s.collect('scissors',{drawerReady:true}),false);assert.equal(s.collect('string',{drawerReady:true}),false);
+ collect(s);assert.equal(s.collect('mobileKit',{drawerReady:true}),false);assert.equal(s.repair(0),false);hang(s);s.inspect();s.repair(0);
+ const pending=s.capture();assert.equal(s.update(.25,true),'repair');assert.equal(s.update(.5,true),null);s.restore(pending);assert.equal(s.phase,'tangled');assert.equal(s.has('mobileKit'),true);
+ s.close(true);s.reset();assert.equal(s.phase,'scattered');assert.equal(s.active,false);assert.equal(s.action,null);assert.equal(s.has('mobileKit'),false);assert.equal(s.collectedAll,false);assert.equal(s.hung,false);
 });
 test('an unconfigured keypad limits input and cannot accidentally unlock',()=>{
  const k=createDoorKeypadState();assert.equal(k.configured,false);k.press('7',{locked:true});assert.equal(k.entry,'');
@@ -58,10 +60,10 @@ test('the actual toys hang in a fixed room position, with rear numbers facing do
  const inspect=createMobileInspection({mobile,state}),supplies=createMobileSupplies(new THREE.Group()),scene=new THREE.Scene();scene.add(mobile.group,inspect.group);
  for(const animal of mobile.animals){const patch=animal.object.getObjectByName(`Stitched ${ANIMAL_DIGITS[animal.kind]} under ${animal.kind}`);assert.ok(patch);patch.geometry.computeBoundingBox();const bounds=patch.geometry.boundingBox;assert.ok(bounds.min.z>.12,'number is on the rear haunches');assert.ok(bounds.max.y<.10,'number sits below the tail');}
  for(const animal of mobile.animals){batchStaticScenery(animal.headPose,{minObjects:2});batchStaticScenery(animal.object,{exclude:[animal.headPose],minObjects:2});assert.equal(animal.headPose.parent,animal.object);assert.ok(animal.headPose.children.length>0,'batched faces still move with the head');}
- state.inspect();inspect.update(0,true);assert.equal(mobile.group.visible,false);assert.equal(inspect.group.visible,true);
+ hang(state);state.inspect();inspect.update(0,true);assert.equal(mobile.group.visible,false);assert.equal(inspect.group.visible,true);
  const patches=[];inspect.group.traverse(o=>{if(o.name.startsWith('Stitched '))patches.push(o);});assert.equal(patches.length,4);assert.ok(patches.every(o=>!o.visible));
- collect(state);supplies.sync(state);assert.equal(supplies.objects.scissors.visible,false);assert.equal(supplies.objects.string.visible,false);
- state.cut(0);inspect.update(.3,true);state.restring(.4);inspect.update(.7,true);assert.equal(state.phase,'repaired');assert.ok(patches.every(o=>o.visible));
+ collect(state);supplies.sync(state);assert.equal(supplies.objects.mobileKit.visible,false);
+ state.repair(0);inspect.update(.3,true);assert.equal(state.phase,'repaired');assert.ok(patches.every(o=>o.visible));
  scene.updateMatrixWorld(true);
  for(const animal of mobile.animals){
   const normal=new THREE.Vector3(0,0,1).applyQuaternion(animal.object.getWorldQuaternion(new THREE.Quaternion()));assert.ok(normal.y<-.999,'rear faces below the hanging animal');
@@ -70,8 +72,20 @@ test('the actual toys hang in a fixed room position, with rear numbers facing do
   assert.ok(Math.abs(face.y)<1e-6,'face is level instead of looking at the ceiling');assert.ok(face.dot(outward)>.999,'face points outward toward the walls');assert.ok(up.y>.999,'ears remain above the face');
  }
  const fixed=inspect.group.position.clone();state.close();inspect.update(1,true);assert.equal(inspect.group.visible,true);assert.equal(mobile.group.visible,false);assert.ok(inspect.group.position.equals(fixed));
- state.reset();inspect.reset();supplies.sync(state);assert.equal(mobile.group.visible,true);assert.equal(inspect.group.visible,false);assert.equal(supplies.objects.string.visible,true);assert.equal(supplies.objects.scissors.visible,true);
+ state.reset();inspect.reset();supplies.sync(state);assert.equal(mobile.group.visible,true);assert.equal(inspect.group.visible,true);assert.equal(inspect.assembly.visible,false);assert.equal(inspect.hookTarget.visible,true);assert.equal(supplies.objects.mobileKit.visible,true);
  for(const [i,animal] of mobile.animals.entries()){assert.equal(animal.object.parent,mobile.group);assert.ok(animal.object.position.equals(home[i].position));assert.ok(animal.object.quaternion.angleTo(home[i].quaternion)<1e-7);assert.ok(animal.object.scale.equals(home[i].scale));assert.equal(animal.headPose.rotation.x,0);}
+}));
+
+test('scattered pieces hide independently, combine without ghost targets, and restore their floor poses on undo',()=>withCanvas(()=>{
+ const scene=new THREE.Scene(),mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11),()=>.012),state=createMobilePuzzleState(),bag=createInventory(),view=createMobileInspection({mobile,state});scene.add(mobile.group,view.group);view.update(0);
+ assert.equal(Object.keys(mobile.pieces).length,7);assert.equal(view.assembly.visible,false);assert.equal(view.hookTarget.visible,true);
+ const animal=mobile.animals[0],id='mobile'+animal.kind,home=animal.object.position.clone(),before=state.capture(),beforeBag=bag.capture();
+ assert.equal(state.collectPiece(id,bag),true);view.update(0);assert.equal(animal.object.visible,false);assert.equal(animal.shadow.visible,false);assert.equal(animal.string.visible,false);assert.equal(mobile.pieces.mobileBar0.visible,true);
+ state.restore(before);bag.restore(beforeBag);view.update(0);assert.equal(animal.object.visible,true);assert.equal(animal.shadow.visible,true);assert.ok(animal.object.position.equals(home));
+ for(const id of Object.keys(MOBILE_PIECES))state.collectPiece(id,bag);view.update(0);assert.equal(mobile.group.visible,false);assert.deepEqual(bag.items,['mobile']);
+ const collected=state.capture();state.hang(bag);state.inspect();view.update(0);assert.equal(view.assembly.visible,true);assert.equal(view.hookTarget.getObjectByName('Animal mobile hanging target').visible,false);assert.equal(view.hookTarget.visible,true,'the hook hardware remains attached to the hanging mobile');assert.equal(animal.object.visible,true);
+ state.restore(collected);view.update(0);assert.equal(view.assembly.visible,false);assert.equal(mobile.group.visible,false);assert.equal(animal.object.parent,mobile.group);assert.ok(animal.object.position.equals(home));
+ state.reset();view.update(0);assert.equal(mobile.group.visible,true);assert.ok(Object.values(mobile.pieces).every(o=>o.visible));
 }));
 
 test('inspection camera moves above and beneath the fixed mobile on an arc, then returns to the saved room view',()=>{
@@ -90,7 +104,7 @@ test('portrait inspection stays inside the room and a forced interruption restor
 test('a new game repaints the same rear patches and hides them again without replacing the animals',()=>withCanvas(()=>{
  const puzzle=createEscapePuzzle(()=>.31),mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11),()=>.012,puzzle),state=createMobilePuzzleState(),inspection=createMobileInspection({mobile,state});
  const patches=mobile.animals.map(a=>a.patch),maps=patches.map(p=>p.material.map),versions=maps.map(m=>m.version);
- state.inspect();collect(state);state.cut(0);inspection.update(.3,true);state.restring(.4);inspection.update(.7,true);assert.ok(patches.every(p=>p.visible));
+ hang(state);state.inspect();collect(state);state.repair(0);inspection.update(.3,true);assert.ok(patches.every(p=>p.visible));
  puzzle.reset();mobile.refreshDigits();state.reset();inspection.reset();
  mobile.animals.forEach((a,i)=>{assert.strictEqual(a.patch,patches[i]);assert.strictEqual(a.patch.material.map,maps[i]);assert.ok(maps[i].version>versions[i]);assert.equal(a.patch.name,`Stitched ${puzzle.digits[a.kind]} under ${a.kind}`);assert.equal(a.patch.visible,false);});
 }));

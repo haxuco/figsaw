@@ -33,11 +33,11 @@ test('pausing preserves subsecond time, including hidden tabs and a paused intro
 
 test('diagnostic actions undo in order, bound history, preserve inventory and leave normal play unpaused',()=>{
  const clock=createCountdownClock(),inventory=createInventory();inventory.add('ratchet');inventory.equip('ratchet');let changes=[],busy=false;
- const actions=[{id:'give',label:'Give scissors',run(){const before=inventory.capture();inventory.add('scissors');return ()=>inventory.restore(before);}}];
+ const actions=[{id:'give',label:'Give mobile kit',run(){const before=inventory.capture();inventory.add('mobileKit');return ()=>inventory.restore(before);}}];
  const mode=createDiagnostics({clock,actions,onInvulnerability:value=>changes.push(value),canRun:()=>!busy,historyLimit:2});
  assert.equal(mode.run('give'),false);assert.equal(mode.invulnerable,false);mode.activate();assert.equal(mode.invulnerable,true);
- mode.toggleTimer();assert.equal(clock.paused,true);mode.run('give');assert.equal(inventory.has('scissors'),true);
- busy=true;assert.equal(mode.undo(),false);assert.equal(inventory.has('scissors'),true);busy=false;assert.equal(mode.undo(),true);
+ mode.toggleTimer();assert.equal(clock.paused,true);mode.run('give');assert.equal(inventory.has('mobileKit'),true);
+ busy=true;assert.equal(mode.undo(),false);assert.equal(inventory.has('mobileKit'),true);busy=false;assert.equal(mode.undo(),true);
  assert.deepEqual(inventory.capture(),{items:['ratchet'],equipped:'ratchet'});assert.equal(mode.undoLabel,null);
  mode.setInvulnerable(false);assert.equal(mode.invulnerable,false);mode.exit();assert.equal(clock.paused,false);assert.equal(mode.enabled,false);assert.deepEqual(changes,[true,false,false]);
 });

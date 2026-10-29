@@ -22,18 +22,30 @@ export function createEscapePuzzle(random=Math.random){
  }
  reset();return {reset,get roles(){return roles;},get pmIndex(){return pmIndex;},get dropOrder(){return dropOrder;},revealFish(){fishRevealed=true;},setFishRevealed(value){fishRevealed=!!value;},get digits(){return digits;},get order(){return order;},get letters(){return order.map(k=>k[0]).join('');},get code(){return order.map(k=>digits[k]).join('');},get revision(){return revision;},get fishRevealed(){return fishRevealed;}};
 }
+export const MOBILE_PIECES=Object.freeze({
+ mobilePig:'Pig plush',mobileTiger:'Tiger plush',mobileElephant:'Elephant plush',mobileFox:'Fox plush',
+ mobileBar0:'Mobile crossbar',mobileBar1:'Mobile crossbar',mobileHub:'Mobile hub'
+});
 export function createMobilePuzzleState(){
- const inventory=new Set();let phase='tangled',active=false,action=null,started=0,progress=0;
+ const inventory=new Set(),pieces=new Set();let phase='scattered',hung=false,active=false,action=null,started=0,progress=0;
+ const complete=()=>pieces.size===Object.keys(MOBILE_PIECES).length;
  return {
-  capture(){return {items:[...inventory],phase,active,action,started,progress};},restore(value){inventory.clear();for(const id of value.items)inventory.add(id);({phase,active,action,started,progress}=value);},
-  inspect(locked=false){if(locked||active)return false;active=true;return true;},
+  capture(){return {items:[...inventory],pieces:[...pieces],phase,hung,active,action,started,progress};},
+  restore(value){inventory.clear();pieces.clear();for(const id of value.items)inventory.add(id);for(const id of value.pieces)pieces.add(id);({phase,hung,active,action,started,progress}=value);},
+  collectPiece(id,bag,{locked=false}={}){
+   if(locked||hung||!MOBILE_PIECES[id]||pieces.has(id)||!bag.add(id))return false;
+   pieces.add(id);
+   if(complete()){phase='tangled';for(const piece of Object.keys(MOBILE_PIECES))bag.remove(piece);bag.add('mobile');}
+   return true;
+  },
+  hang(bag,{locked=false}={}){if(locked||hung||!complete()||!bag.has('mobile'))return false;bag.remove('mobile');hung=true;return true;},
+  inspect(locked=false){if(locked||!hung||active)return false;active=true;return true;},
   close(force=false){if(action&&!force)return false;active=false;return true;},
-  collect(item,{locked=false,drawerReady=false}={}){if(locked||!drawerReady||!['scissors','string'].includes(item)||inventory.has(item))return false;inventory.add(item);return true;},
-  cut(time){if(!active||action||phase!=='tangled'||!inventory.has('scissors'))return false;action='cut';started=time;progress=0;return true;},
-  restring(time){if(!active||action||phase!=='cut'||!inventory.has('string'))return false;action='restring';started=time;progress=0;return true;},
-  update(time,reducedMotion=false){if(!action)return null;progress=Math.max(0,Math.min(1,(time-started)/(reducedMotion?.2:action==='cut'?1.4:2)));if(progress<1)return null;phase=action==='cut'?'cut':'repaired';if(phase==='repaired')inventory.delete('string');const done=action;action=null;return done;},
-  reset(){inventory.clear();phase='tangled';active=false;action=null;progress=0;},
-  has:item=>inventory.has(item),get phase(){return phase;},get active(){return active;},get action(){return action;},get progress(){return progress;}
+  collect(item,{locked=false,drawerReady=false}={}){if(locked||!drawerReady||item!=='mobileKit'||inventory.has(item)||phase==='repaired')return false;inventory.add(item);return true;},
+  repair(time){if(!active||action||phase!=='tangled'||!inventory.has('mobileKit'))return false;action='repair';started=time;progress=0;return true;},
+  update(time,reducedMotion=false){if(!action)return null;progress=Math.max(0,Math.min(1,(time-started)/(reducedMotion?.2:3.2)));if(progress<1)return null;phase='repaired';inventory.delete('mobileKit');action=null;return 'repair';},
+  reset(){inventory.clear();pieces.clear();phase='scattered';hung=active=false;action=null;progress=0;},
+  has:item=>inventory.has(item),hasPiece:id=>pieces.has(id),get collectedAll(){return complete();},get hung(){return hung;},get phase(){return phase;},get active(){return active;},get action(){return action;},get progress(){return progress;}
  };
 }
 export function createDoorKeypadState({order=null,digits=ANIMAL_DIGITS,puzzle=null}={}){

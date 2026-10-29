@@ -16,8 +16,9 @@ export function createScissors(){
 }
 export function createMobileSupplies(drawer){
  const objects=createRepairTools(drawer),group=new THREE.Group();group.name='Scissors and repair string in Supplies';drawer.add(group);
- const scissors=createScissors();scissors.group.rotation.set(-Math.PI/2,0,-.35);scissors.group.position.set(.23,-.129,-.015);scissors.group.scale.setScalar(.80);scissors.group.userData.supplyAction='scissors';group.add(scissors.group);objects.scissors=scissors.group;
- const string=new THREE.Group();string.name='Spool of cotton repair string';string.position.set(-.24,-.100,-.07);string.userData.supplyAction='string';group.add(string);objects.string=string;
+ const kit=new THREE.Group();kit.name='Scissors and cotton string repair kit';kit.userData.supplyAction='mobileKit';group.add(kit);objects.mobileKit=kit;
+ const scissors=createScissors();scissors.group.rotation.set(-Math.PI/2,0,-.35);scissors.group.position.set(.23,-.129,.05);scissors.group.scale.setScalar(.80);kit.add(scissors.group);
+ const string=new THREE.Group();string.name='Spool of cotton repair string';string.position.set(.23,-.100,-.09);kit.add(string);
  const wood=new THREE.MeshStandardMaterial({color:0x8e7253,roughness:.9}),cotton=new THREE.MeshStandardMaterial({color:0xc6bea1,roughness:1});
  function cylinder(r,h,y,mat){const o=new THREE.Mesh(new THREE.CylinderGeometry(r,r,h,20),mat);o.position.y=y;string.add(o);}
  cylinder(.027,.065,0,wood);for(const y of[-.031,.031])cylinder(.036,.008,y,wood);
@@ -25,8 +26,8 @@ export function createMobileSupplies(drawer){
  for(let i=0;i<13;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.031,.0013,4,20),cotton);ring.rotation.x=Math.PI/2;ring.position.y=-.022+i*.0035;string.add(ring);}
  const strand=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(.03,-.023,0),new THREE.Vector3(.065,-.025,.02),new THREE.Vector3(.075,-.025,.04)]),12,.0018,4,false),cotton);string.add(strand);
  for(const [item,object]of Object.entries(objects)){
-  const hit=new THREE.Mesh(new THREE.BoxGeometry(item==='scissors'?.09:.08,item==='scissors'?.22:.08,.045),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));object.add(hit);
+  const hit=new THREE.Mesh(new THREE.BoxGeometry(item==='mobileKit'?.16:.08,item==='mobileKit'?.16:.08,item==='mobileKit'?.28:.045),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));if(item==='mobileKit')hit.position.set(.23,-.10,.02);object.add(hit);
   object.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});hit.castShadow=false;
  }
- return {group,objects,sync(state){for(const [key,o]of Object.entries(objects))o.visible=!state.has(key)&&!(key==='string'&&state.phase==='repaired');}};
+ return {group,objects,sync(state){for(const [key,o]of Object.entries(objects))o.visible=!state.has(key)&&!(key==='mobileKit'&&state.phase==='repaired');}};
 }

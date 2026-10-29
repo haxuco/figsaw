@@ -6,8 +6,8 @@ import { settleOnFloor, drapeFloorCable, floorClearance } from './floor-contact.
 
 // A discarded four-animal nursery mobile, modeled from the user's cartoon reference.
 export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=null){
- const animals=[],strings=[],shadows=[],digitPainters=[];
- const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.userData.mobilePuzzle=true;group.position.set(-1.05,0,.55);
+ const animals=[],strings=[],shadows=[],digitPainters=[],pieces={};
+ const group=new THREE.Group();group.name='Fallen nursery mobile with four soft animals';group.position.set(-1.05,0,.55);
  let seed=48319;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
  const [canvas,ctx]=artCanvas(512);ctx.fillStyle='#e0d9c7';ctx.fillRect(0,0,512,512);
  for(let i=0;i<7000;i++){const x=random()*512,y=random()*512;ctx.strokeStyle=i%2?'rgba(58,52,36,.12)':'rgba(246,236,212,.28)';ctx.lineWidth=.6;ctx.beginPath();ctx.moveTo(x,y);ctx.lineTo(x+2,y+3);ctx.stroke();}
@@ -117,37 +117,35 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
   });
   object.userData.floorProp=true;
  }
- // The support has toppled as one piece; the clamp, bent arch and music box lie low.
- const stand=new THREE.Group();stand.name='Toppled mobile support';group.add(stand);
- box([.16,.055,.12],[-.60,.0305,.48],agedIvory,stand);
- box([.12,.028,.10],[-.60,.0765,.48],agedIvory,stand);
- rod([-.60,.0565,.48],[-.60,.1425,.48],.012,metal,stand);
- ball([-.60,.1455,.48],[.043,.012,.020],agedIvory,stand);
- line([[-.59,.039,.44],[-.63,.017,.10],[-.48,.017,-.30],[-.20,.020,-.47],[.12,.019,-.39],[.19,.017,-.13],[.04,.052,0]],.013,agedIvory,stand);
- settleOnFloor(stand,floorSupport);
- const hub=new THREE.Group();hub.name='Scuffed mobile music box';hub.position.set(0,.116,0);hub.rotation.set(.21,0,-.18);group.add(hub);
- const drum=mesh(new THREE.CylinderGeometry(.103,.103,.068,40),agedIvory,hub);
- const seam=mesh(new THREE.TorusGeometry(.103,.002,6,40),thread,hub);seam.rotation.x=Math.PI/2;
- const button=ball([0,.039,0],[.034,.009,.034],ochre,hub);
+ // The mobile has broken apart: each crossbar, the hub and every animal
+ // is a separate floor pickup, rather than one intact frame lying down.
+ const wood=new THREE.MeshStandardMaterial({color:0x81745a,map:fabricMap,roughness:1});
+ for(const [i,p]of [[-.48,.72,-.35],[-.15,1.45,1.12]].entries()){
+  const bar=new THREE.Group();bar.name=`Broken mobile crossbar ${i+1}`;bar.userData.mobilePiece='mobileBar'+i;
+  bar.position.set(p[0],floorSupport(group.position.x+p[0],group.position.z+p[1])+.013,p[1]);bar.rotation.y=p[2];group.add(bar);
+  rod([-.33,0,0],[.33,0,0],.012,wood,bar);
+  for(const side of[-1,1]){const end=mesh(new THREE.ConeGeometry(.010,.035,5),wood,bar);end.position.set(side*.335,.002,0);end.rotation.z=side*Math.PI/2;}
+  const pick=mesh(new THREE.BoxGeometry(.74,.14,.15),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}),bar);pick.castShadow=false;pieces['mobileBar'+i]=bar;
+ }
+ const hub=new THREE.Group();hub.name='Detached mobile music box hub';hub.userData.mobilePiece='mobileHub';hub.position.set(.10,.116,1.10);hub.rotation.set(.21,0,-.18);group.add(hub);pieces.mobileHub=hub;
+ mesh(new THREE.CylinderGeometry(.103,.103,.068,24),agedIvory,hub);
+ const seam=mesh(new THREE.TorusGeometry(.103,.002,6,24),thread,hub);seam.rotation.x=Math.PI/2;
+ ball([0,.039,0],[.034,.009,.034],ochre,hub);
  for(let j=0;j<5;j++)box([.030,.002,.002],[-.049+j*.019,.035,.041],thread,hub);
- rod([0,-.02,-.093],[0,-.02,-.145],.005,metal,hub);ball([0,-.02,-.150],[.026,.012,.005],metal,hub);
  group.updateMatrixWorld(true);settleOnFloor(hub,floorSupport);
- const ends=[[-.37,.068,.035],[.34,.103,-.025],[.018,.058,-.33],[-.025,.075,.34]];
- for(const end of ends){end[1]=floorSupport(group.position.x+end[0],group.position.z+end[2])+.0076;rod([0,hub.position.y,0],end,.007,metal);}
- for(const p of ends){const ring=mesh(new THREE.TorusGeometry(.014,.003,6,16),metal);ring.rotation.x=Math.PI/2;ring.position.set(p[0],p[1]-.004,p[2]);}
  const placements=[
-  {kind:'Pig',x:.29,z:.35,rear:true,yaw:-.12,roll:.08,arm:3},
-  {kind:'Tiger',x:-.38,z:.17,rear:true,yaw:.36,roll:-.12,arm:0},
-  {kind:'Elephant',x:.34,z:-.29,rear:false,yaw:-.28,roll:-.24,arm:1},
-  {kind:'Fox',x:-.27,z:-.43,rear:true,yaw:1.12,roll:.20,arm:2}
+  {kind:'Pig',x:.46,z:.96,rear:true,yaw:-.12,roll:.08,arm:3},
+  {kind:'Tiger',x:-.62,z:.22,rear:true,yaw:.36,roll:-.12,arm:0},
+  {kind:'Elephant',x:.75,z:1.40,rear:false,yaw:-.28,roll:-.24,arm:1},
+  {kind:'Fox',x:-.85,z:1.85,rear:true,yaw:1.12,roll:.20,arm:2}
  ];
  for(const p of placements){
-  const {object,tab,body,headPose}=makeAnimal(p.kind);animals.push({object,kind:p.kind,tab,headPose});object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
+  const {object,tab,body,headPose}=makeAnimal(p.kind);animals.push({object,kind:p.kind,tab,headPose});const id='mobile'+p.kind;object.userData.mobilePiece=id;pieces[id]=object;object.position.set(p.x,0,p.z);object.scale.setScalar(.88);
   const toward=Math.atan2(viewerPosition.x-(group.position.x+p.x),viewerPosition.z-(group.position.z+p.z));
   object.rotation.set(p.kind==='Pig'?-.06:.03,toward+(p.rear?0:Math.PI)+p.yaw,p.roll,'YXZ');group.add(object);
   group.updateMatrixWorld(true);settlePlush(object,body);group.updateMatrixWorld(true);
-  const end=group.worldToLocal(tab.getWorldPosition(new THREE.Vector3())),start=ends[p.arm];
-  const string=line([start,[start[0]+.06,.024,start[2]+.08],[(start[0]+end.x)/2-.05,.023,(start[2]+end.z)/2+.08],[end.x-.04,.025,end.z+.035],end.toArray()],.0021,cord);string.userData.anchorStart=string.userData.anchorEnd=true;drapeFloorCable(string,floorSupport);strings.push(string);
+  const end=group.worldToLocal(tab.getWorldPosition(new THREE.Vector3()));
+  const string=line([[end.x-.15,.014,end.z+.08],[end.x-.10,.012,end.z+.04],[end.x-.05,.012,end.z+.07],end.toArray()],.0021,cord);string.userData.anchorStart=string.userData.anchorEnd=true;string.userData.mobilePiece=id;drapeFloorCable(string,floorSupport);strings.push(string);
   // A close contact shadow conforms to carpet edges instead of hovering above them.
   const shadowCanvas=document.createElement('canvas');shadowCanvas.width=shadowCanvas.height=64;const sc=shadowCanvas.getContext('2d'),fade=sc.createRadialGradient(32,32,5,32,32,32);fade.addColorStop(0,'rgba(0,0,0,.65)');fade.addColorStop(.48,'rgba(0,0,0,.32)');fade.addColorStop(1,'rgba(0,0,0,0)');sc.fillStyle=fade;sc.fillRect(0,0,64,64);
   const bounds=new THREE.Box3().setFromObject(object),size=bounds.getSize(new THREE.Vector3()),center=group.worldToLocal(bounds.getCenter(new THREE.Vector3()));
@@ -155,7 +153,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
   const points=shadowGeometry.attributes.position;
   for(let i=0;i<points.count;i++)points.setY(i,floorSupport(group.position.x+points.getX(i),group.position.z+points.getZ(i))+.0002);
   shadowGeometry.computeVertexNormals();
-  const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;shadows.push(shadow);
+  const shadow=mesh(shadowGeometry,new THREE.MeshBasicMaterial({map:new THREE.CanvasTexture(shadowCanvas),transparent:true,depthWrite:false}));shadow.name=`${p.kind} floor contact shadow`;shadow.castShadow=false;shadow.userData.ignoreFloorContact=true;shadows.push(shadow);animals.at(-1).shadow=shadow;animals.at(-1).string=string;
  }
  // Stitch the numbers onto the rounded rear below the tail, not the belly.
  for(const animal of animals){
@@ -181,10 +179,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
   const patch=new THREE.Mesh(geometry,material);patch.name=`Stitched ${(puzzle?.digits??ANIMAL_DIGITS)[animal.kind]} under ${animal.kind}`;animal.object.add(patch);animal.patch=patch;
   digitPainters.push(()=>{paintDigit();material.map.needsUpdate=true;patch.name=`Stitched ${(puzzle?.digits??ANIMAL_DIGITS)[animal.kind]} under ${animal.kind}`;});
  }
- const tangled=new THREE.Group();tangled.name='Knotted and crossed mobile cords';group.add(tangled);
- for(let j=0;j<7;j++){
-  const points=[];for(let i=0;i<=28;i++){const a=i/28*Math.PI*2.5+j*.77,r=.14+.11*Math.sin(a*2+j);const x=Math.cos(a)*r,z=Math.sin(a)*r;points.push([x,floorSupport(group.position.x+x,group.position.z+z)+.013+j*.0015,z]);}
-  line(points,.0023,cord,tangled);
- }
- return {group,animals,strings,shadows,tangled,refreshDigits(){digitPainters.forEach(paint=>paint());}};
+ for(const animal of animals){const pick=mesh(new THREE.BoxGeometry(.39,.23,.53),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}),animal.object);pick.position.set(0,.08,-.04);pick.castShadow=false;pick.name=animal.kind+' plush pickup target';}
+ const tangled=new THREE.Group();tangled.name='Loose mobile cord scraps';tangled.visible=false;group.add(tangled);
+ return {group,animals,pieces,strings,shadows,tangled,refreshDigits(){digitPainters.forEach(paint=>paint());}};
 }

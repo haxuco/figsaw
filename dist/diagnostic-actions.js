@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {ITEMS} from './inventory.js';
+import {MOBILE_PIECES} from './mobile-puzzle-state.js';
 import {REPAIRS} from './rescue-state.js';
 import {FIGPAL_INTERVAL_SECONDS} from './countdown-clock.js';
 
@@ -22,8 +23,9 @@ export function createDiagnosticActions({time,hazardTime,inventory,mobilePuzzle,
   action('timer-five','Jump countdown to 00:05',['timer',...environment,'rounds','view'],()=>{prepareTimer();countdown.setRemaining(5);}),
   action('items','Collect all inventory items',['inventory','mobilePuzzle','rescueChairs','hoists','key','props'],()=>{
    for(const id of Object.keys(rescueChairs.parts))if(!inventory.has(id))rescueChairs.collectPart(id,inventory);
-   for(const id of Object.keys(ITEMS))inventory.add(id);
-   for(const id of ['scissors','string'])mobilePuzzle.collect(id,{drawerReady:true});ketchupKey.grant(time());props.hideCollected();
+   for(const id of Object.keys(ITEMS))if(!MOBILE_PIECES[id]&&id!=='mobile')inventory.add(id);
+   for(const id of Object.keys(MOBILE_PIECES))mobilePuzzle.collectPiece(id,inventory);
+   mobilePuzzle.collect('mobileKit',{drawerReady:true});ketchupKey.grant(time());props.hideCollected();
   }),
   action('unlock','Unlock shackle',['wrist'],()=>{if(!restraint.locked)return false;restraint.setLocked(false,time());}),
   action('laptop-open','Open laptop',['charging','laptop'],()=>{if(laptop.isOpen)return false;laptop.open();laptop.update(1,true);}),

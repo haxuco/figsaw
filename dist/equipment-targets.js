@@ -14,8 +14,8 @@ export function equipmentMatchesTarget(item,target,context){
   return item==='ratchet'&&chair.installed.includes(steps[chair.step]?.part);
  }
  if(item==='key')return target.kind==='shackle'&&locked&&context.hasKey;
- if(item==='scissors')return target.kind==='mobile'&&mobilePhase==='tangled';
- if(item==='string')return target.kind==='mobile'&&mobilePhase==='cut';
+ if(item==='mobileKit')return target.kind==='mobile'&&!!context.mobileHung&&mobilePhase==='tangled';
+ if(item==='mobile')return target.kind==='mobile-mount'&&!context.mobileHung&&mobilePhase==='tangled';
  if(item==='charger')return target.kind==='strip'&&chargingPhase==='carrying'||target.kind==='laptop'&&chargingPhase==='powered';
  if(item==='axe')return target.kind==='tank'&&!context.brokenTanks?.[target.index];
  if(item==='saw')return locked?target.kind==='shackle'&&!context.hasKey:target.kind==='plush'&&context.selectingAnimal&&!!context.canCut?.(target.object);

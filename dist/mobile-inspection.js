@@ -2,10 +2,10 @@ import * as THREE from './vendor/three.module.js';
 import {createScissors} from './mobile-supplies.js';
 
 export function createMobileInspection({mobile,state}){
- const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.visible=false;group.userData.ignoreAcid=true;group.userData.mobilePuzzle=true;
+ const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.userData.ignoreAcid=true;
  // Keep the suspended toys to the right, clear of the tanks and rear objects.
  group.position.set(1.25,1.90,.55);
- const assembly=new THREE.Group();group.add(assembly);let hung=false;
+ const assembly=new THREE.Group();assembly.userData.mobilePuzzle=true;assembly.visible=false;group.add(assembly);const arms=[];let hung=false;
  const cord=new THREE.MeshStandardMaterial({color:0xc0b59b,roughness:1}),metal=new THREE.MeshStandardMaterial({color:0x8a8d7e,metalness:.45,roughness:.6}),ivory=new THREE.MeshStandardMaterial({color:0xb8b398,roughness:.8});
  function tube(points,r,material,parent=assembly){const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),Math.max(10,points.length*4),r,5,false);const m=new THREE.Mesh(g,material);parent.add(m);return m;}
  const hub=new THREE.Mesh(new THREE.CylinderGeometry(.10,.10,.07,24),ivory);hub.position.y=.30;assembly.add(hub);
@@ -18,7 +18,7 @@ export function createMobileInspection({mobile,state}){
   // Point each upright face away from the hub toward a different wall.
   const targetQ=new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0,1,0),Math.atan2(-target.x,-target.z)).multiply(hangingQ);
   const end=target.clone().add(animal.tab.position.clone().multiplyScalar(1.08).applyQuaternion(targetQ));
-  const arm=[end.x,.28,end.z];tube([[0,.30,0],arm],.008,metal);
+  const arm=[end.x,.28,end.z];arms.push(tube([[0,.30,0],arm],.012,mobile.pieces.mobileBar0.children[0].material));
   tube([arm,[end.x+.004,.06,end.z],end.toArray()],.0028,cord,cleanStrings);
   const startQ=new THREE.Quaternion().setFromEuler(new THREE.Euler((i-1.5)*.39,i*.66,(i%2?1:-1)*.48));
   const tiedEnd=start.clone().add(animal.tab.position.clone().multiplyScalar(1.08).applyQuaternion(startQ));
@@ -39,35 +39,44 @@ export function createMobileInspection({mobile,state}){
  }
  const scissors=createScissors();scissors.group.scale.setScalar(1.7);assembly.add(scissors.group);scissors.group.visible=false;
  const ceilingY=3.20-group.position.y;
- tube([[0,ceilingY,0],[0,.34,0]],.004,cord);
- const hook=new THREE.Mesh(new THREE.TorusGeometry(.025,.005,6,16),metal);hook.position.set(0,ceilingY,0);group.add(hook);
- const mount=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.018,16),metal);mount.position.set(0,ceilingY+.035,0);group.add(mount);
+ tube([[0,ceilingY-.28,0],[0,.34,0]],.004,cord);
+ const hookTarget=new THREE.Group();hookTarget.name='Empty ceiling hook for the animal mobile';hookTarget.userData.mobileMount=true;group.add(hookTarget);
+ const hookMetal=new THREE.MeshStandardMaterial({color:0xabb19f,metalness:.55,roughness:.55,emissive:0x434c35,emissiveIntensity:.28});
+ const stem=new THREE.Mesh(new THREE.CylinderGeometry(.007,.007,.25,8),hookMetal);stem.position.set(0,ceilingY-.12,0);hookTarget.add(stem);
+ const hook=new THREE.Mesh(new THREE.TorusGeometry(.05,.007,6,18),hookMetal);hook.position.set(0,ceilingY-.28,0);hookTarget.add(hook);
+ const mount=new THREE.Mesh(new THREE.CylinderGeometry(.045,.045,.018,16),metal);mount.position.set(0,ceilingY+.035,0);hookTarget.add(mount);
+ const hookPick=new THREE.Mesh(new THREE.BoxGeometry(.26,.40,.26),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));hookPick.name='Animal mobile hanging target';hookPick.position.set(0,ceilingY-.20,0);hookTarget.add(hookPick);
+ const packedModel=new THREE.Group();packedModel.name='Animal mobile';packedModel.add(hub.clone(),...arms.map(arm=>arm.clone()),cleanStrings.clone());
+ for(const c of mountedAnimals){c.patch.visible=false;const toy=c.object.clone();toy.visible=true;toy.position.copy(c.target);toy.quaternion.copy(c.targetQ);toy.scale.setScalar(1.08);toy.getObjectByName(c.headPose.name).rotation.x=-Math.PI/2;packedModel.add(toy);}
  const lamp=new THREE.PointLight(0xe3d4ad,2,2.5,2);lamp.position.set(0,-.80,0);lamp.userData.mobileEssential=true;group.add(lamp);
  function getTarget(out){return out.copy(group.position).add(new THREE.Vector3(0,-.18,0));}
  function update(time,reducedMotion=false){
   const done=state.update(time,reducedMotion);
-  if(state.active&&!hung){hung=true;for(const c of mountedAnimals){assembly.add(c.object);c.object.scale.setScalar(1.08);}}
-  group.visible=hung;mobile.group.visible=!hung;lamp.visible=state.active;
-  for(const c of mountedAnimals)c.patch.visible=state.phase==='repaired';
-  if(!hung)return done;
-  const repair=state.phase==='repaired'?1:state.action==='restring'?THREE.MathUtils.smootherstep(state.progress,0,1):0;
+  if(!state.hung&&hung)reset();
+  if(state.hung&&!hung){hung=true;for(const c of mountedAnimals){assembly.add(c.object);c.object.scale.setScalar(1.08);c.object.visible=true;}}
+  group.visible=true;assembly.visible=hung;hookTarget.visible=true;hookTarget.userData.mobileMount=!hung;hookPick.visible=!hung;mobile.group.visible=!hung&&!state.collectedAll;lamp.visible=state.active;
+  if(!hung){
+   for(const [id,object]of Object.entries(mobile.pieces))object.visible=!state.hasPiece(id);
+   for(const animal of mobile.animals){animal.shadow.visible=animal.string.visible=!state.hasPiece('mobile'+animal.kind);animal.patch.visible=false;}
+   return done;
+  }
+  const repair=state.phase==='repaired'?1:state.action==='repair'?THREE.MathUtils.smootherstep(state.progress,.35,1):0;
   for(const c of mountedAnimals){c.patch.visible=state.phase==='repaired';c.object.position.lerpVectors(c.start,c.target,repair);c.object.quaternion.copy(c.startQ).slerp(c.targetQ,repair);c.headPose.rotation.x=-Math.PI/2*repair;}
-  knots.visible=state.phase==='tangled';cleanStrings.visible=state.phase==='repaired';
-  scissors.group.visible=state.action==='cut';
-  if(scissors.group.visible){const p=state.progress;scissors.group.position.set(.24-.19*Math.sin(Math.PI*p),.06,.16);scissors.group.rotation.set(0,-.3,-1.2);scissors.setOpen(reducedMotion?.1:.5+.45*Math.sin(p*Math.PI*6));knots.scale.setScalar(1-Math.max(0,p-.7)*1.5);}
+  knots.visible=state.phase==='tangled'&&(!state.action||state.progress<.45);cleanStrings.visible=repair>0;
+  scissors.group.visible=state.action==='repair'&&state.progress<.35;
+  if(scissors.group.visible){const p=state.progress/.35;scissors.group.position.set(.24-.19*Math.sin(Math.PI*p),.06,.16);scissors.group.rotation.set(0,-.3,-1.2);scissors.setOpen(reducedMotion?.1:.5+.45*Math.sin(p*Math.PI*6));knots.scale.setScalar(1-Math.max(0,p-.7)*1.5);}
   else knots.scale.setScalar(1);
   return done;
  }
- function reset(){hung=false;group.visible=false;mobile.group.visible=true;for(const c of mountedAnimals){c.home.parent.add(c.object);c.object.position.copy(c.home.position);c.object.quaternion.copy(c.home.quaternion);c.object.scale.copy(c.home.scale);c.headPose.rotation.x=0;c.patch.visible=false;}}
- return {group,update,getTarget,reset,get hung(){return hung;}};
+ function reset(){hung=false;group.visible=true;assembly.visible=false;hookTarget.visible=true;hookTarget.userData.mobileMount=true;hookPick.visible=true;mobile.group.visible=true;for(const c of mountedAnimals){c.home.parent.add(c.object);c.object.position.copy(c.home.position);c.object.quaternion.copy(c.home.quaternion);c.object.scale.copy(c.home.scale);c.headPose.rotation.x=0;c.patch.visible=false;}for(const object of Object.values(mobile.pieces))object.visible=true;for(const animal of mobile.animals)animal.shadow.visible=animal.string.visible=true;}
+ return {group,assembly,hookTarget,packedModel,update,getTarget,reset,get hung(){return hung;}};
 }
 
 export function createMobileInspectionUI({state,time,equipped=()=>null}){
  function activate(){
   if(!state.active||state.action||state.phase==='repaired')return;
-  const cutting=state.phase==='tangled';
-  if(equipped()!==(cutting?'scissors':'string'))return;
-  if(cutting)state.cut(time());else state.restring(time());
+  if(equipped()!=='mobileKit')return;
+  state.repair(time());
   sync();
  }
  function sync(){document.body.classList.toggle('inspecting-mobile',state.active);}
