@@ -52,7 +52,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  const play=root.querySelector('[data-play]'),result=root.querySelector('[data-result]'),status=root.querySelector('[data-status]'),check=root.querySelector('[data-check]');
  const wordArea=root.querySelector('[data-word]'),roundLabel=root.querySelector('[data-round]'),typeLabel=root.querySelector('[data-typeface]'),progress=[...root.querySelectorAll('[data-progress]')];
  const returnButton=root.querySelector('[data-return]'),power=root.querySelector('[data-power]'),nudgeButtons=[...root.querySelectorAll('[data-nudge]')];
- const answer=root.querySelector('[data-answer]'),answerLabel=root.querySelector('[data-answer-label]');
+ const answer=root.querySelector('[data-answer]'),answerLabel=root.querySelector('[data-answer-label]'),answerToggle=root.querySelector('[data-kern-outlines]');
  const editor=root.querySelector('[data-kern-editor]'),wordInput=root.querySelector('[data-kern-type]'),copyButton=root.querySelector('[data-kern-copy]'),exportText=root.querySelector('[data-kern-export]'),editorStatus=root.querySelector('[data-kern-status]'),instruction=root.querySelector('[data-instruction]');
  const center=new THREE.Vector3(),normal=new THREE.Vector3(),up=new THREE.Vector3(),rotation=new THREE.Quaternion(),startRotation=new THREE.Quaternion(),targetRotation=new THREE.Quaternion(),startPosition=new THREE.Vector3(),destination=new THREE.Vector3(),lookMatrix=new THREE.Matrix4();
  const corners=[[-.823/2,.525/2],[.823/2,.525/2],[.823/2,-.525/2],[-.823/2,-.525/2]].map(([x,y])=>new THREE.Vector3(x,y,0));
@@ -68,6 +68,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   answerLabel.textContent=draft?'Measured reference · layout preview':'Diagnostic answer · match the teal outlines';
   answer.hidden=answerLabel.hidden=!show;answerVisible=show;
  }
+ answerToggle.onchange=()=>syncAnswer(phase==='playing'&&isDiagnostic()&&answerToggle.checked&&(!challenge.completed||!!draft));
  function paint(){paintProgram(screenMap.image,challenge,currentView());screenMap.needsUpdate=true;}
  function selection(){letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&(!!draft||!challenge.accepted)));}
  function sync({texture=true}={}){
@@ -89,7 +90,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   check.textContent=draft?'Return to game':challenge.accepted?'Next word →':'Submit spacing';
   instruction.textContent=draft?'Drag any letter. Copy settings when ready.':'Drag the inner letters. First and last stay fixed.';
   if(editorWord!==view.word){editorWord=view.word;wordInput.value=view.word;}
-  syncAnswer(answerVisible&&(!challenge.completed||!!draft));
+  syncAnswer(answerVisible&&answerToggle.checked&&(!challenge.completed||!!draft));
   if(texture)paint();
  }
  function endDrag(){if(drag&&wordArea.hasPointerCapture?.(drag.id))wordArea.releasePointerCapture(drag.id);drag=null;}
@@ -163,7 +164,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   else if(phase==='unpowered'&&laptop.isPowered){phase='playing';(challenge.completed?returnButton:letters[selected]).focus({preventScroll:true});}
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
   const diagnostic=phase==='playing'&&isDiagnostic();editor.hidden=!diagnostic;
-  const showAnswer=diagnostic&&(!challenge.completed||!!draft);
+  const showAnswer=diagnostic&&answerToggle.checked&&(!challenge.completed||!!draft);
   if(showAnswer!==answerVisible)syncAnswer(showAnswer);
   if(phase!=='playing'){root.hidden=true;return;}
   const rect=canvas.getBoundingClientRect(),points=corners.map(corner=>{const point=laptop.screen.localToWorld(corner.clone()).project(camera);return{x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2};});
