@@ -37,6 +37,7 @@ import { createFigpalCamera } from './figpal-camera.js';
 import { createAcidCamera } from './acid-camera.js';
 import {createChairSeat} from './chair-seat.js';
 import { createAlarmCamera } from './alarm-camera.js';
+import {createEscapeCinematic} from './escape-cinematic.js';
 import {createMobileCamera} from './mobile-camera.js';
 import {createMobilePuzzleState,createEscapePuzzle} from './mobile-puzzle-state.js';
 import {createDocumentViewer} from './wall-documents.js';
@@ -471,6 +472,7 @@ const drawerCamera=createDrawerCamera({position:cameraPosition,state,getView:cha
 const acidCamera=createAcidCamera({position:cameraPosition,state});
 const chairSeat=createChairSeat({position:cameraPosition,state,getView:chairRefuge.getView});
 const alarmCamera=createAlarmCamera({position:cameraPosition,state});
+const escapeCinematic=createEscapeCinematic({camera,position:cameraPosition,state,door:exitDoor,baseFov:homeCamera.fov});
 const hazardClock=createHazardClock(state.time);
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>ketchupKey.hasKey});
@@ -495,7 +497,7 @@ for(const dialog of[gameOver,escapeScreen])dialog.addEventListener('keydown',eve
  const buttons=[...dialog.querySelectorAll('button,input,select,textarea')].filter(control=>!control.disabled&&!control.closest('[hidden]')),index=buttons.indexOf(document.activeElement);
  event.preventDefault();event.stopPropagation();buttons[(index+(event.shiftKey?-1:1)+buttons.length)%buttons.length]?.focus();
 });
-let gameEnded=false,gameWon=false,escapedAt=0;
+let gameEnded=false,gameWon=false;
 document.querySelector('#new-game').addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
@@ -606,10 +608,11 @@ function escapeRoom(){
  laptopProgram.cancel();
  if(gameEnded||gameWon)return;
  const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs,assisted:diagnosticRunUsed});
- testingMode.update({hidden:true});testingHighlights.group.visible=false;equippedModel.group.visible=false;exitDoor.unlock();gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;escapedAt=state.time;
+ testingMode.update({hidden:true});testingHighlights.group.visible=false;equippedModel.group.visible=false;gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
- const target=exitDoor.object.getWorldPosition(new THREE.Vector3()).add(new THREE.Vector3(0,1.1,0)),direction=target.sub(cameraPosition).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=1;
- camera.position.copy(cameraPosition);camera.lookAt(cameraPosition.clone().add(direction));camera.fov=homeCamera.fov;camera.updateProjectionMatrix();
+ arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;
+ putEquipmentAway();inventoryUI.setHidden(true);document.body.classList.add('escape-active');
+ escapeCinematic.start(state.time);
  restraintStatus.textContent='The code works. The door opens. You escaped.';
  victoryShare.prepare(result);leaderboardUI.close();leaderboardUI.showResult(result);
 }
@@ -924,7 +927,7 @@ function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();movePromptChair=null;inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
- gameEnded=false;gameWon=false;escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
+ gameEnded=false;gameWon=false;escapeCinematic.reset();document.body.classList.remove('escape-active');escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';fireWarning.hidden=true;
  document.body.classList.remove('game-over','death-active');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -1146,8 +1149,10 @@ function render(){
  lastRenderAt=cpuStart;
  const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(gameWon){
-  exitDoor.update(reducedMotion);renderer.render(scene,camera);frameRate.frame(performance.now());
-  if(t-escapedAt>1.5){escapeScreen.hidden=false;if(!leaderboardUI.focusResult())document.querySelector('#new-game').focus({preventScroll:true});frameRate.reset();return;}
+  const finished=escapeCinematic.update(t,reducedMotion);exitDoor.update(t,reducedMotion);
+  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
+  renderer.render(scene,camera);frameRate.frame(performance.now());
+  if(finished){escapeScreen.hidden=false;if(!leaderboardUI.focusResult())document.querySelector('#new-game').focus({preventScroll:true});frameRate.reset();return;}
   scheduleFrame();return;
  }
  // Once the trap finishes, only animate the lightweight screen overlay.

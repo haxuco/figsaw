@@ -1,4 +1,5 @@
 import * as THREE from './vendor/three.module.js';
+import {createExitDoorMotion} from './escape-cinematic.js';
 import {artCanvas,fitTextureImage} from './texture-budget.js';
 import {renderQuality as quality} from './render-quality.js';
 import { createDisplayFactory } from './damaged-displays.js?v=laminated-glass';
@@ -602,7 +603,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  box([4.54,3.35,.16],[-1.63,1.675,-.08],rearPlaster,rear);
  box([2.14,3.35,.16],[2.83,1.675,-.08],rearPlaster,rear);
  box([1.12,.99,.16],[1.20,2.855,-.08],rearPlaster,rear);
- box([1.10,2.35,.018],[1.20,1.175,-.30],black,rear);
+ box([1.10,2.35,.018],[1.20,1.175,-.30],new THREE.MeshBasicMaterial({color:0x80927c}),rear);
  const rearGrime=dirtOverlay(7.8,3.35,rear);rearGrime.position.set(0,1.675,.004);
  box([7.8,.14,.045],[0,.07,.024],black,rear);
  box([7.8,.026,.023],[0,2.87,.03],steel,rear);
@@ -641,8 +642,8 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
   const aged=ctx.createLinearGradient(0,0,0,128);aged.addColorStop(0,'rgba(30,33,19,.7)');aged.addColorStop(.30,'rgba(81,60,27,.12)');aged.addColorStop(.70,'rgba(81,60,27,.08)');aged.addColorStop(1,'rgba(25,31,17,.7)');ctx.fillStyle=aged;ctx.fillRect(0,0,512,128);ctx.fillStyle='rgba(33,39,22,.30)';for(let k=0;k<18;k++)ctx.fillRect((k*137)%512,0,2+k%3,14+(k*43)%55);
   const label=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map:texture(c),roughness:.9}),parent);label.position.set(...pos);label.castShadow=false;return label;
  }
- let doorUnlocked=false,doorAngle=0;
- const exitDoor={object:doorHinge,unlock(){doorUnlocked=true;},reset(){doorUnlocked=false;doorAngle=0;doorHinge.rotation.y=0;},update(reducedMotion){doorAngle=reducedMotion?(doorUnlocked?-1.3:0):THREE.MathUtils.lerp(doorAngle,doorUnlocked?-1.3:0,.06);doorHinge.rotation.y=doorAngle;}};
+ const escapeLight=new THREE.PointLight(0xc6d3ac,0,3.5,2);escapeLight.position.set(0,1.65,.48);escapeLight.userData.mobileEssential=true;door.add(escapeLight);
+ const exitDoor=createExitDoorMotion({object:doorHinge,frame:door,light:escapeLight});
  const doorKeypad=createDoorKeypad();doorKeypad.group.position.set(1.96,1.22,.085);rear.add(doorKeypad.group);
  const exitSign=new THREE.Group();exitSign.name='Illuminated red EXIT fixture';exitSign.position.set(0,2.69,.035);door.add(exitSign);
  const exitCase=material(0xd6d0bc,.76,plasticMap,.12);
@@ -742,7 +743,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  function setEnvironment(map){fireAxe.setEnvironment(map);glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
-  rescueChairs.update(time,reducedMotion);doorKeypad.update(time);exitDoor.update(reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
+  rescueChairs.update(time,reducedMotion);doorKeypad.update(time);exitDoor.update(time,reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }
