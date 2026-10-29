@@ -65,7 +65,7 @@ test('a repaired chair offers large clickable destinations and rolls to the chos
  const room=new THREE.Group(),objects=[0,1].map(i=>{
   const o=new THREE.Group();o.position.set(i*2,0,2);o.chairParts={base:new THREE.Group(),seat:new THREE.Group(),caster:new THREE.Group()};o.add(o.chairParts.base,o.chairParts.seat);room.add(o);return o;
  });
- const tanks=[0,1,2].map(i=>{const o=new THREE.Group();o.position.set(i*2,0,-2);room.add(o);return o;});
+ const tanks=[0,1,2].map(i=>{const o=new THREE.Group();o.position.set(i*2,0,-2);o.rotation.y=Math.atan2(1.85-i*2,5.11);room.add(o);return o;});
  const rescue=createRescueChairs({objects,parts:{},player:new THREE.Group(),tanks,floorSupport:()=>.003});room.add(rescue.group);
  const inventory=createInventory();inventory.add('caster');
  assert.equal(rescue.select(0),false,'broken chairs cannot be moved');
@@ -80,11 +80,11 @@ test('a repaired chair offers large clickable destinations and rolls to the chos
   assert.equal(marker.children.length,1,'destinations show only a floor ring, without chair wireframes');
   assert.equal(marker.children[0].geometry.type,'RingGeometry');
  }
- const ray=createSceneRaycaster();ray.set(new THREE.Vector3(.9,.85,1),new THREE.Vector3(0,0,-1));
+ const ray=createSceneRaycaster();ray.set(new THREE.Vector3(markers[0].position.x,.85,1),new THREE.Vector3(0,0,-1));
  assert.equal(ray.intersectObject(rescue.group,true).find(h=>h.object.parent.visible&&h.object.visible)?.object.userData.rescueSlot,0,'the invisible destination remains clickable above the floor ring');
  assert.equal(rescue.place(0),true);assert.equal(rescue.moving,null);assert.deepEqual(rescue.availableSlots(),[]);
  for(const o of rescue.group.children.filter(o=>o.name.startsWith('Chair destination')))assert.equal(o.visible,false);
- rescue.update(4);assert.ok(objects[0].position.distanceTo(new THREE.Vector3(.9,.003,-.95))<1e-9);
+ rescue.update(4);assert.ok(objects[0].position.distanceTo(markers[0].position)<1e-9);
  assert.equal(rescue.canMove(0),false);assert.equal(rescue.select(0),false,'parked chairs cannot reopen destination controls');
  assert.equal(rescue.canInteract(0),false);assert.equal(rescue.canInteract(0,'axe'),false,'held equipment cannot reactivate the parked frame');
  assert.equal(rescue.canInteract(0,'chain0'),false,'parked chairs have no chain interaction');

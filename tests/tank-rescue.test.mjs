@@ -86,7 +86,15 @@ test('both chairs avoid every tank and valve from their room positions and when 
    return [{x:center.x,z:center.z,radius:.61},{x:valve.x,z:valve.z,radius:.14}];
   });
   const homes=[new THREE.Vector3(-1.85,0,-1.28),new THREE.Vector3(2.75,0,3.3)],docks=f.vats.rigs.map((_,i)=>f.rescue.group.getObjectByName(`Chair destination — Tank 0${i+1}`).position.clone());
+  for(const [i,dock]of docks.entries()){const local=f.vats.rigs[i].vat.worldToLocal(dock.clone());assert.ok(Math.abs(local.x)<.25,'the chair stays centered on its own tank');assert.ok(Math.hypot(local.x,local.z)>1.12&&Math.hypot(local.x,local.z)<1.20,'the chair parks close without clipping the base');}
   for(let i=0;i<docks.length;i++)for(let j=i+1;j<docks.length;j++)assert.ok(docks[i].distanceTo(docks[j])>CHAIR_RADIUS*2+CHAIR_GAP,'parked chairs have separate space in the aisle');
+  for(const eye of [new THREE.Vector3(1.85221,.821615,3.1149),new THREE.Vector3(-.295,1.4,3.325)]){
+   const angles=f.vats.rigs.map(({vat})=>{const p=vat.getWorldPosition(new THREE.Vector3());return Math.atan2(p.x-eye.x,eye.z-p.z);});
+   for(const [i,dock]of docks.entries()){
+    const angle=Math.atan2(dock.x-eye.x,eye.z-dock.z),offsets=angles.map(a=>Math.abs(a-angle));
+    assert.equal(offsets.indexOf(Math.min(...offsets)),i,'a parked chair must line up with its own tank from both player viewpoints');
+   }
+  }
   let time=0;
   for(let chair=0;chair<2;chair++)for(const source of[homes[chair],...docks])for(let tank=0;tank<3;tank++){
    f.rescue.reset();f.rescue.objects[chair].position.copy(source);f.rescue.state.chairs[chair].repaired=true;

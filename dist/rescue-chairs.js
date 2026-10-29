@@ -58,9 +58,12 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   tank.updateWorldMatrix(true,false);
   const tankCenter=tank.getWorldPosition(new THREE.Vector3()),valve=tank.localToWorld(new THREE.Vector3(.30,0,.55));
   tankObstacles.push({x:tankCenter.x,z:tankCenter.z,radius:.61},{x:valve.x,z:valve.z,radius:.14});
-  // Park in the open aisle, clear of the neighbouring staggered tanks as well
-  // as this tank. Keep the seat in front of the breach for the rescue swing.
-  const p=tank.localToWorld(new THREE.Vector3(.90,0,1.05));p.y=floorSupport(p.x,p.z);
+  // Keep each chair directly in front of its own breach, just beyond the
+  // tank base and valve, instead of shifting it across the next tank's view.
+  // Aim between the laptop and refuge-chair viewpoints so perspective does
+  // not make a middle chair read as belonging to the right-hand tank.
+  const direction=new THREE.Vector3(.78,0,3.22).sub(tankCenter).setY(0).normalize();
+  const p=tankCenter.clone().addScaledVector(direction,1.18);p.y=floorSupport(p.x,p.z);
   const marker=new THREE.Group();marker.name=`Chair destination — Tank ${String(index+1).padStart(2,'0')}`;marker.position.copy(p);marker.visible=false;marker.userData.rescueSlot=index;group.add(marker);
   const ring=new THREE.Mesh(new THREE.RingGeometry(.46,.50,32),tint);ring.rotation.x=-Math.PI/2;ring.position.y=.014;marker.add(ring);
   // Keep a forgiving invisible target above the floor ring without drawing
@@ -68,7 +71,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   const pick=new THREE.Mesh(new THREE.BoxGeometry(.98,1.1,.98),ghost);pick.position.y=.55;pick.userData.rescueSlot=index;const target=new THREE.Group();target.position.copy(p);target.add(pick);target.visible=false;group.add(target);
   // Present the open front of the seat to the breach. A forward-facing chair's
   // mesh back would otherwise sit directly across the captive's landing path.
-  slots.push({p,q:tank.quaternion.clone().multiply(new THREE.Quaternion().setFromAxisAngle(up,Math.PI+Math.atan2(.90,1.05))),seatedQ:tank.quaternion.clone(),marker,target});
+  slots.push({p,q:new THREE.Quaternion().setFromAxisAngle(up,Math.PI+Math.atan2(direction.x,direction.z)),seatedQ:tank.quaternion.clone(),marker,target});
  });
  function syncParts(){objects.forEach((o,i)=>{const c=state.chairs[i],parts=o.chairParts;if(i===0)parts.caster.visible=c.installed.includes('caster');if(i===1)parts.base.visible=c.installed.includes('base');});}
  function use(index,item,inventory){
