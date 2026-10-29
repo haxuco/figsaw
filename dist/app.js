@@ -729,7 +729,10 @@ function takeMobilePiece(id){
 function hangMobile(){
  if(sawBusy())return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
- if(mobilePuzzle.hang(inventory))mobileInspection.update(state.time,reducedMotion);
+ if(mobilePuzzle.hang(inventory)){
+  mobileInspection.update(state.time,reducedMotion);
+  inventoryUI.notify('It’s all tangled.');
+ }
 }
 function syncSupplies(){mobileSupplies.sync({has:id=>inventory.has(id),phase:mobilePuzzle.phase});}
 
