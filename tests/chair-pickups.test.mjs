@@ -73,8 +73,15 @@ test('a repaired chair offers large clickable destinations and rolls to the chos
  assert.equal(rescue.canMove(0),false,'finish the repair settling animation first');
  rescue.update(2);assert.equal(rescue.canMove(0),true);assert.equal(rescue.select(0),true);
  assert.deepEqual(rescue.availableSlots(),[0,1,2]);room.updateMatrixWorld(true);
+ const markers=rescue.group.children.filter(o=>o.name.startsWith('Chair destination'));
+ assert.equal(markers.length,3);
+ for(const marker of markers){
+  assert.equal(marker.visible,true);
+  assert.equal(marker.children.length,1,'destinations show only a floor ring, without chair wireframes');
+  assert.equal(marker.children[0].geometry.type,'RingGeometry');
+ }
  const ray=createSceneRaycaster();ray.set(new THREE.Vector3(.9,.85,1),new THREE.Vector3(0,0,-1));
- assert.equal(ray.intersectObject(rescue.group,true).find(h=>h.object.parent.visible&&h.object.visible)?.object.userData.rescueSlot,0,'the silhouette is clickable above the floor ring');
+ assert.equal(ray.intersectObject(rescue.group,true).find(h=>h.object.parent.visible&&h.object.visible)?.object.userData.rescueSlot,0,'the invisible destination remains clickable above the floor ring');
  assert.equal(rescue.place(0),true);assert.equal(rescue.moving,null);assert.deepEqual(rescue.availableSlots(),[]);
  for(const o of rescue.group.children.filter(o=>o.name.startsWith('Chair destination')))assert.equal(o.visible,false);
  rescue.update(4);assert.ok(objects[0].position.distanceTo(new THREE.Vector3(.9,.003,-.95))<1e-9);

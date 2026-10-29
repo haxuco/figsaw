@@ -12,7 +12,6 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  const playerHome={p:player.position.clone(),q:player.quaternion.clone()};
  const metal=new THREE.MeshStandardMaterial({color:0x79776a,metalness:.8,roughness:.57});
  const tint=new THREE.MeshBasicMaterial({color:0xffd782,transparent:true,opacity:.75,depthWrite:false,side:THREE.DoubleSide,toneMapped:false,fog:false});
- const previewMaterial=new THREE.LineBasicMaterial({color:0xffd782,transparent:true,opacity:.65,depthWrite:false,toneMapped:false,fog:false});
  const ghost=new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false});
  const dummy=new THREE.Object3D(),up=new THREE.Vector3(0,1,0),right=new THREE.Vector3(1,0,0),twist=new THREE.Quaternion(),point=new THREE.Vector3();
  const linkCurve=[];for(let j=0;j<=8;j++){const a=j/8*Math.PI;linkCurve.push(new THREE.Vector3(Math.cos(a)*.017,.012+Math.sin(a)*.017,0));}for(let j=0;j<=8;j++){const a=Math.PI+j/8*Math.PI;linkCurve.push(new THREE.Vector3(Math.cos(a)*.017,-.012+Math.sin(a)*.017,0));}
@@ -76,11 +75,8 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   const p=tank.localToWorld(new THREE.Vector3(.90,0,1.05));p.y=floorSupport(p.x,p.z);
   const marker=new THREE.Group();marker.name=`Chair destination — Tank ${String(index+1).padStart(2,'0')}`;marker.position.copy(p);marker.visible=false;marker.userData.rescueSlot=index;group.add(marker);
   const ring=new THREE.Mesh(new THREE.RingGeometry(.46,.50,32),tint);ring.rotation.x=-Math.PI/2;ring.position.y=.014;marker.add(ring);
-  // A lightweight chair silhouette makes the floor target recognizable from
-  // a low viewpoint. Its hit volume covers the silhouette as well as the ring.
-  for(const [size,pos]of[[[.48,.04,.46],[0,.49,0]],[[.48,.48,.04],[0,.77,.21]],[[.04,.47,.04],[-.18,.25,0]],[[.04,.47,.04],[.18,.25,0]]]){
-   const box=new THREE.BoxGeometry(...size),outline=new THREE.LineSegments(new THREE.EdgesGeometry(box),previewMaterial);box.dispose();outline.position.set(...pos);outline.raycast=()=>{};marker.add(outline);
-  }
+  // Keep a forgiving invisible target above the floor ring without drawing
+  // chair wireframes across the tanks.
   const pick=new THREE.Mesh(new THREE.BoxGeometry(.98,1.1,.98),ghost);pick.position.y=.55;pick.userData.rescueSlot=index;const target=new THREE.Group();target.position.copy(p);target.add(pick);target.visible=false;group.add(target);
   // Present the open front of the seat to the breach. A forward-facing chair's
   // mesh back would otherwise sit directly across the captive's landing path.
