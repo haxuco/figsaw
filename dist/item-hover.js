@@ -70,8 +70,8 @@ export function createItemHover({renderer,camera,canvas,resolve}){
   }
   void main(){
    float inside=texture2D(mask,uvMask).a;
-   float edge=(ring(1.6)*.95+ring(3.4)*.45+ring(6.0)*.14)*(1.0-inside);
-   gl_FragColor=vec4(.92,.96,.89,edge);
+   float edge=(ring(1.1)*.24+ring(2.4)*.11+ring(4.0)*.035)*(1.0-inside);
+   gl_FragColor=vec4(.76,.82,.74,edge);
   }`});
  const quad=new THREE.Mesh(new THREE.PlaneGeometry(2,2),material);quad.frustumCulled=false;overlay.add(quad);
  let selected=null,mask=null,target=null,lastMaskTime=-Infinity,labelWidth=0;
