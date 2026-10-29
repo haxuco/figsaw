@@ -41,10 +41,10 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
  box([.66,.27,.015],[0,-.01,-.155],drawerMaterial,drawer);
  for(const x of[-.348,.348])box([.013,.027,.43],[x,-.08,.015],metal,drawer);
  const {group:brick,plug:adapterPlug,exit:adapterExit}=createMacBookAdapter();drawer.add(brick);
- const drawerBrickPosition=new THREE.Vector3(.105,-.105,-.055);
+ const drawerBrickPosition=new THREE.Vector3(-.215,-.102,-.11),drawerCoilPosition=new THREE.Vector3(-.215,-.127,.125);
  brick.position.copy(drawerBrickPosition);brick.rotation.x=Math.PI/2;
  const adapterText=label('96W USB-C',.077,.018,[0,.082,-.034],brick);adapterText.rotation.y=Math.PI;adapterText.material.color.setHex(0x999b92);
- const coil=new THREE.Group();coil.name='Coiled charger cable';coil.userData.chargingAction='charger';drawer.add(coil);coil.position.set(-.145,-.127,.06);
+ const coil=new THREE.Group();coil.name='Coiled charger cable';coil.userData.chargingAction='charger';drawer.add(coil);coil.position.copy(drawerCoilPosition);
  const coiled=[];for(let i=0;i<=120;i++){const a=i/120*Math.PI*6;coiled.push([Math.cos(a)*(.086+i*.00012),i*.000045,Math.sin(a)*.060]);}
  const coilWire=tube(coiled,.0045,cableMaterial,coil);rounded([.041,.014,.019],[.12,.01,0],white,coil);box([.014,.009,.014],[.145,.01,0],metal,coil);
  const {group:strip,leadExit,adapterSeat}=createPowerStrip();
@@ -118,7 +118,7 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
    batteryPaint.strokeStyle=charging?'#93dba3':'#e3b36d';batteryPaint.lineWidth=5;batteryPaint.strokeRect(405,25,72,44);batteryPaint.fillRect(480,37,7,19);batteryPaint.fillRect(413,33,56*level/100,28);batteryMap.needsUpdate=true;
   }
  }
- function reset(){state.reset();laptop.setPower(true);batteryOverlay.visible=warningOverlay.visible=false;lastWarningLabel='';powerMessage='';cablePoints.length=0;burnAmount.value=0;led.visible=true;drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.copy(drawerBrickPosition);brick.rotation.set(Math.PI/2,0,0);coil.position.set(-.145,-.127,.06);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
+ function reset(){state.reset();laptop.setPower(true);batteryOverlay.visible=warningOverlay.visible=false;lastWarningLabel='';powerMessage='';cablePoints.length=0;burnAmount.value=0;led.visible=true;drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.copy(drawerBrickPosition);brick.rotation.set(Math.PI/2,0,0);coil.position.copy(drawerCoilPosition);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
  function hint(action){
   if(state.phase==='damaged')return 'Charger cable burned through';
   if(action==='drawer')return state.drawerOpen?'Close Supplies drawer':'Open Supplies drawer';
