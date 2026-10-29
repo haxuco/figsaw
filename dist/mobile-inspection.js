@@ -2,7 +2,9 @@ import * as THREE from './vendor/three.module.js';
 import {createScissors} from './mobile-supplies.js';
 
 export function createMobileInspection({mobile,state}){
- const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.visible=false;group.userData.ignoreAcid=true;group.userData.mobilePuzzle=true;mobile.group.getWorldPosition(group.position);group.position.y=1.90;
+ const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.visible=false;group.userData.ignoreAcid=true;group.userData.mobilePuzzle=true;
+ // Keep the suspended toys to the right, clear of the tanks and rear objects.
+ group.position.set(1.25,1.90,.55);
  const assembly=new THREE.Group();group.add(assembly);let hung=false;
  const cord=new THREE.MeshStandardMaterial({color:0xc0b59b,roughness:1}),metal=new THREE.MeshStandardMaterial({color:0x8a8d7e,metalness:.45,roughness:.6}),ivory=new THREE.MeshStandardMaterial({color:0xb8b398,roughness:.8});
  function tube(points,r,material,parent=assembly){const g=new THREE.TubeGeometry(new THREE.CatmullRomCurve3(points.map(p=>new THREE.Vector3(...p))),Math.max(10,points.length*4),r,5,false);const m=new THREE.Mesh(g,material);parent.add(m);return m;}
