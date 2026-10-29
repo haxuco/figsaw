@@ -65,6 +65,22 @@ test('real hoists retain acid, require preparation before descent, and hop both 
  }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
 });
 
+test('a normal-speed Pudding rescue releases the winch lock so Maki can lower next',()=>{
+ const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
+ try{
+  const f=fixture(createEscapePuzzle(()=>.9));f.breakTanks();f.prepareChairs();
+  assert.match(f.vats.toggleHoist(0),/lowering/);
+  assert.equal(f.vats.toggleHoist(1),null,'only one hoist moves during Pudding’s descent');
+  for(let frame=0;frame<1200&&!f.vats.isSettled(0);frame++)f.update(1/60);
+  assert.equal(f.vats.isRescued(0),true);assert.equal(f.vats.movingIndex,null,'a seated Figpal must release the global winch lock');
+  assert.match(f.vats.toggleHoist(1),/lowering/,'Maki’s control works after Pudding lands');
+  for(let frame=0;frame<1200&&!f.vats.isSettled(1);frame++)f.update(1/60);
+  assert.equal(f.vats.isRescued(1),true);assert.equal(f.vats.movingIndex,null);
+  const saved=f.vats.capture(0);saved.rigs[0].height+=.008;f.vats.restore(saved,0);
+  assert.equal(f.vats.movingIndex,null,'a rescued checkpoint with a residual height difference cannot relock the winches');
+ }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
+});
+
 test('winch chains stay in the scene and no chain inventory or pickup targets remain',()=>{
  const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
  try{

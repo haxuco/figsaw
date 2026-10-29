@@ -246,7 +246,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   rigs.push({rig,hanger,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3()});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
- const movingIndex=()=>{const index=rigs.findIndex(rig=>rig.escaping||Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
+ const movingIndex=()=>{const index=rigs.findIndex(rig=>!rig.rescued&&(rig.escaping||Math.abs(rig.height-rig.targetHeight)>.005));return index<0?null:index;};
  function beginLowering(rig){
   if(rig.lowered||rig.rescued||rig.escaping)return;
   // Decide at the start, never grant a late rescue after exposure to the acid.
@@ -309,7 +309,11 @@ export function createFigpalVats({floorSupport,puzzle}={}){
    const remaining=leaks?.remaining(rig.index)??1;
    rig.transformation.update(remaining>.0001?.227+.865*remaining:null);
    if(rig.lowered&&rig.rescuePlanned&&Math.abs(rig.height-RESCUE_HEIGHT)<.01){
-    if(rescue?.board(rig.index,rig.hanger,!rig.transformation.damaged)){rig.escaping=true;continue;}
+    if(rescue?.board(rig.index,rig.hanger,!rig.transformation.damaged)){
+     // The hop begins just before the descent reaches its exact endpoint.
+     // Finish that height now so it cannot leave the next winch locked.
+     rig.height=rig.targetHeight=RESCUE_HEIGHT;rig.escaping=true;continue;
+    }
     rig.rescuePlanned=false;rescue?.cancelPreparation(rig.index);
    }
    if(rig.lowered&&!rig.rescuePlanned&&leaks?.outflowFinished(rig.index))rig.targetHeight=.43;
