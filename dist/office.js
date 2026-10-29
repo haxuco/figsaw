@@ -143,7 +143,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  // Fallen hardware and open cases are actual objects, not floor decals.
  const fallen=monitor(office,[-.80,.31,-1.45],.42,'hole',.95);fallen.rotation.set(-1.38,.42,.21);onFloor(fallen);
  const tipped=monitor(office,[-3.25,.24,2.95],-.45,'cracked',.73);tipped.rotation.x=-.56;tipped.rotation.z=.24;onFloor(tipped);
- const looseTower=tower(office,[-2.22,.13,-.72],.35,true);looseTower.rotation.z=Math.PI/2;onFloor(looseTower);
+ // Keep the fallen case beneath the back desk, outside the right tank's
+ // chair landing and the aisle used to roll repaired chairs into place.
+ const looseTower=tower(office,[-2.22,.13,-3.02],.35,true);looseTower.name='Fallen computer case beneath back desk';looseTower.rotation.z=Math.PI/2;onFloor(looseTower);
  for(let i=0;i<3;i++)onFloor(tower(office,[-3.32,0,-2.95+i*.31],-.18,true)).scale.setScalar(.90);
 
  // Aeron-inspired chairs: curved open mesh, broad back shells, lumbar supports and cast bases.
