@@ -510,7 +510,7 @@ cancelSawSelection.addEventListener('click',()=>{clearSawSelection();canvas.focu
 let hoveredChair=false,hoveredDocument=null,hoveredFish=false,hoveredSupply=null,hoveredMobile=false,hoveredKeypad=false,hoveredAlarm=false,hoveredKeyAction=null,hoveredChargingAction=null;
 const chainMenu=createRestraintMenu(()=>{
  if(!ketchupKey.hasKey){return;}
- if(restraint.detach(state.time)){restraintStatus.textContent='Your wrist is free.';canvas.classList.remove('over-chain');}
+ if(restraint.detach(state.time)){inventory.remove('key');inventoryUI.sync();restraintStatus.textContent='Your wrist is free.';canvas.classList.remove('over-chain');}
 },{canDetach:()=>ketchupKey.hasKey});
 const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!ketchupKey.hasKey,canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
