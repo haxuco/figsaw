@@ -8,8 +8,8 @@
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=adfff857aa9f">
-  <link rel="modulepreload" href="./game.bundle.js?v=d2d8ca2e6103">
+  <link rel="stylesheet" href="./style.css?v=cb09c75d9470">
+  <link rel="modulepreload" href="./game.bundle.js?v=41a8d64271a4">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -46,7 +46,13 @@
     <main data-play>
       <div class="kern-round"><p class="program-eyebrow" data-round>WORD 01 / 03</p><span>90 points to pass</span></div>
       <h1>Fix the spacing.</h1>
-      <p class="program-instruction">Drag the inner letters. First and last stay fixed.</p>
+      <p class="program-instruction" data-instruction>Drag the inner letters. First and last stay fixed.</p>
+      <form class="kern-editor" data-kern-editor hidden>
+        <label>Word<input data-kern-type type="text" aria-label="Kerning word" minlength="2" maxlength="20" autocomplete="off" spellcheck="false"></label>
+        <button type="submit">Edit word</button><button type="button" data-kern-copy>Copy settings</button>
+        <p class="sr-only" data-kern-status role="status" aria-live="polite"></p>
+        <textarea data-kern-export hidden readonly aria-label="Kerning settings"></textarea>
+      </form>
       <div class="kern-word" data-word role="group" aria-label="Adjust letter spacing"></div>
       <div class="kern-word kern-answer" data-answer hidden aria-hidden="true"></div>
       <p class="kern-answer-label" data-answer-label hidden>Diagnostic answer · match the teal outlines</p>
@@ -127,6 +133,6 @@
     </div>
   </div>
   <p id="copy-status" class="sr-only" role="status" aria-live="polite"></p>
-  <script type="module" src="./boot.js?v=d2d8ca2e6103"></script>
+  <script type="module" src="./boot.js?v=41a8d64271a4"></script>
 </body>
 </html>
