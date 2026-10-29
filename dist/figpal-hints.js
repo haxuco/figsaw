@@ -1,7 +1,6 @@
 export const FIGPAL_HINTS=Object.freeze({
  residual:"Don't lower me yet, there's still some acid on the bottom of the tank.",
- landing:"That hole could be an exit... if I had somewhere to land.",
- chains:"A chair's nice. I'd feel better if it couldn't roll away."
+ landing:"That hole could be an exit... if I had somewhere to land."
 });
 
 // Share the existing bubble channel with pleas and descent dialogue. A floor
@@ -25,7 +24,8 @@ export function createFigpalHints({hoists,bubbles,acidLeaks,rescue,puzzle}){
   for(const index of brokenAt.keys())if(eligible(index)&&!said.has(`${index}:residual`))return say(index,'residual',time);
   for(const index of brokenAt.keys()){
    if(!eligible(index)||index===puzzle.pmIndex||time-(lastSpoke.get(index)??time)<30)continue;
-   const hasChair=rescue.state.chairAt(index)>=0,key=hasChair?'chains':'landing';
+   if(rescue.state.chairAt(index)>=0)continue;
+   const key='landing';
    if(!said.has(`${index}:${key}`))return say(index,key,time);
   }
   return null;

@@ -233,9 +233,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   for(const side of[-1,1])chainRun([[side*.21,.45,0],[side*.245,.11,0],[side*.23,-.12,.015],[side*.16,-.205,.04],[0,-.222,.045]],hanger);
   const loadChain=chainRun([[0,winchY-.10,.025],[0,height+.52,0]],rig,72);
   const returnChain=chainRun([[-.10,winchY-.01,-.11],[-.11,winchY-.36,-.12],[-.16,winchY-.40,-.10],[-.20,winchY-.05,-.08]],rig,96);
-  returnChain.object.name='Winch return chain loop';returnChain.object.userData.chainPickup=i;
-  const chainPick=mesh(new THREE.BoxGeometry(.28,.34,.24),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}),returnChain.object);
-  chainPick.position.set(-.15,winchY-.32,-.105);chainPick.userData.chainPickup=i;chainPick.name='Spare hoist chain pickup';chainPick.castShadow=false;
+  returnChain.object.name='Winch return chain loop';
   const control=new THREE.Group();control.name=`Canister ${i+1} winch control`;control.position.set(.39,.85,.40);control.rotation.y=.35;control.userData.hoistIndex=i;vat.add(control);
   box([.12,.21,.07],[0,0,0],darkMetal,control);
   ball([0,.047,.047],[.024,.024,.015],material(0x7b2e23,.6,0),control);ball([0,-.047,.047],[.024,.024,.015],material(0x697c49,.6,0),control);
@@ -245,15 +243,10 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
   batchRigid(vat,{exclude:[liquid,meniscus,shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
-  rigs.push({rig,hanger,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3(),chainDropped:false});
+  rigs.push({rig,hanger,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3()});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
  const movingIndex=()=>{const index=rigs.findIndex(rig=>rig.escaping||Math.abs(rig.height-rig.targetHeight)>.005);return index<0?null:index;};
- const canCollectChain=index=>!!rigs[index]&&!rigs[index].chainDropped&&!rigs[index].escaping&&movingIndex()===null&&vats[index].breakage.broken&&!!leaks?.outflowFinished(index);
- function collectChain(index,inventory){
-  if(!canCollectChain(index)||!rescue?.collectChain(index,inventory,{fromHoist:true}))return false;
-  rigs[index].chainDropped=true;rigs[index].returnChain.object.visible=false;return true;
- }
  function beginLowering(rig){
   if(rig.lowered||rig.rescued||rig.escaping)return;
   // Decide at the start, never grant a late rescue after exposure to the acid.
@@ -273,11 +266,11 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  }
 
  function raise(index){const rig=rigs[index];if(!rig?.lowered||rig.rescued||rig.escaping)return false;rig.lowered=false;rig.rescuePlanned=false;rescue?.cancelPreparation(index);rig.targetHeight=rig.homeHeight;return true;}
- function capture(time){return {time,fishRevealed:puzzle.fishRevealed,tanks:vats.map(v=>v.breakage.capture()),rigs:rigs.map(r=>({parent:r.hanger.parent,position:r.hanger.position.toArray(),rotation:r.hanger.quaternion.toArray(),cut:r.transformation.capture(),height:r.height,targetHeight:r.targetHeight,lowered:r.lowered,rescued:r.rescued,rescuePlanned:r.rescuePlanned,escaping:r.escaping,releasedAt:r.releasedAt,releasedFrom:r.releasedFrom.toArray(),chainDropped:r.chainDropped}))};}
+ function capture(time){return {time,fishRevealed:puzzle.fishRevealed,tanks:vats.map(v=>v.breakage.capture()),rigs:rigs.map(r=>({parent:r.hanger.parent,position:r.hanger.position.toArray(),rotation:r.hanger.quaternion.toArray(),cut:r.transformation.capture(),height:r.height,targetHeight:r.targetHeight,lowered:r.lowered,rescued:r.rescued,rescuePlanned:r.rescuePlanned,escaping:r.escaping,releasedAt:r.releasedAt,releasedFrom:r.releasedFrom.toArray()}))};}
  function restore(value,time){
   const delta=time-value.time;puzzle.setFishRevealed(value.fishRevealed);
   value.tanks.forEach((v,i)=>vats[i].breakage.restore(v,time));
-  value.rigs.forEach((v,i)=>{const r=rigs[i];for(const key of['height','targetHeight','lowered','rescued','rescuePlanned','escaping','chainDropped'])r[key]=v[key];r.releasedAt=v.releasedAt===null?null:v.releasedAt+delta;r.releasedFrom.fromArray(v.releasedFrom);v.parent.add(r.hanger);r.hanger.position.fromArray(v.position);r.hanger.quaternion.fromArray(v.rotation);r.transformation.restore(v.cut);r.returnChain.object.visible=!r.chainDropped;r.loadChain.object.visible=true;});lastTime=time;
+  value.rigs.forEach((v,i)=>{const r=rigs[i];for(const key of['height','targetHeight','lowered','rescued','rescuePlanned','escaping'])r[key]=v[key];r.releasedAt=v.releasedAt===null?null:v.releasedAt+delta;r.releasedFrom.fromArray(v.releasedFrom);v.parent.add(r.hanger);r.hanger.position.fromArray(v.position);r.hanger.quaternion.fromArray(v.rotation);r.transformation.restore(v.cut);r.returnChain.object.visible=true;r.loadChain.object.visible=true;});lastTime=time;
  }
  function getFocusView(index,eye,target){
   const rig=rigs[index];
@@ -287,7 +280,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function reset(){
   for(const vat of vats)vat.breakage.reset();
   for(const rig of rigs){
-   rig.rescued=rig.rescuePlanned=rig.escaping=false;rig.nameTag.position.y=0;rig.releasedAt=null;rig.chainDropped=false;rig.returnChain.object.visible=true;rig.returnChain.setPoints([-.10,rig.winchY-.01,-.11],[-.14,rig.winchY-.40,-.10]);rig.loadChain.object.visible=true;rig.rig.add(rig.hanger);rig.hanger.quaternion.identity();rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
+   rig.rescued=rig.rescuePlanned=rig.escaping=false;rig.nameTag.position.y=0;rig.releasedAt=null;rig.returnChain.object.visible=true;rig.returnChain.setPoints([-.10,rig.winchY-.01,-.11],[-.14,rig.winchY-.40,-.10]);rig.loadChain.object.visible=true;rig.rig.add(rig.hanger);rig.hanger.quaternion.identity();rig.lowered=false;rig.height=rig.targetHeight=rig.homeHeight;
    rig.hanger.position.set(0,rig.homeHeight,0);rig.hanger.rotation.z=0;
    rig.loadChain.setPoints([0,rig.winchY-.10,.025],[0,rig.homeHeight+.52,0]);
    rig.drum.rotation.y=rig.crank.rotation.x=0;rig.transformation.reset();rig.skullClue?.refresh();if(rig.skullClue){rig.skullClue.mesh.visible=rig.index===puzzle.pmIndex;rig.transformation.skeleton.userData.fishClue=rig.index===puzzle.pmIndex;}rig.vat.userData.fishClue=false;
@@ -348,7 +341,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.rescued&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
- return {group,update,capture,restore,raise,canCollectChain,collectChain,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(!rigs[index].escaping&&rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
+ return {group,update,capture,restore,raise,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(!rigs[index].escaping&&rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isRescued:index=>rigs[index]?.rescued??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,

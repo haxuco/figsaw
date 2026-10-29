@@ -18,7 +18,7 @@ test('D-pad wraps values and slots; direct digits cannot bypass the awkward cont
 });
 test('inventory consumes fitted parts, preserves reusable equipment and rejects removed tools',()=>{
  const i=createInventory(),r=createRescueState();
- for(const removed of['hammer','screwdriver','allen','ratchet']){assert.equal(i.add(removed),false);assert.equal(i.equip(removed),false);}
+ for(const removed of['hammer','screwdriver','allen','ratchet','chain0','chain1','chain2']){assert.equal(i.add(removed),false);assert.equal(i.equip(removed),false);}
  assert.equal(i.equip('axe'),false);i.add('axe');i.add('caster');i.equip('axe');r.use(0,'axe',i);assert.equal(r.chairs[0].repaired,false);assert.equal(i.has('axe'),true);
  i.equip('caster');assert.equal(r.use(0,'caster',i),'Chair repaired.');assert.equal(i.has('caster'),false);assert.equal(i.equipped,null);assert.equal(r.chairs[0].repaired,true);assert.equal(i.has('axe'),true);
  i.reset();r.reset();assert.equal(i.items.length,0);assert.equal(r.chairs[0].repaired,false);
@@ -41,47 +41,43 @@ test('chairs become usable after their required parts are installed, in either o
   assert.equal(i.has('seat'),false);assert.equal(i.has('base'),false);assert.equal(r.chairs[1].step,2);
  }
 });
-test('exactly two survivors and two chains complete the train for every randomized PM',()=>{
+test('each survivor boards its own chair without chains or preparing the other chair',()=>{
  for(let pmIndex=0;pmIndex<3;pmIndex++){
-  const {state:r}=repairedChairs({pmIndex}),survivors=[0,1,2].filter(n=>n!==pmIndex);
-  assert.equal(r.place(0,survivors[0]),true);assert.equal(r.place(1,survivors[0]),false);r.place(1,survivors[1]);
-  assert.equal(r.reserve(survivors[0],survivors[0]),false,'unlinked chairs cannot catch a Figpal');
-  assert.equal(r.connect(PLAYER_CHAIR,0,'chain'+survivors[0]),true);
-  assert.equal(r.ready,false);assert.equal(r.startPull(),false);
-  assert.equal(r.connect(0,1,'chain'+survivors[1]),true);
-  assert.equal(r.connect(1,PLAYER_CHAIR,'chain'+pmIndex),false);
-  assert.equal(r.connect(0,3,'chain'+pmIndex),false,'no phantom fourth chair');
-  assert.equal(r.arranged,true);assert.equal(r.ready,false);
-  for(const [i,tank]of survivors.entries()){assert.equal(r.reserve(tank,tank),true);assert.equal(r.board(tank,tank),i);}
-  assert.equal(r.ready,true);assert.equal(r.startPull(),true);r.finishPull();assert.equal(r.safe,true);
-  r.reset();assert.equal(r.chairs.length,2);assert.equal(r.safe,false);assert.equal(r.links.length,0);assert.equal(r.ready,false);
+  const survivors=[0,1,2].filter(n=>n!==pmIndex),r=createRescueState({pmIndex}),inventory=createInventory();
+  inventory.add('caster');r.use(0,'caster',inventory);
+  assert.equal(r.place(0,survivors[0]),true);assert.equal(r.canBoard(survivors[0],survivors[0]),true);
+  assert.equal(r.chairs[1].repaired,false);assert.equal(r.safe,false);
+  assert.equal(r.reserve(survivors[0],survivors[0]),true);assert.equal(r.board(survivors[0],survivors[0]),0);
+  assert.equal(r.safe,false,'a Figpal in mid-hop is not yet safe');r.finishBoard(survivors[0]);assert.equal(r.safe,true);
+  for(const part of ['base','seat']){inventory.add(part);r.use(1,part,inventory);}
+  assert.equal(r.place(1,survivors[1]),true,'one saved Figpal does not block the other repair');
+  assert.equal(r.reserve(survivors[1],survivors[1]),true);assert.equal(r.board(survivors[1],survivors[1]),1);r.finishBoard(survivors[1]);
+  assert.equal(r.ready,true);const saved=r.capture();r.reset();assert.equal(r.safe,false);r.restore(saved);assert.equal(r.ready,true);
+  assert.equal(r.canBoard(survivors[0],survivors[0]),false,'a rescued passenger cannot board again');
  }
 });
-test('chairs lock at survivor tanks, remain movable at the PM tank, and keep their towing connections usable',()=>{
+test('chairs lock at survivor tanks and remain movable at the PM tank',()=>{
  for(let pmIndex=0;pmIndex<3;pmIndex++){
-  const puzzle={pmIndex},{state:r}=repairedChairs(puzzle),survivors=[0,1,2].filter(n=>n!==pmIndex),unplaced=r.capture();
-  assert.equal(r.place(0,pmIndex),true);assert.equal(r.isParked(0),false);
+  const {state:r}=repairedChairs({pmIndex}),survivors=[0,1,2].filter(n=>n!==pmIndex),unplaced=r.capture();
+  assert.equal(r.place(0,pmIndex),true);assert.equal(r.isParked(0),false);assert.equal(r.reserve(pmIndex,pmIndex),false);
   assert.equal(r.place(0,survivors[0]),true);assert.equal(r.isParked(0),true);
-  for(let tank=0;tank<3;tank++)assert.equal(r.place(0,tank),false,'a correct placement cannot be moved again');
-  assert.equal(r.place(1,survivors[1]),true);
-  assert.equal(r.connect(PLAYER_CHAIR,0,'chain0'),true);assert.equal(r.connect(0,1,'chain1'),true);
-  assert.equal(r.arranged,true);assert.equal(r.reserve(survivors[0],survivors[0]),true);assert.equal(r.board(survivors[0],survivors[0]),0);
-  const parked=r.capture();r.restore(unplaced);assert.equal(r.isParked(0),false);assert.equal(r.canPlace(0,pmIndex),true);
-  r.restore(parked);assert.equal(r.isParked(0),true);assert.equal(r.canPlace(0,pmIndex),false);
+  for(let tank=0;tank<3;tank++)assert.equal(r.place(0,tank),false);
+  assert.equal(r.place(1,survivors[0]),false,'two chairs cannot occupy one tank spot');assert.equal(r.place(1,survivors[1]),true);
+  assert.equal(r.reserve(survivors[0],survivors[0]),true);assert.equal(r.board(survivors[0],survivors[0]),0);
+  const parked=r.capture();r.restore(unplaced);assert.equal(r.canPlace(0,pmIndex),true);r.restore(parked);assert.equal(r.isParked(0),true);
   r.reset();assert.equal(r.isParked(0),false);
  }
 });
-test('PM and damaged captives cannot reserve a rescue chair; retries use the new PM identity',()=>{
+test('PM and damaged captives cannot reserve a chair; retry clears reservations and passengers',()=>{
  const puzzle={pmIndex:0},{state:r}=repairedChairs(puzzle);
- r.place(0,1);r.place(1,2);r.connect(PLAYER_CHAIR,0,'chain0');r.connect(0,1,'chain1');
+ r.place(0,1);r.place(1,2);
  assert.equal(r.reserve(0,0),false);assert.equal(r.reserve(1,1,{alive:false}),false);
  assert.equal(r.board(1,1),-1,'boarding without a pre-descent reservation is forbidden');
  assert.equal(r.reserve(1,1),true);assert.equal(r.place(1,0),false,'the route cannot move during a descent');assert.equal(r.board(1,1),0);
  assert.equal(r.reserve(2,1),false,'no duplicate passenger');
  puzzle.pmIndex=2;r.reset();const i=createInventory();for(const id of ['caster','seat','base'])i.add(id);
- for(const [chair,part]of [[0,'caster'],[1,'seat'],[1,'base']]){r.use(chair,part,i);}
- r.place(0,0);r.place(1,1);r.connect(PLAYER_CHAIR,0,'chain0');r.connect(0,1,'chain1');
- assert.equal(r.reserve(2,2),false);assert.equal(r.reserve(0,0),true);r.cancelReservation(0);assert.equal(r.board(0,0),-1);assert.equal(r.reserve(0,0),true);assert.equal(r.board(0,0),0);
+ for(const [chair,part]of [[0,'caster'],[1,'seat'],[1,'base']])r.use(chair,part,i);
+ r.place(0,0);r.place(1,1);assert.equal(r.reserve(2,2),false);assert.equal(r.reserve(0,0),true);r.cancelReservation(0);assert.equal(r.board(0,0),-1);assert.equal(r.reserve(0,0),true);assert.equal(r.board(0,0),0);
 });
 test('finite draining leaves broad persistent puddles that ignore camera and cable targets',()=>{
  const a=createAcidFlow(),b=createAcidFlow();a.open(0,{x:0,y:.01,z:0},0,false,{breach:true});b.open(0,{x:0,y:.01,z:0},0,false,{breach:true});

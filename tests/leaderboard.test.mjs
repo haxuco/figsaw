@@ -5,9 +5,9 @@ import {captureRankedEscape,remainingEscapeTime,createLocalLeaderboard,rankedEnt
 
 const run=(id,remainingSeconds=900)=>({id,eligible:true,attempt:3,remainingSeconds});
 function storage(){const data=new Map();return {getItem:key=>data.get(key)??null,setItem:(key,value)=>data.set(key,value),data};}
-function fixture(pmIndex=2){return {id:'win',attempt:4,intervalSeconds:340,scheduledDrops:0,pmIndex,rigs:Array.from({length:3},()=>({transformation:{transformed:false}})),rescue:{safe:true,chairs:[0,1,2].filter(i=>i!==pmIndex).map(passenger=>({passenger}))}};}
+function fixture(pmIndex=2){return {id:'win',attempt:4,intervalSeconds:340,scheduledDrops:0,pmIndex,rigs:Array.from({length:3},()=>({transformation:{transformed:false}})),rescue:{safe:true,chairs:[0,1,2].filter(i=>i!==pmIndex).map(passenger=>({passenger,landed:true}))}};}
 
-test('only both living non-PMs at the exit qualify, regardless of the randomized PM identity',()=>{
+test('only both living non-PMs safely seated qualify, regardless of the randomized PM identity',()=>{
  for(let pmIndex=0;pmIndex<3;pmIndex++){
   const f=fixture(pmIndex);f.rigs[pmIndex].transformation.transformed=true;
   const result=captureRankedEscape(f);assert.equal(result.eligible,true);assert.equal(result.remainingSeconds,940);assert.equal(Object.isFrozen(result),true);

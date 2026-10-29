@@ -32,12 +32,12 @@ test('hints wait for inspections and existing dialogue without being lost or rep
  assert.equal(f.hints.update(15),null);assert.equal(f.hints.update(22).index,1);
  assert.deepEqual(f.spoken.map(s=>s.index),[0,1]);
 });
-test('occasional follow-ups reflect the missing landing and chains, then stop once the actual route can board',()=>{
+test('occasional follow-ups reflect the missing landing, then stop once the actual route can board',()=>{
  const f=fixture();f.tanks[0].broken=true;f.drained.add(0);
  assert.equal(f.hints.update(2).key,'residual');assert.equal(f.hints.update(31),null);
  assert.equal(f.hints.update(32).key,'landing');f.chairs.add(0);
- assert.equal(f.hints.update(63).key,'chains');f.ready.add(0);
- assert.equal(f.hints.update(94),null);assert.equal(f.spoken.length,3);
+ assert.equal(f.hints.update(63),null,'a positioned chair must not ask for chains');f.ready.add(0);
+ assert.equal(f.hints.update(94),null);assert.equal(f.spoken.length,2);
 });
 test('PM dialogue does not promise an impossible chair rescue, and new tank warnings take priority over follow-ups',()=>{
  const f=fixture();f.tanks[0].broken=true;f.drained.add(0);f.hints.update(2);

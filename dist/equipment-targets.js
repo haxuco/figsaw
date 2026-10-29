@@ -7,7 +7,6 @@ export function equipmentMatchesTarget(item,target,context){
  if(locked&&!['key','saw'].includes(item))return false;
  if(target.kind==='chair'){
   const chair=chairs[target.index];
-  if(item.startsWith('chain'))return !!context.canHook?.(target.index,item);
   if(target.index===PLAYER_CHAIR||!chair||chair.repaired)return false;
   const steps=REPAIRS[target.index].steps;
   if(['caster','seat','base'].includes(item))return steps.some(step=>step.part===item)&&!chair.installed.includes(item);

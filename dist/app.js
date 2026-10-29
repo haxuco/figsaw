@@ -574,9 +574,9 @@ function interactionAt(event){
  const skullHit=preferSkullInspection(matchedHit,sceneHits,figpalHoists.fishInspectionTarget,figpalHoists.fishClueReady);
  const hit=preferMobilePickup(skullHit,sceneHits,!mobilePuzzle.hung);
  for(let object=hit?.object;object;object=object.parent){
-  const chairIndex=Number.isInteger(object.userData.chainAnchor)?object.userData.chainAnchor:object.userData.rescueChair;
+  const chairIndex=object.userData.rescueChair;
   if(Number.isInteger(chairIndex))return rescueChairs.canInteract(chairIndex,inventory.equipped)?object:null;
-  if(object===model&&departure.finished)return puppet;if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.mobileMount||object.userData.mobilePiece||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
+  if(object===model&&departure.finished)return puppet;if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.mobileMount||object.userData.mobilePiece||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 const leaveChairButton=document.querySelector('#leave-chair');
@@ -643,25 +643,24 @@ function inventoryModelFor(id){
  if(id==='saw')return {object:handsaw,rotation:[1.25,.15,-.2]};
  if(id==='axe')return {object:fireAxe.object,rotation:[.1,-.28,-.65]};
  if(id==='charger')return {object:chargingKit.inventoryModel(),rotation:[.15,-.2,0]};
- if(id.startsWith('chain'))return {object:rescueChairs.inventoryChain(Number(id.at(-1))),rotation:[.9,-.15,-.25]};
  return {object:rescueChairs.parts[id],rotation:[.48,-.4,-.12]};
 }
 const inventoryPreviews=createInventoryModelPreviews({renderer,getModel:inventoryModelFor});
 const equippedModel=createEquippedModel({camera,getModel:inventoryModelFor});scene.add(equippedModel.group);
-const inventoryUI=createInventoryUI({inventory,previews:inventoryPreviews,onEquip:equipItem,onPutAway:putEquipmentAway,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},canOpen:()=>!laptopProgram.active&&!sawBusy()&&!rescueChairs.state.pulling});
+const inventoryUI=createInventoryUI({inventory,previews:inventoryPreviews,onEquip:equipItem,onPutAway:putEquipmentAway,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},canOpen:()=>!laptopProgram.active&&!sawBusy()});
 const testingMode=createTestingModeUI();
 rescueChairs.setHighlightsEnabled(false);
 const testingHighlights=createTestingHighlights({entries:createInteractionTargets({office,model,restraint,laptop,catMug,handsaw,fireAxe,chairRefuge,rescueChairs,mobileInspection,fallenMobile,stuffedAnimals,inventory,chargingKit,ketchupKey,figpalHoists,doorKeypadUI,plushCut})});scene.add(testingHighlights.group);
 function updateTestingMode(time){
- const context={locked:restraint.locked,hasKey:ketchupKey.hasKey,mobilePhase:mobilePuzzle.phase,mobileHung:mobilePuzzle.hung,chargingPhase:chargingKit.phase,chairs:rescueChairs.state.chairs,canHook:rescueChairs.canHook,brokenTanks:figpalHoists.tanks.map(t=>t.broken),canCut:plushCut.canCut,selectingAnimal};
- const revision=[inventory.revision,mobilePuzzle.phase,mobilePuzzle.hung,mobilePuzzle.action,chargingKit.phase,chargingKit.drawerOpen,ketchupKey.phase,restraint.locked,doorKeypadUI.active,context.brokenTanks.join(),context.chairs.map(c=>[c.step,c.installed.join(),c.repaired,c.tank,c.passenger].join(':')).join('|'),rescueChairs.state.links.length,figpalHoists.fishClueReady].join(';');
+ const context={locked:restraint.locked,hasKey:ketchupKey.hasKey,mobilePhase:mobilePuzzle.phase,mobileHung:mobilePuzzle.hung,chargingPhase:chargingKit.phase,chairs:rescueChairs.state.chairs,brokenTanks:figpalHoists.tanks.map(t=>t.broken),canCut:plushCut.canCut,selectingAnimal};
+ const revision=[inventory.revision,mobilePuzzle.phase,mobilePuzzle.hung,mobilePuzzle.action,chargingKit.phase,chargingKit.drawerOpen,ketchupKey.phase,restraint.locked,doorKeypadUI.active,context.brokenTanks.join(),context.chairs.map(c=>[c.step,c.installed.join(),c.repaired,c.tank,c.passenger].join(':')).join('|'),figpalHoists.fishClueReady].join(';');
  const counts=testingHighlights.update(time,{enabled:testingMode.enabled&&!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!mobilePuzzle.action&&!sawMenu.active,showInteractive:testingMode.showInteractive,showMatching:testingMode.showMatching,item:inventory.equipped,revision,context});
  testingMode.update({hidden:!diagnostics.enabled||gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
  equippedModel.update(inventory.equipped,time,!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.action);
 }
 let movePromptChair=null;
 const rescueControls=document.createElement('div');rescueControls.id='rescue-controls';rescueControls.hidden=true;
-rescueControls.innerHTML='<p data-move-label role="status"></p><div class="rescue-actions"><button type="button" data-move>Move chair</button><div data-destinations aria-label="Chair destinations"><button type="button" data-tank="0">Left tank</button><button type="button" data-tank="1">Middle tank</button><button type="button" data-tank="2">Right tank</button></div><button type="button" data-cancel>Cancel move</button><button type="button" data-pull>Pull chairs to safety</button></div><small data-pan>Drag to look around · Esc to cancel</small>';document.body.append(rescueControls);
+rescueControls.innerHTML='<p data-move-label role="status"></p><div class="rescue-actions"><button type="button" data-move>Move chair</button><div data-destinations aria-label="Chair destinations"><button type="button" data-tank="0">Left tank</button><button type="button" data-tank="1">Middle tank</button><button type="button" data-tank="2">Right tank</button></div><button type="button" data-cancel>Cancel move</button></div><small data-pan>Drag to look around · Esc to cancel</small>';document.body.append(rescueControls);
 const moveLabel=rescueControls.querySelector('[data-move-label]'),moveButton=rescueControls.querySelector('[data-move]'),destinations=rescueControls.querySelector('[data-destinations]'),panLabel=rescueControls.querySelector('[data-pan]');
 function beginChairMove(index){
  if(!rescueChairs.canMove(index))return false;
@@ -672,19 +671,17 @@ function placeRescueChair(tank){if(rescueChairs.place(tank)){movePromptChair=nul
 moveButton.onclick=()=>beginChairMove(movePromptChair);
 for(const button of destinations.children)button.onclick=()=>placeRescueChair(Number(button.dataset.tank));
 rescueControls.querySelector('[data-cancel]').onclick=()=>{rescueChairs.cancelMove();canvas.focus({preventScroll:true});};
-rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){return;}rescueChairs.pull();};
 function syncRescueControls(){
  const moving=rescueChairs.moving!==null,c=movePromptChair===null?null:rescueChairs.state.chairs[movePromptChair];
  const prompt=!moving&&c?.repaired&&rescueChairs.canMove(movePromptChair);
- const pull=rescueChairs.state.ready&&!rescueChairs.busy&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;
- rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||sawBusy()||documentViewer.active||mobilePuzzle.active||laptopProgram.active||drawerCamera.active||(!moving&&!prompt&&!pull);
+ rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||sawBusy()||documentViewer.active||mobilePuzzle.active||laptopProgram.active||drawerCamera.active||(!moving&&!prompt);
  const label=moving?'Choose a spot in front of a tank.':prompt?'Chair repaired.':'';if(moveLabel.textContent!==label)moveLabel.textContent=label;moveLabel.hidden=!moving&&!prompt;
  moveButton.hidden=!prompt;moveButton.disabled=prompt&&!rescueChairs.canMove(movePromptChair);
  destinations.hidden=panLabel.hidden=!moving;
  const available=rescueChairs.availableSlots();for(const button of destinations.children)button.disabled=!available.includes(Number(button.dataset.tank));
- rescueControls.querySelector('[data-cancel]').hidden=!moving;rescueControls.querySelector('[data-pull]').hidden=!pull;
+ rescueControls.querySelector('[data-cancel]').hidden=!moving;
 }
-function putEquipmentAway(){putAxeBack();clearSawSelection();sawMenu.hide();rescueChairs.cancelHook();inventory.putAway();if(inventory.has('saw')&&!sawTrap.active&&!plushCut.active)handsaw.visible=false;canvas.focus({preventScroll:true});}
+function putEquipmentAway(){putAxeBack();clearSawSelection();sawMenu.hide();inventory.putAway();if(inventory.has('saw')&&!sawTrap.active&&!plushCut.active)handsaw.visible=false;canvas.focus({preventScroll:true});}
 function equipItem(id){
  putEquipmentAway();rescueChairs.cancelMove();movePromptChair=null;if(!inventory.equip(id))return;
  if(id==='axe'){fireAxe.object.visible=true;axeInteraction.pickUp(state.time);}
@@ -694,15 +691,13 @@ function equipItem(id){
 }
 function useRescueObject(hit){
  const data=hit?.userData;if(!data)return false;
- const isRescue=data.chairSeat||data.salvagePart||Number.isInteger(data.rescueChair)||Number.isInteger(data.chainPickup)||Number.isInteger(data.chainAnchor);
+ const isRescue=data.chairSeat||data.salvagePart||Number.isInteger(data.rescueChair);
  if(!isRescue)return false;
  if(sawBusy())return true;
  if(restraint.locked){restraint.requestReach(state.time);return true;}
  if(data.chairSeat){sitOnChair();return true;}
  if(data.salvagePart){rescueChairs.collectPart(data.salvagePart,inventory);return true;}
- if(Number.isInteger(data.chainPickup)){if(!figpalHoists.collectChain(data.chainPickup,inventory))rescueChairs.collectChain(data.chainPickup,inventory);return true;}
- let index=data.chairSeat?PLAYER_CHAIR:Number.isInteger(data.chainAnchor)?data.chainAnchor:data.rescueChair;
- if(inventory.equipped?.startsWith('chain')){testingMode.report(rescueChairs.hook(index,inventory.equipped,inventory));return true;}
+ const index=data.rescueChair;
  if(index===PLAYER_CHAIR){sitOnChair();return true;}
  if(rescueChairs.state.chairs[index].repaired){beginChairMove(index);return true;}
  if(inventory.equipped){
@@ -755,7 +750,7 @@ function swingFireAxe(object){
  }
 }
 function useKeyObject(action){
- if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  arrivalCameraMove.cancel();resetting=false;
  if(action==='pour'){
   ketchupKey.pour(state.time);
@@ -765,7 +760,7 @@ function useKeyObject(action){
  }
 }
 function useCharging(action){
- if(!action||rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(!action||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(['strip','laptop'].includes(action)&&inventory.equipped!=='charger'){return;}
  const wasOpen=chargingKit.drawerOpen,previousPhase=chargingKit.phase;
  hoveredChargingAction=null;canvas.classList.remove('over-charging');
@@ -781,7 +776,7 @@ function useCharging(action){
 }
 const laptopProgram=createLaptopProgram({camera,canvas,laptop,isDiagnostic:()=>diagnostics.enabled,onLock(){prepareSawAction();inventoryUI.close();arrivalDialogue.hidden=true;},onReturn(){releaseControls();restraintStatus.textContent='You close the laptop.';canvas.classList.remove('over-laptop');canvas.setAttribute('aria-label',initialCanvasDescription);},getPowerStatus(){return chargingKit.phase==='charging'?'⚡ 0% · External power':`${Math.ceil(chargingKit.battery)}% · Connect charger: ${formatCountdown(chargingKit.battery/8*60)}`;}});
 function openLaptop(){
- if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){
   restraint.requestReach(state.time);restraintStatus.textContent="The chain pulls tight. You can't reach the laptop.";return;
  }
@@ -807,7 +802,7 @@ function finishOpeningLaptop(fromHand=false){
  laptopProgram.start();
 }
 function grabMug(){
- if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent='The chain pulls tight.';return;}
  if(!mugTrap.start(state.time))return;
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
@@ -815,7 +810,7 @@ function grabMug(){
  canvas.classList.remove('over-mug');
  restraintStatus.textContent='You pick up the cat mug by its handle and raise it for a drink.';
 }
-function sawBusy(){return rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying;}
+function sawBusy(){return chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying;}
 function clearSawSelection(){selectingAnimal=false;cancelSawSelection.hidden=true;canvas.classList.remove('over-plush');}
 function prepareSawAction(){drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();arrivalCameraMove.cancel();resetting=false;releaseControls();chainMenu.hide();}
 function grabSaw(){
@@ -847,7 +842,7 @@ function cutStuffedAnimal(object){
  restraintStatus.textContent=`You saw into the stuffed ${object.userData.stuffedAnimal.toLowerCase()}. Cotton filling spills out.`;
 }
 function openTankValve(index){
- if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);restraintStatus.textContent='The chain pulls tight.';return;}
  if(acidLeaks.open(index,hazardClock.time,restraint.locked)){
   drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();
@@ -858,7 +853,7 @@ function openTankValve(index){
  }
 }
 function pullFireAlarm(){
- if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
  const outcome=fireAlarm.pull(hazardClock.time);
  if(!outcome){return;}
@@ -876,7 +871,7 @@ function updateFigpalRound(time){
   countdown.start();countdownStartTime=null;
   countdownAnnouncement.textContent='The ten-minute countdown has started.';
  }
- const event=figpalRounds.update(time,rescueChairs.state.pulling||chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying,diagnostics.invulnerable);
+ const event=figpalRounds.update(time,chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying,diagnostics.invulnerable);
  if(event?.type==='lower'){
   leaderboardUI.close();laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
   figpalCamera.start(event.index,time);loweringDialogue.reset();const line=loweringDialogue.show(event.index,time);
@@ -913,8 +908,7 @@ function updateGameOver(time){
  return frame;
 }
 function operateHoist(index){
- if(rescueChairs.state.pulling||chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
- if(!restraint.locked&&figpalHoists.collectChain(index,inventory))return;
+ if(chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  const message=toggleHoist(index);if(!message){document.querySelector('#hoist-status').textContent='Wait for the moving hoist to stop before operating another.';return;}
  const lowering=figpalHoists.isLowered(index);
  const line=lowering?loweringDialogue.show(index,state.time):null;if(!lowering)loweringDialogue.hide(index);
@@ -985,7 +979,7 @@ document.addEventListener('keydown',event=>{
   if(event.code==='KeyR'&&!event.repeat){event.preventDefault();resetView();canvas.focus({preventScroll:true});}
   return;
  }
- if((rescueChairs.state.pulling||chairSeat.moving||figpalRounds.active||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
+ if((chairSeat.moving||figpalRounds.active||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)&&event.code!=='KeyR'){event.preventDefault();return;}
  if(laptopProgram.active){if(event.code==='Escape'){event.preventDefault();laptopProgram.cancel();}return;}
  if(documentViewer.active){
   if(event.metaKey||event.ctrlKey||event.altKey)return;
@@ -1034,26 +1028,26 @@ canvas.addEventListener('contextmenu',event=>{
  if(laptopProgram.active){laptopProgram.cancel();return;}
  if(documentViewer.active){leaveInspection();return;}
  if(mobilePuzzle.active){closeMobileInspection();return;}
- if(rescueChairs.state.pulling||chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(axeInteraction.held){putAxeBack();return;}
  if(selectingAnimal){clearSawSelection();return;}
  if(restraint.locked&&interactionAt(event)===restraint.target)chainMenu.show(event.clientX,event.clientY);else chainMenu.hide();
 });
 canvas.addEventListener('pointerdown',event=>{
- if(documentViewer.returning||rescueChairs.state.pulling||chairSeat.moving||mobileCamera.returning||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(documentViewer.returning||chairSeat.moving||mobileCamera.returning||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(inventoryUI.active||event.button!==0)return;
  if(laptopProgram.active)return;
  if(dragPointer!==null)return;
  canvas.focus({preventScroll:true});dragPointer=event.pointerId;resetting=false;pointerDistance=0;
  lastPointer={x:event.clientX,y:event.clientY};canvas.setPointerCapture(event.pointerId);
  const chairHit=interactionAt(event),chairIndex=chairHit?.userData.rescueChair;
- chairDragCandidate=rescueChairs.moving===null&&!inventory.equipped?.startsWith('chain')&&!restraint.locked&&Number.isInteger(chairIndex)&&rescueChairs.canMove(chairIndex)?chairIndex:null;
+ chairDragCandidate=rescueChairs.moving===null&&!restraint.locked&&Number.isInteger(chairIndex)&&rescueChairs.canMove(chairIndex)?chairIndex:null;
 });
 canvas.addEventListener('pointermove',event=>{
- if(rescueChairs.state.pulling||chairSeat.moving||laptopProgram.active||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
+ if(chairSeat.moving||laptopProgram.active||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(documentViewer.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);documentViewer.drag(dx,dy);lastPointer={x:event.clientX,y:event.clientY};}return;}
  if(mobilePuzzle.active){if(dragPointer!==null&&event.pointerId===dragPointer){const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);mobileCamera.drag(dx,dy,state.time);lastPointer={x:event.clientX,y:event.clientY};}return;}
- if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);if(Number.isInteger(hit?.userData.rescueChair)&&rescueChairs.canMove(hit.userData.rescueChair)&&!inventory.equipped?.startsWith('chain'))movePromptChair=hit.userData.rescueChair;hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair||Number.isInteger(hit?.userData.rescueChair)||Number.isInteger(hit?.userData.chainAnchor));hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.mobileMount||!!hit?.userData.mobilePiece||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad||!!hit?.userData.salvagePart||Number.isInteger(hit?.userData.rescueSlot)||Number.isInteger(hit?.userData.chainPickup));canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
+ if(dragPointer===null){const hit=interactionAt(event);canvas.classList.toggle('over-figsaw',hit===puppet&&departure.finished);if(Number.isInteger(hit?.userData.rescueChair)&&rescueChairs.canMove(hit.userData.rescueChair))movePromptChair=hit.userData.rescueChair;hoveredChair=!!hit?.userData.chairSeat;canvas.classList.toggle('over-chair',hoveredChair||Number.isInteger(hit?.userData.rescueChair));hoveredDocument=hit?.userData.wallDocument||null;hoveredFish=!!hit?.userData.fishClue&&figpalHoists.fishClueReady;hoveredSupply=hit?.userData.supplyAction||null;hoveredMobile=!!hit?.userData.mobilePuzzle||!!hit?.userData.mobileMount||!!hit?.userData.mobilePiece||!!hit?.userData.stuffedAnimal;hoveredKeypad=!!hit?.userData.exitKeypad;canvas.classList.toggle('over-puzzle',!!hoveredDocument||hoveredFish||!!hoveredSupply||hoveredMobile||hoveredKeypad||!!hit?.userData.salvagePart||Number.isInteger(hit?.userData.rescueSlot));canvas.classList.toggle('over-axe',!!hit?.userData.fireAxe);canvas.classList.toggle('over-tank',axeInteraction.held&&tankIndexFor(hit)>=0);canvas.classList.toggle('over-plush',selectingAnimal&&!!hit?.userData.stuffedAnimal);hoveredAlarm=!!hit?.userData.fireAlarm;canvas.classList.toggle('over-alarm',hoveredAlarm);hoveredKeyAction=hit?.userData.keyAction||null;canvas.classList.toggle('over-key',!!hoveredKeyAction);hoveredChargingAction=hit?.userData.chargingAction||(hit===laptop.object&&chargingKit.phase==='powered'?'laptop':null);canvas.classList.toggle('over-charging',!!hoveredChargingAction);canvas.classList.toggle('over-laptop',hit===laptop.object);canvas.classList.toggle('over-hoist',Number.isInteger(hit?.userData.hoistIndex));canvas.classList.toggle('over-mug',hit===catMug);canvas.classList.toggle('over-saw',hit===handsaw);canvas.classList.toggle('over-valve',Number.isInteger(hit?.userData.valveIndex));canvas.classList.toggle('over-chain',hit===restraint.target&&restraint.locked);return;}
  if(event.pointerId!==dragPointer)return;
  const dx=event.clientX-lastPointer.x,dy=event.clientY-lastPointer.y;pointerDistance+=Math.abs(dx)+Math.abs(dy);
  if(pointerDistance>=6&&chairDragCandidate!==null&&rescueChairs.moving===null)beginChairMove(chairDragCandidate);
@@ -1098,7 +1092,7 @@ canvas.addEventListener('pointerup',event=>{
 canvas.addEventListener('pointerleave',()=>{hoveredChair=false;canvas.classList.remove('over-chair');hoveredDocument=null;hoveredFish=false;hoveredSupply=null;hoveredMobile=hoveredKeypad=false;canvas.classList.remove('over-puzzle');hoveredAlarm=false;canvas.classList.remove('over-alarm');hoveredKeyAction=null;hoveredChargingAction=null;canvas.classList.remove('over-axe','over-tank','over-key','over-laptop','over-hoist','over-chain','over-mug','over-saw','over-valve','over-charging','over-plush','over-figsaw');});
 canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
-canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopProgram.active)return;if(documentViewer.active){documentViewer.setZoom(documentViewer.zoom*Math.exp(event.deltaY*.0015));return;}if(mobilePuzzle.active||mobileCamera.returning)return;if(rescueChairs.state.pulling||chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
+canvas.addEventListener('wheel',event=>{event.preventDefault();if(laptopProgram.active)return;if(documentViewer.active){documentViewer.setZoom(documentViewer.zoom*Math.exp(event.deltaY*.0015));return;}if(mobilePuzzle.active||mobileCamera.returning)return;if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
 // Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
 const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
@@ -1219,7 +1213,6 @@ function render(){
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
- if(chairSeat.seated&&!documentViewer.active&&!mobilePuzzle.active&&!drawerCamera.active)cameraPosition.add(rescueChairs.playerOffset);
  inventoryUI.sync();syncRescueControls();diagnosticUI.sync();leaderboardUI.update();
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion

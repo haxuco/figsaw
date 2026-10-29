@@ -23,7 +23,6 @@ export function createInteractionTargets({office,model,restraint,laptop,catMug,h
   else if(Number.isInteger(d.rescueSlot))add(o,{kind:'rescue-slot',index:d.rescueSlot});
   else if(d.keypadKey)add(o,{kind:'keypad-key'},()=>doorKeypadUI.active);
   else if(d.exitKeypad)add(o,{kind:'keypad'});
-  else if(Number.isInteger(d.chainPickup)&&o.isInstancedMesh)add(o,{kind:'pickup',item:'chain'+d.chainPickup},()=>figpalHoists.canCollectChain(d.chainPickup)||rescueChairs.canCollectChain(d.chainPickup));
   else if(d.fishClue!==undefined&&!Number.isInteger(d.tankIndex))add(o,{kind:'clue'},()=>d.fishClue&&figpalHoists.fishClueReady);
  });
  add(model,{kind:'figsaw'});

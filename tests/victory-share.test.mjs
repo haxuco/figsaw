@@ -7,12 +7,12 @@ import {drawVictoryGraphic,createVictoryShare,createGameOverShare,SHARE_WIDTH,SH
 function context(){const text=[],rects=[];const gradient={addColorStop(){}};return new Proxy({text,rects,createRadialGradient:()=>gradient,measureText:value=>({width:String(value).length*45}),fillText:value=>text.push(value),fillRect:(...args)=>rects.push(args)},{get:(o,k)=>k in o?o[k]:()=>{}});}
 test('victory captures the clock, rescued passengers and attempts once at escape',()=>{
  let now=0;const clock=createCountdownClock(undefined,()=>now);clock.start();now=127.2;
- const rescue={safe:false,chairs:[{passenger:0},{passenger:1}]};
- assert.equal(captureVictoryResult({attempt:4,remainingSeconds:clock.remainingSeconds,rescue}).figpalsSaved,0,'seated captives still need to reach the exit');
- rescue.safe=true;const result=captureVictoryResult({attempt:4,remainingSeconds:clock.remainingSeconds,rescue});
+ const rescue={safe:false,chairs:[{passenger:0,landed:false},{passenger:1,landed:false}]};
+ assert.equal(captureVictoryResult({attempt:4,remainingSeconds:clock.remainingSeconds,rescue}).figpalsSaved,0,'captives in mid-hop are not yet safe');
+ rescue.safe=true;rescue.chairs.forEach(c=>c.landed=true);const result=captureVictoryResult({attempt:4,remainingSeconds:clock.remainingSeconds,rescue});
  assert.deepEqual(result,{attempt:4,remainingSeconds:473,figpalsSaved:2});assert.equal(Object.isFrozen(result),true);
  now=500;rescue.safe=false;rescue.chairs.length=0;assert.deepEqual(result,{attempt:4,remainingSeconds:473,figpalsSaved:2},'viewing or retrying cannot rewrite the completed run');
- assert.equal(captureVictoryResult({attempt:1,remainingSeconds:50,rescue:{safe:true,chairs:[{passenger:1},{passenger:1},{passenger:null}]}}).figpalsSaved,1,'never count an empty chair or duplicate passenger');
+ assert.equal(captureVictoryResult({attempt:1,remainingSeconds:50,rescue:{safe:true,chairs:[{passenger:1,landed:true},{passenger:1,landed:true},{passenger:null,landed:true}]}}).figpalsSaved,1,'never count an empty chair or duplicate passenger');
 });
 test('victory values stay valid at zero time, with no rescues and with large attempt counts',()=>{
  assert.deepEqual(victoryResult({attempt:342,remainingSeconds:0,figpalsSaved:0}),{attempt:342,remainingSeconds:0,figpalsSaved:0});

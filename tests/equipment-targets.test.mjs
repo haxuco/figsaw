@@ -20,12 +20,7 @@ test('supplies, key, charger, saw and axe follow their actual interaction stages
  assert.equal(matches('axe',{kind:'tank',index:0},ctx),true);assert.equal(matches('axe',{kind:'tank',index:1},ctx),false);assert.equal(matches('saw',{kind:'plush',object:plush},ctx),true);assert.equal(matches('saw',{kind:'plush',object:{}},ctx),false);
  ctx.locked=true;assert.equal(matches('key',{kind:'shackle'},ctx),true);assert.equal(matches('mobileKit',{kind:'mobile'},ctx),false);assert.equal(matches('axe',{kind:'tank',index:0},ctx),false);assert.equal(matches('saw',{kind:'plush',object:plush},ctx),false);assert.equal(matches('saw',{kind:'shackle'},ctx),false);ctx.hasKey=false;assert.equal(matches('key',{kind:'shackle'},ctx),false);assert.equal(matches('saw',{kind:'shackle'},ctx),true);
 });
-test('chain highlights share the real connection rules and exclude self-links, full hooks, cycles and used chains',()=>{
- const state=createRescueState(),inventory=createInventory();
- for(let i=0;i<2;i++)for(const step of REPAIRS[i].steps){inventory.add(step.part);state.use(i,step.part,inventory);}
- for(const chain of['chain0','chain1','chain2']){
-  const ctx={locked:false,canHook:i=>state.canStartLink(i,chain)};assert.equal(matches(chain,{kind:'chair',index:0},ctx),true);assert.equal(matches(chain,{kind:'chair',index:PLAYER_CHAIR},ctx),true);
- }
- assert.equal(state.canConnect(0,0,'chain0'),false);assert.equal(state.connect(PLAYER_CHAIR,0,'chain0'),true);
- assert.equal(state.canStartLink(PLAYER_CHAIR,'chain1'),false);assert.equal(state.canStartLink(1,'chain0'),false);assert.equal(state.canConnect(0,1,'chain1'),true);assert.equal(state.connect(0,1,'chain1'),true);assert.equal(state.canConnect(1,PLAYER_CHAIR,'chain2'),false);
+test('removed chain items never match a chair, even in testing mode',()=>{
+ const ctx={locked:false,chairs:createRescueState().chairs};
+ for(const item of ['chain0','chain1','chain2'])for(let index=0;index<=PLAYER_CHAIR;index++)assert.equal(matches(item,{kind:'chair',index},ctx),false);
 });
