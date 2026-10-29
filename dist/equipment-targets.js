@@ -6,6 +6,7 @@ export function equipmentMatchesTarget(item,target,context){
  const {locked,mobilePhase,chargingPhase,chairs=[]}=context;
  if(locked&&!['key','saw'].includes(item))return false;
  if(target.kind==='chair'){
+  if(item==='chain')return !context.chainFlooded&&!context.chainLinks?.[target.index]&&(target.index===PLAYER_CHAIR||chairs[target.index]?.repaired&&chairs[target.index]?.tank!==null&&chairs[target.index]?.tank!==context.pmIndex);
   const chair=chairs[target.index];
   if(target.index===PLAYER_CHAIR||!chair||chair.repaired)return false;
   const steps=REPAIRS[target.index].steps;

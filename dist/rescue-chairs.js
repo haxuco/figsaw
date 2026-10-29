@@ -5,6 +5,8 @@ import {renderQuality} from './render-quality.js';
 import {visibleLocalBounds} from './testing-highlights.js';
 import {createRescueSwingPath,CHAIR_PASSENGER_HEIGHT,RESCUE_SWING_SECONDS} from './rescue-swing.js';
 import {createChairRoute,CHAIR_RADIUS} from './chair-route.js';
+import {createRescueChain} from './rescue-chain.js';
+import {createChairTow} from './chair-tow.js';
 
 export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzzle}){
  const group=new THREE.Group();group.name='Chair rescue and salvaged parts';group.userData.ignoreAcid=true;
@@ -15,6 +17,8 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  const up=new THREE.Vector3(0,1,0),right=new THREE.Vector3(1,0,0),twist=new THREE.Quaternion(),point=new THREE.Vector3();
  const slots=[],tankObstacles=[],rolls=new Map(),transfers=new Map();
  let message='',moving=null,lastTime=0,discoveryEnabled=true;
+ const chain=createRescueChain({chairs:[...objects,player],state,floorSupport});group.add(chain.group);
+ const tow=createChairTow({chairs:[...objects,player],state,tankObstacles,floorSupport});
  for(const [id,object]of Object.entries(parts)){object.userData.salvagePart=id;object.userData.ignoreAcid=true;object.name=`Salvage ${id} from donor chair`;batchStaticScenery(object,{minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});}
  // Keep forgiving hit volumes and temporary markers outside the collectible
  // models, so inventory previews and installed replacements remain unchanged.
@@ -81,9 +85,9 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   syncParts();if(c.repaired){const object=objects[index];rolls.set(index,{from:object.position.clone(),q:object.quaternion.clone(),to:object.position.clone().setY(floorSupport(object.position.x,object.position.z)),toQ:new THREE.Quaternion().setFromAxisAngle(up,object.rotation.y),at:lastTime,duration:1});}
   return message;
  }
- function canMove(index){return !rolls.size&&!transfers.size&&slots.some((s,i)=>state.canPlace(index,i));}
+ function canMove(index){return !tow.active&&!rolls.size&&!transfers.size&&slots.some((s,i)=>state.canPlace(index,i));}
  // Correctly parked frames stop accepting clicks.
- function canInteract(index){return !state.isParked(index);}
+ function canInteract(index,item){return !tow.active&&(item==='chain'&&state.canLink(index)||state.towPhase==='idle'&&!state.isParked(index));}
  function availableSlots(){return moving===null?[]:slots.flatMap((s,i)=>state.canPlace(moving,i)?[i]:[]);}
  function select(index){if(!canMove(index))return false;moving=index;slots.forEach((s,i)=>{s.marker.visible=s.target.visible=state.canPlace(index,i);});return true;}
  function cancelMove(){moving=null;slots.forEach(s=>s.marker.visible=s.target.visible=false);}
@@ -101,20 +105,24 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   group.attach(hanger);const toQ=group.getWorldQuaternion(new THREE.Quaternion()).invert().multiply(object.getWorldQuaternion(new THREE.Quaternion()));
   transfers.set(tank,{hanger,object,index,source,path:createRescueSwingPath(from,to),q:hanger.quaternion.clone(),toQ,at:lastTime});return true;
  }
- function update(time,reducedMotion=false){lastTime=time;syncPartHighlights(time,reducedMotion);
+ function update(time,reducedMotion=false){lastTime=time;syncPartHighlights(time,reducedMotion);tow.update(time,reducedMotion);
   for(const [i,r]of rolls){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-r.at,0,r.duration),o=objects[i];if(r.route){r.route.getPoint(u,o.position);o.position.y=floorSupport(o.position.x,o.position.z);}else o.position.lerpVectors(r.from,r.to,u);o.quaternion.slerpQuaternions(r.q,r.toQ,u);if(u===1)rolls.delete(i);}
   for(const [i,t]of transfers){const u=reducedMotion?1:THREE.MathUtils.smootherstep(time-t.at,0,RESCUE_SWING_SECONDS);t.path.getPoint(u,point);t.source.localToWorld(point);group.worldToLocal(point);t.hanger.position.copy(point);t.hanger.quaternion.slerpQuaternions(t.q,t.toQ,u);twist.setFromAxisAngle(right,-Math.sin(u*Math.PI)*.14);t.hanger.quaternion.multiply(twist);
    if(u===1){t.object.attach(t.hanger);t.hanger.position.set(0,CHAIR_PASSENGER_HEIGHT,0);t.hanger.quaternion.identity();state.finishBoard(i);rolls.set(t.index,{from:t.object.position.clone(),to:t.object.position.clone(),q:t.object.quaternion.clone(),toQ:slots[i].seatedQ.clone(),at:time,duration:1});transfers.delete(i);}
   }
+  chain.update();
  }
- function reset(){message='';cancelMove();state.reset();rolls.clear();transfers.clear();objects.forEach((o,i)=>{o.position.copy(homes[i].p);o.quaternion.copy(homes[i].q);if(o.replacementSeat){o.remove(o.replacementSeat);o.replacementSeat=null;}o.chairParts.seat.visible=true;});player.position.copy(playerHome.p);player.quaternion.copy(playerHome.q);for(const p of Object.values(parts))p.visible=true;syncParts();syncPartHighlights();}
- function capture(){return {state:state.capture(),poses:[...objects,player].map(o=>({position:o.position.toArray(),rotation:o.quaternion.toArray()})),parts:Object.fromEntries(Object.entries(parts).map(([id,o])=>[id,o.visible]))};}
+ function reset(){message='';cancelMove();state.reset();tow.reset();rolls.clear();transfers.clear();objects.forEach((o,i)=>{o.position.copy(homes[i].p);o.quaternion.copy(homes[i].q);if(o.replacementSeat){o.remove(o.replacementSeat);o.replacementSeat=null;}o.chairParts.seat.visible=true;});player.position.copy(playerHome.p);player.quaternion.copy(playerHome.q);for(const p of Object.values(parts))p.visible=true;syncParts();syncPartHighlights();chain.reset();}
+ function capture(){return {state:state.capture(),chain:chain.capture(),poses:[...objects,player].map(o=>({position:o.position.toArray(),rotation:o.quaternion.toArray()})),parts:Object.fromEntries(Object.entries(parts).map(([id,o])=>[id,o.visible]))};}
  function restore(value){
   reset();state.restore(value.state);syncParts();
   if(state.chairs[1].installed.includes('seat')){objects[1].chairParts.seat.visible=false;const seat=parts.seat.clone();seat.userData={};seat.visible=true;seat.position.set(0,.49,0);seat.rotation.set(0,0,0);objects[1].add(seat);objects[1].replacementSeat=seat;}
   value.poses.forEach((p,i)=>{const o=[...objects,player][i];o.position.fromArray(p.position);o.quaternion.fromArray(p.rotation);});
   for(const [id,visible]of Object.entries(value.parts))parts[id].visible=visible;
-  syncPartHighlights(lastTime);
+  chain.restore(value.chain);syncPartHighlights(lastTime);
  }
- return {group,state,objects,parts,capture,restore,canInteract,setHighlightsEnabled(value){discoveryEnabled=value;syncPartHighlights(lastTime);},takeMessage(){const result=message;message='';return result;},use,canMove,availableSlots,select,cancelMove,place,prepare,cancelPreparation:state.cancelReservation,board,isTransferring:index=>transfers.has(index)||rolls.has(state.chairs.findIndex(c=>c.passenger===index)),update,reset,get moving(){return moving;},get busy(){return rolls.size>0||transfers.size>0;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
+ return {group,state,objects,parts,chain,capture,restore,canInteract,
+  link(index,inventory){if(rolls.size||transfers.size)return 'The chair is still moving.';const result=state.link(index,inventory);chain.update();return result;},
+  canTow:()=>!rolls.size&&!transfers.size&&!tow.active&&state.canTow(),pull:time=>!rolls.size&&!transfers.size&&tow.start(time),exit:time=>tow.start(time,true),pauseTow:tow.pause,get towing(){return tow.active;},
+  setHighlightsEnabled(value){discoveryEnabled=value;syncPartHighlights(lastTime);},takeMessage(){const result=message;message='';return result;},use,canMove,availableSlots,select,cancelMove,place,prepare,cancelPreparation:state.cancelReservation,board,isTransferring:index=>transfers.has(index)||rolls.has(state.chairs.findIndex(c=>c.passenger===index)),update,reset,get moving(){return moving;},get busy(){return tow.active||rolls.size>0||transfers.size>0;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
 }

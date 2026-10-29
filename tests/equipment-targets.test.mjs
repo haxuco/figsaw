@@ -24,3 +24,11 @@ test('removed chain items never match a chair, even in testing mode',()=>{
  const ctx={locked:false,chairs:createRescueState().chairs};
  for(const item of ['chain0','chain1','chain2'])for(let index=0;index<=PLAYER_CHAIR;index++)assert.equal(matches(item,{kind:'chair',index},ctx),false);
 });
+
+
+test('spare chain highlights only prepared unlinked chairs while the floor is dry',()=>{
+ const ctx={locked:false,pmIndex:2,chainFlooded:false,chainLinks:[false,false,false],chairs:[{repaired:true,tank:0},{repaired:true,tank:null}]};
+ assert.equal(matches('chain',{kind:'chair',index:0},ctx),true);assert.equal(matches('chain',{kind:'chair',index:1},ctx),false);assert.equal(matches('chain',{kind:'chair',index:PLAYER_CHAIR},ctx),true);
+ ctx.chainLinks[0]=true;assert.equal(matches('chain',{kind:'chair',index:0},ctx),false);ctx.chainFlooded=true;assert.equal(matches('chain',{kind:'chair',index:PLAYER_CHAIR},ctx),false);
+ ctx.chainFlooded=false;ctx.chairs[1].tank=2;assert.equal(matches('chain',{kind:'chair',index:1},ctx),false);
+});

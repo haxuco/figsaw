@@ -734,6 +734,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  const chargingKit=createChargingKit({filing,laptop:laptopControl,floorSupport,drawerMaterial:steel});office.add(chargingKit.group);
  const mobileSupplies=createMobileSupplies(chargingKit.drawer);
  const rescueChairs=createRescueChairs({objects:rescueObjects,parts:{caster:looseCaster,seat:looseSeat,base:looseBase},player:refugeChair,tanks:figpalVats.rigs.map(r=>r.vat),floorSupport,puzzle});office.add(rescueChairs.group);figpalVats.bindRescue(rescueChairs,acidLeaks);
+ acidLeaks.onSpill(rescueChairs.state.noteFlood);
  const fireHazard=createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMaterial:steel});office.add(fireHazard.group);
  const fireAlarm=createFireAlarm({fireHazard,acidLeaks,laptop:laptopControl,floorSupport});
  fireAlarm.station.position.set(.40,1.22,.065);rear.add(fireAlarm.station);office.add(fireAlarm.effects);
@@ -743,7 +744,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  function setEnvironment(map){fireAxe.setEnvironment(map);glassClosure.setEnvironment(map);fireHazard.setEnvironment(map);acidLeaks.setEnvironment(map);handsaw.setEnvironment(map);displays.setEnvironment(map);figpalVats.setEnvironment(map);ceilingFixture.setEnvironment(map);}
  let lastEffectsTime=-Infinity;
  function update(time,reducedMotion,viewer=viewerPosition){
-  rescueChairs.update(time,reducedMotion);doorKeypad.update(time);exitDoor.update(time,reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
+  doorKeypad.update(time);exitDoor.update(time,reducedMotion);ketchupKey.update(time,reducedMotion);const level=ceilingFixture.update(time,reducedMotion);
   if(time-lastEffectsTime>=1/quality.effectsHz){lastEffectsTime=time;rodents.update(time,reducedMotion,viewer);figpalVats.update(time,reducedMotion);ceilingInsects.update(time,reducedMotion,level);rearInsects.update(time,reducedMotion,.65);deskInsects.update(time,reducedMotion,.78);}
   return level;
  }

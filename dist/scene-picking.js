@@ -12,6 +12,19 @@ const ancestor=(object,predicate)=>{for(let o=object;o;o=o.parent)if(predicate(o
 const visible=object=>!ancestor(object,o=>!o.visible);
 const chair=object=>ancestor(object,o=>Number.isInteger(o.userData.rescueChair)||o.userData.chairSeat);
 const within=(object,root)=>!!ancestor(object,o=>o===root);
+// The prepared chain passes over chairs that are already clasped. Let the
+// next unlinked chair remain selectable through those forgiving chair boxes.
+export function preferChainChairHit(hit,hits,{chainHeld=false,links=[],canLink=()=>false}={}){
+ const index=o=>o?.userData.chairSeat?2:o?.userData.rescueChair;
+ const front=chair(hit?.object);if(!chainHeld||!front||!links[index(front)])return hit;
+ for(const candidate of hits){
+  if(!visible(candidate.object)||!unclipped(candidate))continue;
+  const root=chair(candidate.object);if(!root)return hit;
+  const i=index(root);if(links[i])continue;
+  return canLink(i)?{...candidate,object:root}:hit;
+ }
+ return hit;
+}
 // A breached tank's remaining glass and hardware must not block axe strikes
 // aimed at the next tank. Other tools keep the tank's normal interactions.
 export function firstInteractionHit(hits,{axeHeld=false,tanks=[]}={}){

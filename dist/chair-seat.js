@@ -32,7 +32,7 @@ export function createChairSeat({position,state,getView}){
   state.zoom=THREE.MathUtils.lerp(from.zoom,to.zoom,progress);
   if(progress===1){phase=phase==='sitting'?'seated':'floor';move=null;if(phase==='floor')saved=null;}
  }
- return {sit,leave,update,reset(){phase='floor';move=saved=null;progress=0;},
+ return {sit,leave,update,translate(delta){if(phase!=='seated')return;position.add(delta);body.add(delta);if(saved)saved.position.add(delta);},reset(){phase='floor';move=saved=null;progress=0;},
   get occupied(){return phase!=='floor';},get seated(){return phase==='seated';},get moving(){return move!==null;},
   get hazardPosition(){return phase==='floor'?position:body;},
   get protectedFromAcid(){return phase==='seated'||phase==='sitting'&&progress>=.35||phase==='leaving'&&progress<.65;}

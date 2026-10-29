@@ -22,6 +22,7 @@ export function createDiagnosticActions({time,hazardTime,inventory,mobilePuzzle,
   action('timer-reset','Reset countdown to 10:00',['timer',...environment,'rounds','view'],()=>{prepareTimer();countdown.setRemaining(FIGPAL_INTERVAL_SECONDS);}),
   action('timer-five','Jump countdown to 00:05',['timer',...environment,'rounds','view'],()=>{prepareTimer();countdown.setRemaining(5);}),
   action('items','Collect all inventory items',['inventory','mobilePuzzle','rescueChairs','hoists','key','props'],()=>{
+   rescueChairs.chain?.collect(inventory);
    for(const id of Object.keys(rescueChairs.parts))if(!inventory.has(id))rescueChairs.collectPart(id,inventory);
    for(const id of Object.keys(ITEMS))if(!MOBILE_PIECES[id]&&id!=='mobile')inventory.add(id);
    for(const id of Object.keys(MOBILE_PIECES))mobilePuzzle.collectPiece(id,inventory);
@@ -36,6 +37,11 @@ export function createDiagnosticActions({time,hazardTime,inventory,mobilePuzzle,
   action('challenge','Complete laptop challenge',['program'],()=>{if(laptopProgram.completed)return false;laptopProgram.complete();}),
   action('repair-chairs','Repair both rescue chairs',['inventory','rescueChairs','hoists'],()=>{
    for(const [index,repair]of REPAIRS.entries())for(const {part}of repair.steps){const chair=rescueChairs.state.chairs[index];if(chair.repaired||chair.installed.includes(part))continue;if(!inventory.has(part))rescueChairs.collectPart(part,inventory);inventory.add(part);rescueChairs.parts[part].visible=false;rescueChairs.use(index,part,inventory);}rescueChairs.update(time(),true);
+  }),
+  action('link-chairs','Link the three prepared chairs',['inventory','rescueChairs'],()=>{
+   if(![0,1,2].some(i=>rescueChairs.state.canLink(i)))return false;
+   rescueChairs.chain.collect(inventory);inventory.add('chain');inventory.equip('chain');
+   for(const i of [0,1,2])if(rescueChairs.state.canLink(i))rescueChairs.link(i,inventory);
   }),
   action('valve','Open tank valve',environment,index=>acidLeaks.open(index,hazardTime()),true),
   action('break-tank','Break tank with axe',environment,index=>{const tank=hoists.tanks[index];if(!tank||!tank.break(time()))return false;return acidLeaks.breach(index,hazardTime(),tank.outlet);},true),

@@ -81,7 +81,7 @@ test('a normal-speed Pudding rescue releases the winch lock so Maki can lower ne
  }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
 });
 
-test('winch chains stay in the scene and no chain inventory or pickup targets remain',()=>{
+test('winch chains stay attached and cannot be collected as spare inventory chains',()=>{
  const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
  try{
   const f=fixture(createEscapePuzzle(()=>.9));f.breakTanks();

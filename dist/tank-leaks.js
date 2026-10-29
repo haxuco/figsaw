@@ -5,7 +5,7 @@ import {createAcidSurface,createDrainJet} from './acid-surface.js';
 export function createTankLeaks({valves,floorSupport}){
  const group=new THREE.Group();group.name='Corrosive green liquid, bubbles and contact smoke';group.userData.ignoreAcid=true;group.visible=false;
  const flow=createAcidFlow(),dummy=new THREE.Object3D(),cameraRotation=new THREE.Quaternion();
- const timeUniform={value:0},streams=new Map(),openedValves=new Set(),materialCopies=new Map(),contactBounds=[];let lastPaint=-Infinity,neutralizedAt=null;
+ const timeUniform={value:0},streams=new Map(),openedValves=new Set(),materialCopies=new Map(),contactBounds=[];let lastPaint=-Infinity,neutralizedAt=null,onSpill=()=>{};
  const burnCanvas=document.createElement('canvas');burnCanvas.width=burnCanvas.height=512;
  const burn=burnCanvas.getContext('2d');burn.fillStyle='#000';burn.fillRect(0,0,512,512);
  const burnMap=new THREE.CanvasTexture(burnCanvas);burnMap.generateMipmaps=false;burnMap.minFilter=THREE.LinearFilter;burnMap.flipY=false;
@@ -87,14 +87,14 @@ export function createTankLeaks({valves,floorSupport}){
   const stream=createDrainJet(valve.outlet,floorSupport,surface.jetMaterial);stream.source=valve.outlet;
   if(!flow.open(index,stream.origin,time,locked)){stream.mesh.geometry.dispose();return false;}
   stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);openedValves.add(index);
-  group.visible=true;return true;
+  group.visible=true;onSpill();return true;
  }
  function breach(index,time,outlet,locked=false){
   if(locked||!valves[index]||!outlet||flow.dying||streams.get(index)?.breached)return false;
   const stream=createDrainJet(outlet,floorSupport,surface.jetMaterial,{breach:true});stream.breached=true;stream.source=outlet;
   if(!flow.breach(index,stream.origin,time)){stream.mesh.geometry.dispose();return false;}
   const previous=streams.get(index);if(previous){group.remove(previous.mesh);previous.mesh.geometry.dispose();}
-  stream.mesh.name='Acid pouring through shattered tank glass';stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);group.visible=true;return true;
+  stream.mesh.name='Acid pouring through shattered tank glass';stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);group.visible=true;onSpill();return true;
  }
  function paintBurn(time){
   if(flow.neutralized)return;
@@ -153,5 +153,5 @@ export function createTankLeaks({valves,floorSupport}){
   flow.restore(value.flow,time);openedValves.clear();for(const i of value.opened)openedValves.add(i);
   neutralizedAt=value.neutralizedAt===null?null:value.neutralizedAt+time-value.time;surface.setNeutralized(flow.neutralized?1:0);rippleMaterial.color.setHex(flow.neutralized?0xb3c5ce:0xb6c58b);burn.putImageData(value.burn,0,0);burnMap.needsUpdate=true;group.visible=flow.leaks.length>0;
  }
- return {group,open,breach,update,reset,bindTargets,capture,restore,setInvulnerable:flow.setInvulnerable,neutralize(time){if(!flow.neutralize())return false;neutralizedAt=time;rippleMaterial.color.setHex(0xb3c5ce);bubbles.count=smoke.count=0;return true;},get neutralized(){return flow.neutralized;},remaining:flow.remaining,outflowFinished:flow.outflowFinished,isDrained:index=>flow.remaining(index)<=.0001,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
+ return {group,open,breach,update,reset,bindTargets,capture,restore,onSpill(callback){onSpill=callback;},setInvulnerable:flow.setInvulnerable,neutralize(time){if(!flow.neutralize())return false;neutralizedAt=time;rippleMaterial.color.setHex(0xb3c5ce);bubbles.count=smoke.count=0;return true;},get neutralized(){return flow.neutralized;},remaining:flow.remaining,outflowFinished:flow.outflowFinished,isDrained:index=>flow.remaining(index)<=.0001,get leaks(){return flow.leaks;},setEnvironment:surface.setEnvironment,blackout:time=>flow.blackout(time),get dying(){return flow.dying;},get active(){return flow.leaks.length>0;}};
 }

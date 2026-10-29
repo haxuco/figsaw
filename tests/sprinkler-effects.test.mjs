@@ -47,7 +47,7 @@ test('sizzle is optional without audio support and stops cleanly between tries',
  const audio=createLaptopSizzle({getContext:()=>context});assert.equal(audio.play(),true);assert.equal(start,10.85);assert.ok(samples.some(v=>Math.abs(v)>.1));assert.ok(samples.every(Number.isFinite));audio.stop();assert.equal(stopped,2);audio.stop();assert.equal(stopped,2);
 });
 
-test('the fire alarm neutralizes real floor pools, ends the spray, and leaves a safe wet floor',()=>{
+test('the fire alarm extinguishes flames and stops spraying while floor acid stays green and lethal',()=>{
  const previous=globalThis.document;
  const context=new Proxy({}, {get(_,key){return key==='createRadialGradient'?()=>({addColorStop(){}}):()=>{};},set(){return true;}});
  globalThis.document={createElement:()=>({getContext:()=>context})};
@@ -59,13 +59,14 @@ test('the fire alarm neutralizes real floor pools, ends the spray, and leaves a 
   const fire=createOfficeFire({chargingKit:charging,acidLeaks:leaks,floorSupport:()=>0,pipeMaterial:new THREE.MeshStandardMaterial()});
   fire.update(2,.016,viewer,camera);fire.update(3.5,.016,viewer,camera);assert.equal(fire.phase,'burning');
   const laptop={object:new THREE.Group(),damageWater(){throw new Error('successful fire suppression must not destroy the laptop');}};
-  const alarm=createFireAlarm({fireHazard:fire,acidLeaks:leaks,laptop,floorSupport:()=>0});assert.equal(alarm.pull(3.6),'fire');assert.equal(leaks.neutralized,true);
-  for(let t=3.8;t<15;t+=.05){assert.equal(leaks.update(t,.05,viewer,camera),false);assert.equal(fire.update(t,.05,viewer,camera),false);assert.equal(alarm.update(t,camera),false);}
+  const alarm=createFireAlarm({fireHazard:fire,acidLeaks:leaks,laptop,floorSupport:()=>0});assert.equal(alarm.pull(3.6),'fire');assert.equal(leaks.neutralized,false);
+  for(let t=3.8;t<15;t+=.05){assert.equal(leaks.update(t,.05,viewer,camera,false,{protectedFromAcid:true}),false);assert.equal(fire.update(t,.05,viewer,camera),false);assert.equal(alarm.update(t,camera),false);}
   assert.equal(fire.phase,'extinguished');assert.equal(leaks.dying,false);
-  const pool=leaks.group.getObjectByName('Continuous reflective acid film');assert.equal(pool.material.color.getHex(),0x77878c);assert.equal(pool.material.emissive.getHex(),0);
-  assert.equal(leaks.group.getObjectByName('Smoke rising from corroding surfaces').count,0);
+  const pool=leaks.group.getObjectByName('Continuous reflective acid film');assert.equal(pool.material.color.getHex(),0x637c23);assert.notEqual(pool.material.emissive.getHex(),0);
+  assert.ok(leaks.group.getObjectByName('Smoke rising from corroding surfaces').count>0);
   assert.equal(fire.group.getObjectByName('Sprinkler droplets falling from ceiling deflectors').visible,false);
   assert.equal(fire.group.getObjectByName('Standing sprinkler water across the office floor').visible,true);
+  leaks.update(16,.05,viewer,camera);assert.equal(leaks.dying,true,'stepping off the chair after the sprinkler cycle is still fatal');
   leaks.reset();fire.reset();assert.equal(leaks.neutralized,false);assert.equal(pool.material.color.getHex(),0x637c23);assert.equal(fire.group.getObjectByName('Standing sprinkler water across the office floor').visible,false);
  }finally{globalThis.document=previous;}
 });

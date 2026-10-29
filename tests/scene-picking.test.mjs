@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createSceneRaycaster,firstInteractionHit,preferAxeTankHit,preferSkullInspection,preferMobilePickup} from '../dist/scene-picking.js';
+import {createSceneRaycaster,firstInteractionHit,preferAxeTankHit,preferChainChairHit,preferSkullInspection,preferMobilePickup} from '../dist/scene-picking.js';
 import {createInventory} from '../dist/inventory.js';
 import {createMobilePuzzleState} from '../dist/mobile-puzzle-state.js';
 
@@ -111,4 +111,17 @@ test('parked chairs and previously broken tanks do not shield the next intact ta
  next.add(new THREE.Mesh(new THREE.BoxGeometry(.8,.8,.6),new THREE.MeshBasicMaterial()));f.room.add(next);
  f.options.tanks[1].broken=true;const hits=f.hitsAt();assert.equal(preferAxeTankHit(hits[0],hits,f.options).object,next);
  f.options.tanks[2].broken=true;assert.equal(preferAxeTankHit(hits[0],hits,f.options),hits[0],'no intact tank means no strike target');
+});
+
+
+test('the equipped chain reaches an unlinked chair behind a linked chair, but never through walls',()=>{
+ const room=new THREE.Group(),front=new THREE.Group(),back=new THREE.Group();front.userData.rescueChair=0;back.userData.rescueChair=1;front.position.z=1;
+ const material=new THREE.MeshBasicMaterial();for(const c of [front,back]){c.add(new THREE.Mesh(new THREE.BoxGeometry(.8,1,.5),material));room.add(c);}room.updateMatrixWorld(true);
+ const ray=createSceneRaycaster();ray.set(new THREE.Vector3(0,0,3),new THREE.Vector3(0,0,-1));
+ const options={chainHeld:true,links:[true,false,false],canLink:i=>i===1},hits=ray.intersectObject(room,true);
+ assert.equal(preferChainChairHit(hits[0],hits,options).object,back);
+ assert.equal(preferChainChairHit(hits[0],hits,{...options,chainHeld:false}),hits[0]);
+ assert.equal(preferChainChairHit(hits[0],hits,{...options,canLink:()=>false}),hits[0]);
+ const wall=new THREE.Mesh(new THREE.BoxGeometry(1,1,.1),material);wall.position.z=.5;room.add(wall);room.updateMatrixWorld(true);const blocked=ray.intersectObject(room,true);
+ assert.equal(preferChainChairHit(blocked[0],blocked,options),blocked[0]);
 });

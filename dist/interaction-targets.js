@@ -28,6 +28,7 @@ export function createInteractionTargets({office,model,restraint,laptop,catMug,h
  add(model,{kind:'figsaw'});
  add(laptop.object,{kind:'laptop'});add(catMug,{kind:'mug'});
  add(handsaw,{kind:'pickup',item:'saw'},()=>!inventory.has('saw'));
+ add(rescueChairs.chain?.coil,{kind:'pickup',item:'chain'},()=>!!rescueChairs.chain?.coil.visible);
  add(fireAxe.object,{kind:'pickup',item:'axe'},()=>!inventory.has('axe'));
  rescueChairs.objects.forEach((o,index)=>add(o,{kind:'chair',index},()=>rescueChairs.canInteract(index,inventory.equipped)));add(chairRefuge.object,{kind:'chair',index:PLAYER_CHAIR});
  for(const [id,o]of Object.entries(rescueChairs.parts))add(o,{kind:'pickup',item:id},()=>!inventory.has(id));
