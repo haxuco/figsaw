@@ -126,9 +126,10 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  const {glass,haze,fluid,liquidTop,foam:foamMat,bubble:bubbleMat,ripple:rippleMat,waterTime}=tankMaterials;
  let leaks=null,rescue=null;
  const rigs=[],vats=[],valves=[],speechAnchors=[],dummy=new THREE.Object3D();
- // Number the staggered bay left to right from the player's saved floor view.
+ // Fan the bay across the floor and seated sightlines instead of lining the
+ // tanks up behind one another. Number it left to right from the floor view.
  // Each index owns the entire station, including its valve, hoist and chair slot.
- const stations=[{x:-2.15,z:1.45,height:1.60,winchY:2.38},{x:-2.85,z:.30,height:1.84,winchY:2.65},{x:-3.05,z:-1.05,height:2.02,winchY:2.80}];
+ const stations=[{x:-2.65,z:1.95,height:1.60,winchY:2.38},{x:-3.00,z:.55,height:1.84,winchY:2.65},{x:-3.15,z:-1.40,height:2.02,winchY:2.80}];
  for(let i=0;i<stations.length-1;i++){const a=stations[i],b=stations[i+1];rod([a.x,3.065,a.z],[b.x,3.065,b.z],.052,steel);}
  const makers=[pudding,sushi,pufferfish];
  for(let i=0;i<3;i++){

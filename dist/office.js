@@ -142,9 +142,9 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(let i=0;i<3;i++){monitor(sideDesk,[-.84+i*.83,.86,-.10],range(-.2,.2),i===0?'live':'hole',.9);keyboard(sideDesk,[-.84+i*.83,.87,.30],range(-.2,.2));}
  // Fallen hardware and open cases are actual objects, not floor decals.
  const fallen=monitor(office,[-.80,.31,-1.45],.42,'hole',.95);fallen.rotation.set(-1.38,.42,.21);onFloor(fallen);
- const tipped=monitor(office,[-2.72,.24,2.58],-.45,'cracked',.73);tipped.rotation.x=-.56;tipped.rotation.z=.24;onFloor(tipped);
+ const tipped=monitor(office,[-3.25,.24,2.95],-.45,'cracked',.73);tipped.rotation.x=-.56;tipped.rotation.z=.24;onFloor(tipped);
  const looseTower=tower(office,[-2.22,.13,-.72],.35,true);looseTower.rotation.z=Math.PI/2;onFloor(looseTower);
- for(let i=0;i<3;i++)onFloor(tower(office,[-3.32,0,-2.45+i*.31],-.18,true)).scale.setScalar(.90);
+ for(let i=0;i<3;i++)onFloor(tower(office,[-3.32,0,-2.95+i*.31],-.18,true)).scale.setScalar(.90);
 
  // Aeron-inspired chairs: curved open mesh, broad back shells, lumbar supports and cast bases.
  // Keep their wear generation independent of the established room's random layout.

@@ -29,6 +29,18 @@ function fixture(puzzle=null){
  return {room,vats,flow,rescue,inventory,update,breakTanks,prepareChairs,collectChains};
 }
 
+test('the three tank stations and suspended Figpals are separated from both the laptop floor view and the player chair',()=>{
+ const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
+ try{
+  const {vats}=fixture();vats.group.updateMatrixWorld(true);
+  for(const eye of [new THREE.Vector3(1.85221,.821615,3.1149),new THREE.Vector3(-.295,1.4,3.325)]){
+   const angles=vats.rigs.map(({vat})=>{const p=vat.getWorldPosition(new THREE.Vector3());return Math.atan2(p.x-eye.x,eye.z-p.z);});
+   for(let i=1;i<angles.length;i++)assert.ok(angles[i]-angles[i-1]>THREE.MathUtils.degToRad(12),'stations must spread left to right instead of lining up behind the front tank');
+  }
+  for(const {vat,rig,hanger}of vats.rigs){const tank=vat.getWorldPosition(new THREE.Vector3()),hoist=rig.getWorldPosition(new THREE.Vector3()),captive=hanger.getWorldPosition(new THREE.Vector3());assert.ok(Math.hypot(tank.x-hoist.x,tank.z-hoist.z)<1e-8,'the hoist moves with its tank');assert.ok(Math.hypot(tank.x-captive.x,tank.z-captive.z)<.08,'the swaying Figpal stays over its own tank');}
+ }finally{globalThis.document=previous;globalThis.Path2D=previousPath;}
+});
+
 test('real hoists retain acid, require preparation before descent, and swing both living captives onto linked chairs',()=>{
  const previous=globalThis.document,previousPath=globalThis.Path2D;globalThis.Path2D=class {};globalThis.document={createElement:()=>canvasMock(),createElementNS:()=>({addEventListener(){},removeEventListener(){},set src(value){}})};
  try{
