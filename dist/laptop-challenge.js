@@ -1,7 +1,7 @@
 export const KERNING_PASS_SCORE=90;
 export const KERNING_WORDS=Object.freeze([
  Object.freeze({word:'SACRIFICE',family:'Arial, sans-serif',weight:'700',style:'normal',fontSize:118,label:'Arial / Bold',positions:Object.freeze([82.039551,160.059604,243.749577,328.356938,414.431849,445.742385,518.412478,555.469733,639.255371])}),
- Object.freeze({word:'PRODUCT',family:'Georgia, serif',weight:'400',style:'normal',fontSize:132,label:'Georgia / Regular'}),
+ Object.freeze({word:'PRODUCT',family:'Georgia, serif',weight:'400',style:'normal',fontSize:132,label:'Georgia / Regular',positions:Object.freeze([81.762695,163.144415,256.561104,353.420566,447.927623,546.637989,636.575195])}),
  Object.freeze({word:'MANAGER',family:'Georgia, serif',weight:'400',style:'italic',fontSize:132,label:'Georgia / Italic'})
 ]);
 
