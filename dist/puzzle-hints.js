@@ -6,7 +6,8 @@ export const PUZZLE_HINTS=Object.freeze({
  laptop:'Maybe the laptop has a clue on what you should do next.',
  pm:'I wonder who the PM is?',
  skull:'Was his sacrifice for nothing?!',
- mobile:'Looks like the animals are a set, but they might be tangled'
+ mobile:'Looks like the animals are a set, but they might be tangled',
+ perspective:'maybe you should shift your perspective and sit down for a second'
 });
 
 // Choose from actual unfinished tasks, including discoveries made out of order.
@@ -21,6 +22,7 @@ export function nextPuzzleHint(progress,seen){
  if(progress.laptopComplete&&!progress.pmRevealed&&!seen.has('org-chart'))return 'pm';
  if(progress.pmRevealed&&!seen.has('skull'))return 'skull';
  if(seen.has('skull')&&!progress.mobileRepaired)return 'mobile';
+ if(progress.laptopComplete&&progress.pmRevealed&&seen.has('skull')&&progress.mobileRepaired&&!progress.chairOccupied&&!progress.keypadUnlocked&&!seen.has('keypad'))return 'perspective';
  return null;
 }
 
@@ -40,7 +42,9 @@ export function createPuzzleHints({hoists,bubbles,getProgress,chooseSpeaker=(eli
    // An unrelated pickup or inventory equip resets a pending delay, but never
    // dismisses a hint that has already appeared for an unfinished task.
    if(!shown&&(blocked||time-lastAction<PUZZLE_HINT_DELAY||bubbles.isActive(dialogueTime)))return null;
-   const eligible=hoists.speechAnchors.map((_,i)=>i).filter(i=>hoists.isHanging(i)&&hoists.canSpeak(i));
+   // The final discovery hint remains available after the living Figpals have
+   // boarded their chairs; ordinary pleas still come only from hanging Figpals.
+   const eligible=hoists.speechAnchors.map((_,i)=>i).filter(i=>stage==='perspective'&&hoists.canHint?hoists.canHint(i):hoists.isHanging(i)&&hoists.canSpeak(i));
    if(!eligible.includes(speaker)){
     speaker=chooseSpeaker(eligible,lastSpeaker)??null;
     if(speaker!==null)lastSpeaker=speaker;

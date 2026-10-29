@@ -351,9 +351,10 @@ export function createFigpalVats({floorSupport,puzzle}={}){
  function setEnvironment(map){for(const mat of[steel,darkMetal,fastener,chainMetal,glass,fluid,liquidTop,bubbleMat]){mat.envMap=map;mat.needsUpdate=true;}}
  function canSpeak(index){const rig=rigs[index];return !!rig&&!rig.rescued&&!rig.transformation.transformed;}
  function isHanging(index){const rig=rigs[index];return canSpeak(index)&&!rig.lowered&&Math.abs(rig.height-rig.homeHeight)<.025;}
+ function canHint(index){const rig=rigs[index];return !!rig&&!rig.transformation.transformed&&(rig.rescued||isHanging(index));}
  return {group,update,capture,restore,raise,bindRescue(value,acid){rescue=value;leaks=acid;},get rigs(){return rigs;},isSettled:index=>!!rigs[index]&&(rigs[index].rescued||(!rigs[index].escaping&&rigs[index].lowered&&Math.abs(rigs[index].height-rigs[index].targetHeight)<.01)),tanks:vats.map(v=>v.breakage),valves,toggleHoist,lower,getFocusView,count:rigs.length,get movingIndex(){return movingIndex();},
   isLowered:index=>rigs[index]?.lowered??false,
   isRescued:index=>rigs[index]?.rescued??false,
   isSubmerged:index=>!!rigs[index]?.lowered&&rigs[index].height<=.655&&rigs[index].transformation.transformed,
-  safeDescent:index=>!!rigs[index]&&(rigs[index].rescuePlanned||rigs[index].rescued||leaks?.isDrained(index)),canSpeak,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[puzzle?.pmIndex??2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[puzzle?.pmIndex??2].transformation.skeleton;}};
+  safeDescent:index=>!!rigs[index]&&(rigs[index].rescuePlanned||rigs[index].rescued||leaks?.isDrained(index)),canSpeak,canHint,isHanging,reset,speechAnchors,setEnvironment,get fishClueReady(){return rigs[puzzle?.pmIndex??2].transformation.cutHeight>.155;},get fishInspectionTarget(){return rigs[puzzle?.pmIndex??2].transformation.skeleton;}};
 }

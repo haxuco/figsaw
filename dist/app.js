@@ -522,7 +522,7 @@ const chainMenu=createRestraintMenu(()=>{
 const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!inventory.has('key'),canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
-const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak);
+const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak,figpalHoists.canHint);
 const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,figpalHoists.safeDescent);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
 const figpalHints=createFigpalHints({hoists:figpalHoists,bubbles:figpalBubbles,acidLeaks,rescue:rescueChairs,puzzle:escapePuzzle});
@@ -540,7 +540,8 @@ const puzzleHints=createPuzzleHints({hoists:figpalHoists,bubbles:figpalBubbles,c
  locked:restraint.locked,keyCollected:ketchupKey.hasKey||inventory.has('key'),
  laptopPowered:chargingKit.canUse,chargerDamaged:chargingKit.phase==='damaged',laptopComplete:laptopProgram.completed,
  pmRevealed:figpalHoists.fishClueReady,mobileRepaired:mobilePuzzle.phase==='repaired',
- revision:[inventory.revision,ketchupKey.phase,chargingKit.phase,chargingKit.drawerOpen,laptop.isOpen,mobilePuzzle.phase,mobilePuzzle.hung].join('|')
+ chairOccupied:chairSeat.occupied,keypadUnlocked:doorKeypadUI.unlocked,
+ revision:[inventory.revision,ketchupKey.phase,chargingKit.phase,chargingKit.drawerOpen,laptop.isOpen,mobilePuzzle.phase,mobilePuzzle.hung,chairSeat.occupied].join('|')
 })});
 // Diffuse mobile materials do not sample a reflection environment. Avoid the
 // panorama conversion, render targets and PMREM shader compilation on phones.
@@ -780,7 +781,7 @@ function hangMobile(){
 }
 function syncSupplies(){mobileSupplies.sync({has:id=>inventory.has(id),phase:mobilePuzzle.phase});}
 
-function useDoorKeypad(){if(sawBusy())return;prepareSawAction();doorKeypadUI.show();}
+function useDoorKeypad(){if(sawBusy())return;prepareSawAction();doorKeypadUI.show();if(doorKeypadUI.active)puzzleHints.inspect('keypad',performance.now()/1000);}
 function putAxeBack(){axeInteraction.reset();fireAxe.object.visible=!inventory.has('axe');if(inventory.equipped==='axe')inventory.putAway();cancelAxeSelection.hidden=true;canvas.classList.remove('over-axe','over-tank');}
 function takeFireAxe(){
  if(sawBusy())return;
