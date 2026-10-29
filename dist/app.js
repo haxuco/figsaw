@@ -646,6 +646,7 @@ function leaveInspection(){
 inspectionBack.addEventListener('click',leaveInspection);
 function inventoryModelFor(id){
  if(id==='mobile')return {object:mobileInspection.inventoryModel(),rotation:[.15,-.35,-.08]};
+ if(id==='mobileFox')return {object:fallenMobile.pieces[id],rotation:[.35,Math.PI-.45,-.08]};
  if(fallenMobile.pieces[id])return {object:fallenMobile.pieces[id],rotation:[.45,-.3,-.15]};
  const supply=mobileSupplies.objects[id];
  if(supply)return {object:supply,rotation:id==='mobileKit'?[.7,-.35,-.2]:[.12,-.3,-.55]};

@@ -17,6 +17,7 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
  const fabricMap=texture(canvas);
  function plush(color,map=fabricMap){return new THREE.MeshPhysicalMaterial({color,map,bumpMap:fabricMap,bumpScale:.0023,roughness:1,sheen:.65,sheenColor:0xbdb9a8,sheenRoughness:.95});}
  const pink=plush(0xd2989e),pinkPale=plush(0xe1b5ac),blue=plush(0x779da9),blueDark=plush(0x506c80),ochre=plush(0xd7a455),cream=plush(0xe6d6a9),brown=plush(0x34302b);
+ const foxOrange=plush(0xdc712e),foxIvory=plush(0xf4e6cc),foxBoots=plush(0x483126);
  const thread=new THREE.MeshStandardMaterial({color:0x60574b,roughness:1});
  const cord=new THREE.MeshStandardMaterial({color:0xa09b80,roughness:1});
  const black=new THREE.MeshStandardMaterial({color:0x191b19,roughness:.48});
@@ -49,20 +50,21 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
  }
  function makeAnimal(kind){
   const g=new THREE.Group();g.name=`${kind} mobile animal`;g.userData.stuffedAnimal=kind;
-  const mat=kind==='Pig'?pink:kind==='Elephant'?blue:kind==='Tiger'?tigerMat:ochre;
+  const mat=kind==='Pig'?pink:kind==='Elephant'?blue:kind==='Tiger'?tigerMat:foxOrange;
   // Rounded plush haunches retain their tails; underside embroidery supplies the clue.
   const body=ball([0,.065,-.025],[.112,.091,.154],mat,g);body.name='Soft body resting on the floor';pile([0,.065,-.025],[.112,.091,.154],mat,g,quality.mobile?90:360);
   for(const side of[-1,1])ball([side*.047,.073,.080],[.077,.090,.090],mat,g);
 
   for(const side of[-1,1])for(const z of[-.106,.100]){
    const leg=ball([side*.110,.002,z],[.043,.043,.062],mat,g);leg.rotation.z=side*.28;
-   ball([side*.134,-.007,z+.015],[.021,.030,.041],kind==='Pig'?brown:kind==='Elephant'?blueDark:pinkPale,g);
+   ball([side*.134,-.007,z+.015],kind==='Fox'?[.030,.034,.046]:[.021,.030,.041],kind==='Pig'?brown:kind==='Elephant'?blueDark:kind==='Fox'?foxBoots:pinkPale,g);
    if(kind==='Tiger'||kind==='Fox')for(let j=0;j<3;j++)ball([side*.151,-.012+(j-1)*.014,z+.034],[.004,.004,.006],brown,g);
   }
   // Articulate the whole face together when the torso hangs rear-down.
   const headPose=new THREE.Group();headPose.name=`${kind} head pose`;g.add(headPose);
-  ball([0,.102,-.170],kind==='Elephant'?[.105,.101,.101]:[.098,.091,.090],mat,headPose);
-  pile([0,.102,-.170],kind==='Elephant'?[.105,.101,.101]:[.098,.091,.090],mat,headPose,quality.mobile?75:300);
+  const headSize=kind==='Elephant'?[.105,.101,.101]:kind==='Fox'?[.094,.083,.086]:[.098,.091,.090];
+  ball([0,.102,-.170],headSize,mat,headPose);
+  pile([0,.102,-.170],headSize,mat,headPose,quality.mobile?75:300);
   if(kind==='Pig'){
    ball([0,.080,-.244],[.049,.032,.024],pinkPale,headPose);for(const side of[-1,1])ball([side*.019,.082,-.267],[.006,.009,.003],brown,headPose);
    for(const side of[-1,1]){const e=ear([side*.061,.153,-.177],[.072,.083,.09],pink,headPose);e.rotation.z=-side*.35;}
@@ -73,22 +75,42 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
    line([[0,.099,-.240],[0,.055,-.273],[0,-.006,-.268],[.018,-.031,-.304],[.032,-.006,-.317]],.022,blue,headPose);
    eyes(headPose,-.248,.127,.043);
    line([[0,.122,.150],[.025,.115,.185],[.042,.080,.199]],.006,blueDark,g);ball([.044,.077,.200],[.013,.018,.012],blueDark,g);
+  }else if(kind==='Fox'){
+   // Tall dark-tipped ears, a tapered ivory muzzle and cheek ruffs distinguish
+   // the fox from the round-faced tiger while keeping the sewn plush finish.
+   for(const side of[-1,1]){
+    const outer=ear([side*.061,.159,-.173],[.085,.119,.13],foxBoots,headPose);outer.rotation.z=-side*.16;outer.name='Fox pointed ear';
+    const orange=ear([side*.061,.163,-.183],[.069,.098,.09],foxOrange,headPose);orange.rotation.z=-side*.16;
+    const inner=ear([side*.061,.170,-.194],[.041,.067,.045],foxIvory,headPose);inner.rotation.z=-side*.16;
+    const ruff=ear([side*.038,.064,-.234],[.067,.074,.15],foxIvory,headPose);ruff.rotation.z=-side*1.04;ruff.name='Fox ivory cheek ruff';
+   }
+   const profile=[[0,-.012],[.044,0],[.043,.018],[.031,.050],[.017,.078],[0,.088]];
+   const muzzleGeometry=new THREE.LatheGeometry(profile.map(p=>new THREE.Vector2(...p)),quality.mobile?16:28);muzzleGeometry.rotateX(-Math.PI/2);
+   const muzzle=mesh(muzzleGeometry,foxIvory,headPose);muzzle.position.set(0,.078,-.215);muzzle.scale.y=.77;muzzle.name='Fox tapered muzzle';
+   ball([0,.084,-.302],[.014,.010,.011],brown,headPose).name='Fox dark nose';
+   eyes(headPose,-.245,.128,.044);
+   line([[0,.076,-.307],[0,.062,-.294],[-.016,.059,-.281]],.0017,brown,headPose);
+   line([[0,.062,-.294],[.016,.059,-.281]],.0017,brown,headPose);
+   // One continuous curved brush, with its pale tip part of the same mesh.
+   const path=new THREE.CatmullRomCurve3([[0,.122,.135],[.094,.145,.204],[.183,.153,.174],[.225,.155,.083],[.220,.162,.006]].map(p=>new THREE.Vector3(...p)));
+   const segments=quality.mobile?20:32,sides=quality.mobile?10:14,geometry=new THREE.TubeGeometry(path,segments,1,sides,false),positions=geometry.attributes.position,center=new THREE.Vector3(),vertex=new THREE.Vector3();
+   for(let i=0;i<=segments;i++){
+    const t=i/segments,r=.012*(1-t)+.060*Math.pow(Math.sin(Math.PI*t),.75);path.getPointAt(t,center);
+    for(let j=0;j<=sides;j++){const index=i*(sides+1)+j;vertex.fromBufferAttribute(positions,index).sub(center).multiplyScalar(r).add(center);positions.setXYZ(index,...vertex);}
+   }
+   geometry.computeVertexNormals();const tipStart=Math.floor(segments*.66)*sides*6;
+   geometry.clearGroups();geometry.addGroup(0,tipStart,0);geometry.addGroup(tipStart,geometry.index.count-tipStart,1);
+   mesh(geometry,[foxOrange,foxIvory],g).name='Fox bushy white-tipped tail';
   }else{
    for(const side of[-1,1]){
-    if(kind==='Tiger'){ball([side*.073,.175,-.168],[.034,.036,.022],mat,headPose);ball([side*.073,.177,-.188],[.021,.023,.007],pinkPale,headPose);}
-    else{const e=ear([side*.065,.165,-.172],[.076,.083,.10],mat,headPose);e.rotation.z=-side*.26;ear([side*.065,.173,-.184],[.043,.053,.055],cream,headPose);}
+    ball([side*.073,.175,-.168],[.034,.036,.022],mat,headPose);ball([side*.073,.177,-.188],[.021,.023,.007],pinkPale,headPose);
    }
    for(const side of[-1,1])ball([side*.025,.076,-.235],[.039,.032,.026],cream,headPose);
    ball([0,.091,-.260],[.015,.011,.011],brown,headPose);eyes(headPose,-.241,.124,.044);
-   if(kind==='Tiger'){
-    line([[0,.134,.150],[.035,.162,.193],[.067,.155,.201],[.075,.129,.182]],.012,tigerMat,g);
-    ball([.075,.129,.182],[.014,.015,.016],brown,g);
-   }else{
-    const tail=ball([.145,.145,.175],[.058,.061,.131],ochre,g);tail.rotation.x=-.55;tail.rotation.z=-.62;
-    const tip=ball([.202,.204,.251],[.045,.046,.061],cream,g);tip.rotation.x=-.45;
-   }
+   line([[0,.134,.150],[.035,.162,.193],[.067,.155,.201],[.075,.129,.182]],.012,tigerMat,g);
+   ball([.075,.129,.182],[.014,.015,.016],brown,g);
   }
-  if(kind!=='Elephant')line([[-.020,.060,-.255],[0,.051,-.259],[.020,.060,-.255]],.0017,brown,headPose);
+  if(kind!=='Elephant'&&kind!=='Fox')line([[-.020,.060,-.255],[0,.051,-.259],[.020,.060,-.255]],.0017,brown,headPose);
   headPose.position.set(0,.102,-.170);
   for(const part of headPose.children)part.position.sub(headPose.position);
   // Fabric seam on each flank and a small suspension tab on the shoulder.

@@ -29,7 +29,9 @@ export function createEquippedModel({camera,getModel}){
   if(current!==model){if(current)current.visible=false;current=model;model.visible=true;}
   camera.updateWorldMatrix(true,false);
   const halfHeight=.70*Math.tan(THREE.MathUtils.degToRad(camera.fov/2)),halfWidth=halfHeight*camera.aspect;
-  point.set(halfWidth*.55,-halfHeight*.56,-.70).applyMatrix4(camera.matrixWorld);group.position.copy(point);group.quaternion.copy(camera.quaternion);
+  // Keep the key on the opposite side from the right wrist's unlock target.
+  const key=id==='key';
+  point.set(halfWidth*(key?-.48:.55),-halfHeight*(key?.10:.56),-.70).applyMatrix4(camera.matrixWorld);group.position.copy(point);group.quaternion.copy(camera.quaternion);
   group.scale.setScalar(.17*halfHeight/.42*Math.min(1,camera.aspect/1.1)*(sizes[id]??1));
   group.visible=true;group.updateWorldMatrix(false,true);
  }

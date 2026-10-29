@@ -37,7 +37,7 @@ test('ranking uses the entire twenty-minute budget instead of rewarding a reset 
 test('names accept normal international names and reject profanity, common disguises and markup',()=>{
  for(const name of ['Maya Chen','O’Connor','Anne-Marie','José','Zoë','李 明','Ada_42','Scunthorpe','Hancock','Dickens','Cassandra','Shital'])assert.equal(validateDisplayName(name).ok,true,name);
  assert.deepEqual(validateDisplayName('  Maya   Chen '),{ok:true,name:'Maya Chen'});
- for(const name of ['fuck','FUCKYOU','f.u.c.k','F U C K','fuuuck','fück','ｆｕｃｋ','f\u200buck','sh1t','S H I T','b1tch','biiitch','bastard123','123bastard','c.u.n.t','asshole','<script>alert(1)</script>','a','a'.repeat(25),'...'])assert.equal(validateDisplayName(name).ok,false,name);
+ for(const name of ['fuck','FUCKYOU','f.u.c.k','f.u.c.k.','F U C K','fuuuck','fück','ｆｕｃｋ','f\u200buck','sh1t','S H I T','b1tch','biiitch','bastard123','123bastard','c.u.n.t','asshole','<script>alert(1)</script>','a','a'.repeat(25),'...'])assert.equal(validateDisplayName(name).ok,false,name);
 });
 
 test('the board keeps ten names, descending time, and stable earlier-first ties',async()=>{

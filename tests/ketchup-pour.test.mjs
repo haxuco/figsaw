@@ -3,6 +3,8 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createKetchupKey} from '../dist/ketchup-key.js';
 import {KETCHUP_MOUTH_Y} from '../dist/ketchup-closure.js';
+import {createPlayerRestraint} from '../dist/player-restraint.js';
+import {createEquippedModel} from '../dist/equipped-model.js';
 
 function fixture(){
  const scene=new THREE.Scene(),bottle=new THREE.Group(),body=new THREE.Group();
@@ -73,4 +75,25 @@ test('a hidden key cannot be collected, even between updates at the reveal bound
  assert.equal(key.key.visible,false);assert.equal(key.collect(12.49),false);
  assert.equal(key.collect(12.5),true,'pickup checks the current clock, not the previous render');
  key.reset();assert.equal(key.hasKey,false);assert.equal(key.collect(20),false);
+});
+
+test('the equipped key stays clear of the entire cuff and never catches clicks, including on narrow phones',()=>{
+ const {key}=fixture();
+ function screenBounds(root,camera){
+  const box=new THREE.Box2(),point=new THREE.Vector3();root.updateWorldMatrix(true,true);
+  root.traverse(object=>{if(!object.isMesh)return;const p=object.geometry.attributes.position;
+   for(let i=0;i<p.count;i++){point.fromBufferAttribute(p,i).applyMatrix4(object.matrixWorld).project(camera);box.expandByPoint(new THREE.Vector2(point.x,point.y));}
+  });return box;
+ }
+ for(const aspect of [.40,.48,.75,1,1.78,2.4])for(const fov of [48.36,62]){
+  const camera=new THREE.PerspectiveCamera(fov,aspect,.06,35),restraint=createPlayerRestraint(camera),equipped=createEquippedModel({camera,getModel:()=>({object:key.key,rotation:[1.15,.15,-.35]})});
+  camera.position.set(1.85221,.821615,3.1149);camera.lookAt(1.155084,.748275,2.401713);camera.updateMatrixWorld();restraint.requestReach(0);
+  for(const time of [.3,.7,1,2,15]){
+   restraint.update(time,false,true,null,0,true);equipped.update('key',time);
+   const keyBounds=screenBounds(equipped.group,camera),cuffBounds=screenBounds(restraint.group.getObjectByName('Close-fitting oval wrist cuff'),camera);
+   assert.ok(!cuffBounds.clone().expandByScalar(.05).intersectsBox(keyBounds),`key overlaps the unlock target at aspect ${aspect}, FOV ${fov}, time ${time}: key ${keyBounds.min.toArray()} to ${keyBounds.max.toArray()}, cuff ${cuffBounds.min.toArray()} to ${cuffBounds.max.toArray()}`);
+   assert.ok(keyBounds.min.x>-1&&keyBounds.max.x<1&&keyBounds.min.y>-.7&&keyBounds.max.y<1,'key stays on screen above the inventory HUD');
+   const ray=new THREE.Raycaster();ray.setFromCamera(keyBounds.getCenter(new THREE.Vector2()),camera);assert.equal(ray.intersectObject(equipped.group,true).length,0);
+  }
+ }
 });
