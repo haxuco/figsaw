@@ -1,6 +1,6 @@
 export const REPAIRS=Object.freeze([
- {label:'missing caster',steps:[{part:'caster',tool:'ratchet'}]},
- {label:'torn seat and broken base',steps:[{part:'seat',tool:'ratchet'},{part:'base',tool:'ratchet'}]}
+ {label:'missing caster',steps:[{part:'caster'}]},
+ {label:'torn seat and broken base',steps:[{part:'seat'},{part:'base'}]}
 ]);
 export const PLAYER_CHAIR=REPAIRS.length;
 export function createRescueState(puzzle={pmIndex:2}){
@@ -10,12 +10,13 @@ export function createRescueState(puzzle={pmIndex:2}){
  function use(index,item,inventory){
   const c=chairs[index];if(!c||pulling||safe)return 'That chair cannot be repaired now.';
   if(c.repaired)return 'Chair already repaired.';
-  const r=REPAIRS[index].steps[c.step];
-  if(!c.installed.includes(r.part)){if(item!==r.part)return 'That item does not fit this chair.';if(!inventory.has(item))return 'Item not in inventory.';inventory.remove(item);c.installed.push(item);return `${r.part[0].toUpperCase()+r.part.slice(1)} fitted.`;}
-  if(item===r.part)return 'Part already fitted.';
-  if(item!==r.tool||!inventory.has(item))return 'That item cannot secure this part.';
-  c.step++;if(c.step<REPAIRS[index].steps.length)return 'Part secured.';
-  c.repaired=true;return 'Chair repaired.';
+  const steps=REPAIRS[index].steps;
+  if(!steps.some(step=>step.part===item))return 'That item does not fit this chair.';
+  if(c.installed.includes(item))return 'Part already fitted.';
+  if(!inventory.has(item))return 'Item not in inventory.';
+  inventory.remove(item);c.installed.push(item);c.step=c.installed.length;
+  c.repaired=steps.every(step=>c.installed.includes(step.part));
+  return c.repaired?'Chair repaired.':`${item[0].toUpperCase()+item.slice(1)} fitted.`;
  }
  const isParked=index=>{const c=chairs[index];return !!c?.repaired&&c.tank!==null&&c.tank!==puzzle.pmIndex;};
  function canPlace(index,tank){const c=chairs[index];return !!c?.repaired&&!isParked(index)&&c.passenger===null&&!chairs.some(c=>c.reservation!==null)&&!pulling&&!safe&&Number.isInteger(tank)&&tank>=0&&tank<3&&!chairs.some((o,i)=>i!==index&&o.tank===tank);}

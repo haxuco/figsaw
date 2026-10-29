@@ -1,4 +1,3 @@
-import {createRepairTools} from './repair-tools.js';
 import * as THREE from './vendor/three.module.js';
 
 export function createScissors(){
@@ -15,7 +14,7 @@ export function createScissors(){
  return {group,setOpen(value){blades.forEach((b,i)=>b.rotation.z=(i?1:-1)*(.06+value*.34));}};
 }
 export function createMobileSupplies(drawer){
- const objects=createRepairTools(drawer),group=new THREE.Group();group.name='Scissors and repair string in Supplies';drawer.add(group);
+ const objects={},group=new THREE.Group();group.name='Scissors and repair string in Supplies';drawer.add(group);
  const kit=new THREE.Group();kit.name='Scissors and cotton string repair kit';kit.userData.supplyAction='mobileKit';group.add(kit);objects.mobileKit=kit;
  const scissors=createScissors();scissors.group.rotation.set(-Math.PI/2,0,0);scissors.group.position.set(.215,-.129,.10);scissors.group.scale.setScalar(.80);kit.add(scissors.group);
  const string=new THREE.Group();string.name='Spool of cotton repair string';string.position.set(.215,-.100,-.07);kit.add(string);
@@ -26,7 +25,7 @@ export function createMobileSupplies(drawer){
  for(let i=0;i<13;i++){const ring=new THREE.Mesh(new THREE.TorusGeometry(.031,.0013,4,20),cotton);ring.rotation.x=Math.PI/2;ring.position.y=-.022+i*.0035;string.add(ring);}
  const strand=new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3([new THREE.Vector3(.03,-.023,0),new THREE.Vector3(.065,-.025,.02),new THREE.Vector3(.075,-.025,.04)]),12,.0018,4,false),cotton);string.add(strand);
  for(const [item,object]of Object.entries(objects)){
-  const hit=new THREE.Mesh(new THREE.BoxGeometry(item==='mobileKit'?.17:.08,item==='mobileKit'?.16:.08,item==='mobileKit'?.31:.045),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));if(item==='mobileKit')hit.position.set(.215,-.10,.04);object.add(hit);
+  const hit=new THREE.Mesh(new THREE.BoxGeometry(.17,.16,.31),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));hit.position.set(.215,-.10,.04);object.add(hit);
   object.traverse(o=>{if(o.isMesh){o.castShadow=true;o.receiveShadow=true;}});hit.castShadow=false;
  }
  return {group,objects,sync(state){for(const [key,o]of Object.entries(objects))o.visible=!state.has(key)&&!(key==='mobileKit'&&state.phase==='repaired');}};

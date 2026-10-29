@@ -11,7 +11,7 @@ export function equipmentMatchesTarget(item,target,context){
   if(target.index===PLAYER_CHAIR||!chair||chair.repaired)return false;
   const steps=REPAIRS[target.index].steps;
   if(['caster','seat','base'].includes(item))return steps.some(step=>step.part===item)&&!chair.installed.includes(item);
-  return item==='ratchet'&&chair.installed.includes(steps[chair.step]?.part);
+  return false;
  }
  if(item==='key')return target.kind==='shackle'&&locked&&context.hasKey;
  if(item==='mobile')return target.kind==='mobile-mount'&&!context.mobileHung&&mobilePhase==='tangled';

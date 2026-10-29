@@ -2,8 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {cloneInventoryModel,frameInventoryModel} from '../dist/inventory-models.js';
-import {createScissors} from '../dist/mobile-supplies.js';
-import {createRepairTools} from '../dist/repair-tools.js';
+import {createScissors,createMobileSupplies} from '../dist/mobile-supplies.js';
 
 test('inventory previews reveal collected models without touching world objects or picking volumes',()=>{
  const source=createScissors().group;source.visible=false;source.position.set(7,3,-5);source.rotation.set(1,.5,.3);source.scale.setScalar(.8);
@@ -19,8 +18,8 @@ test('inventory previews reveal collected models without touching world objects 
  const size=bounds.getSize(new THREE.Vector3());assert.ok(size.x<=2.23&&size.y<=1.651);
 });
 
-test('batched repair tool models preserve their geometry and fit the inventory card',()=>{
- const drawer=new THREE.Group(),tools=createRepairTools(drawer);assert.deepEqual(Object.keys(tools),['ratchet']);assert.equal(drawer.children.length,1);
+test('Supplies contains only the mobile repair kit, whose model fits the inventory card',()=>{
+ const drawer=new THREE.Group(),{objects:tools}=createMobileSupplies(drawer);assert.deepEqual(Object.keys(tools),['mobileKit']);assert.equal(drawer.children.length,1);
  for(const [id,source]of Object.entries(tools)){
   source.visible=false;
   const preview=frameInventoryModel(cloneInventoryModel(source),[.12,-.3,-.55]);

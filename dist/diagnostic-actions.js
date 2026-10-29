@@ -35,7 +35,7 @@ export function createDiagnosticActions({time,hazardTime,inventory,mobilePuzzle,
   }),
   action('challenge','Complete laptop challenge',['program'],()=>{if(laptopProgram.completed)return false;laptopProgram.complete();}),
   action('repair-chairs','Repair both rescue chairs',['inventory','rescueChairs','hoists'],()=>{
-   inventory.add('ratchet');for(const [index,repair]of REPAIRS.entries())for(const step of repair.steps){const chair=rescueChairs.state.chairs[index];if(chair.repaired||chair.step>repair.steps.indexOf(step))continue;if(!chair.installed.includes(step.part)){if(!inventory.has(step.part))rescueChairs.collectPart(step.part,inventory);inventory.add(step.part);rescueChairs.parts[step.part].visible=false;rescueChairs.use(index,step.part,inventory);}rescueChairs.use(index,'ratchet',inventory);}rescueChairs.update(time(),true);
+   for(const [index,repair]of REPAIRS.entries())for(const {part}of repair.steps){const chair=rescueChairs.state.chairs[index];if(chair.repaired||chair.installed.includes(part))continue;if(!inventory.has(part))rescueChairs.collectPart(part,inventory);inventory.add(part);rescueChairs.parts[part].visible=false;rescueChairs.use(index,part,inventory);}rescueChairs.update(time(),true);
   }),
   action('valve','Open tank valve',environment,index=>acidLeaks.open(index,hazardTime()),true),
   action('break-tank','Break tank with axe',environment,index=>{const tank=hoists.tanks[index];if(!tank||!tank.break(time()))return false;return acidLeaks.breach(index,hazardTime(),tank.outlet);},true),

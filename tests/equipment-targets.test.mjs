@@ -4,15 +4,14 @@ import {equipmentMatchesTarget as matches} from '../dist/equipment-targets.js';
 import {createRescueState,REPAIRS,PLAYER_CHAIR} from '../dist/rescue-state.js';
 import {createInventory} from '../dist/inventory.js';
 
-test('chair parts point to their owner; the ratchet only matches a fitted, unsecured repair',()=>{
- const state=createRescueState(),inventory=createInventory(),ctx={locked:false,chairs:state.chairs};for(const id of['caster','seat','base','ratchet'])inventory.add(id);
+test('chair parts point to their owner and installed parts stop matching immediately',()=>{
+ const state=createRescueState(),inventory=createInventory(),ctx={locked:false,chairs:state.chairs};for(const id of['caster','seat','base'])inventory.add(id);
  assert.equal(matches('caster',{kind:'chair',index:0},ctx),true);assert.equal(matches('caster',{kind:'chair',index:1},ctx),false);
  for(const id of['seat','base']){assert.equal(matches(id,{kind:'chair',index:1},ctx),true);assert.equal(matches(id,{kind:'chair',index:0},ctx),false);}
- assert.equal(matches('ratchet',{kind:'chair',index:0},ctx),false);state.use(0,'caster',inventory);
- assert.equal(matches('caster',{kind:'chair',index:0},ctx),false);assert.equal(matches('ratchet',{kind:'chair',index:0},ctx),true);
- state.use(0,'ratchet',inventory);assert.equal(matches('ratchet',{kind:'chair',index:0},ctx),false);
- state.use(1,'seat',inventory);assert.equal(matches('ratchet',{kind:'chair',index:1},ctx),true);state.use(1,'ratchet',inventory);assert.equal(matches('ratchet',{kind:'chair',index:1},ctx),false);
- assert.equal(matches('base',{kind:'chair',index:1},ctx),true);assert.equal(matches('base',{kind:'chair',index:PLAYER_CHAIR},ctx),false);
+ state.use(0,'caster',inventory);assert.equal(state.chairs[0].repaired,true);assert.equal(matches('caster',{kind:'chair',index:0},ctx),false);
+ state.use(1,'base',inventory);assert.equal(matches('base',{kind:'chair',index:1},ctx),false);assert.equal(matches('seat',{kind:'chair',index:1},ctx),true);
+ state.use(1,'seat',inventory);assert.equal(state.chairs[1].repaired,true);assert.equal(matches('seat',{kind:'chair',index:1},ctx),false);
+ assert.equal(matches('base',{kind:'chair',index:PLAYER_CHAIR},ctx),false);
 });
 test('supplies, key, charger, saw and axe follow their actual interaction stages',()=>{
  const plush={},ctx={locked:false,hasKey:true,mobilePhase:'tangled',chargingPhase:'carrying',brokenTanks:[false,true,false],selectingAnimal:true,canCut:o=>o===plush};
@@ -22,8 +21,8 @@ test('supplies, key, charger, saw and axe follow their actual interaction stages
  ctx.locked=true;assert.equal(matches('key',{kind:'shackle'},ctx),true);assert.equal(matches('mobileKit',{kind:'mobile'},ctx),false);assert.equal(matches('axe',{kind:'tank',index:0},ctx),false);assert.equal(matches('saw',{kind:'plush',object:plush},ctx),false);assert.equal(matches('saw',{kind:'shackle'},ctx),false);ctx.hasKey=false;assert.equal(matches('key',{kind:'shackle'},ctx),false);assert.equal(matches('saw',{kind:'shackle'},ctx),true);
 });
 test('chain highlights share the real connection rules and exclude self-links, full hooks, cycles and used chains',()=>{
- const state=createRescueState(),inventory=createInventory();inventory.add('ratchet');
- for(let i=0;i<2;i++)for(const step of REPAIRS[i].steps){inventory.add(step.part);state.use(i,step.part,inventory);state.use(i,'ratchet',inventory);}
+ const state=createRescueState(),inventory=createInventory();
+ for(let i=0;i<2;i++)for(const step of REPAIRS[i].steps){inventory.add(step.part);state.use(i,step.part,inventory);}
  for(const chain of['chain0','chain1','chain2']){
   const ctx={locked:false,canHook:i=>state.canStartLink(i,chain)};assert.equal(matches(chain,{kind:'chair',index:0},ctx),true);assert.equal(matches(chain,{kind:'chair',index:PLAYER_CHAIR},ctx),true);
  }

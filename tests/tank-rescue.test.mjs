@@ -19,8 +19,8 @@ function fixture(puzzle=null){
  function update(dt=.1,reduced=false){time+=dt;rescue.update(time,reduced);vats.update(time,reduced);room.updateMatrixWorld(true);}
  function breakTanks(){for(let i=0;i<2;i++){vats.tanks[i].break(time);flow.breach(i,{x:0,y:.39,z:0},time);}flow.update(time+20,.1,{x:20,z:20});update(20);}
  function prepareChairs(){
-  for(const id of ['caster','seat','base','ratchet'])inventory.add(id);
-  for(const [i,part]of [[0,'caster'],[1,'seat'],[1,'base']]){rescue.use(i,part,inventory);rescue.use(i,'ratchet',inventory);}
+  for(const id of ['caster','seat','base'])inventory.add(id);
+  for(const [i,part]of [[0,'caster'],[1,'seat'],[1,'base']]){rescue.use(i,part,inventory);}
   update(2);for(let i=0;i<2;i++){assert.equal(rescue.select(i),true);assert.equal(rescue.place(i),true);update(8);}
   for(const [a,b,id]of [[2,0,'chain0'],[0,1,'chain1']]){rescue.hook(a,id,inventory);rescue.hook(b,id,inventory);}
   assert.equal(rescue.state.arranged,true);

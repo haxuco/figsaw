@@ -4,7 +4,7 @@ import {cloneInventoryModel,frameInventoryModel} from './inventory-models.js';
 export function createEquippedModel({camera,getModel}){
  const group=new THREE.Group();group.name='Camera-relative equipped item';group.userData.ignoreAcid=group.userData.ignoreFloorContact=true;group.visible=false;
  const cache=new Map(),point=new THREE.Vector3();let current=null;
- const sizes={key:.45,mobileKit:.72,mobile:.8,ratchet:.85,caster:.65,charger:.85};
+ const sizes={key:.45,mobileKit:.72,mobile:.8,caster:.65,charger:.85};
  function load(id){
   if(cache.has(id))return cache.get(id);
   const definition=getModel(id);if(!definition?.object)return null;

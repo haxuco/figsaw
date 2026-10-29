@@ -20,22 +20,22 @@ function gather(state,bag=createInventory()){for(const id of Object.keys(MOBILE_
 function hang(state){const bag=gather(state);assert.equal(state.hung,false);bag.equip('mobile');assert.equal(state.hang(bag),true);return bag;}
 function collect(state){assert.equal(state.collect('mobileKit',{drawerReady:true}),true);}
 test('four animals and one attached frame combine in inventory and require equipping before hanging',()=>{
- const s=createMobilePuzzleState(),bag=createInventory(),ids=Object.keys(MOBILE_PIECES);bag.add('ratchet');
+ const s=createMobilePuzzleState(),bag=createInventory(),ids=Object.keys(MOBILE_PIECES);bag.add('axe');
  assert.equal(s.inspect(),false);assert.equal(s.hung,false);assert.equal(s.collectPiece(ids[0],bag,{locked:true}),false);
  for(const id of ids.slice(0,-1)){assert.equal(s.collectPiece(id,bag),true);assert.equal(bag.has(id),true);assert.equal(s.collectPiece(id,bag),false);assert.equal(bag.has('mobile'),false);}
- bag.equip(ids[0]);assert.equal(s.collectPiece(ids.at(-1),bag),true);assert.deepEqual(bag.items,['ratchet','mobile']);assert.equal(bag.equipped,null);assert.equal(s.collectedAll,true);
- assert.equal(s.hung,false);assert.equal(s.inspect(),false);assert.equal(s.hang(bag),false);bag.equip('ratchet');assert.equal(s.hang(bag),false);bag.equip('mobile');assert.equal(s.hang(bag,{locked:true}),false);assert.equal(bag.has('mobile'),true);assert.equal(s.hang(bag),true);assert.equal(s.hang(bag),false);assert.equal(bag.has('mobile'),false);assert.equal(bag.equipped,null);assert.equal(s.collectPiece(ids[0],bag),false);
+ bag.equip(ids[0]);assert.equal(s.collectPiece(ids.at(-1),bag),true);assert.deepEqual(bag.items,['axe','mobile']);assert.equal(bag.equipped,null);assert.equal(s.collectedAll,true);
+ assert.equal(s.hung,false);assert.equal(s.inspect(),false);assert.equal(s.hang(bag),false);bag.equip('axe');assert.equal(s.hang(bag),false);bag.equip('mobile');assert.equal(s.hang(bag,{locked:true}),false);assert.equal(bag.has('mobile'),true);assert.equal(s.hang(bag),true);assert.equal(s.hang(bag),false);assert.equal(bag.has('mobile'),false);assert.equal(bag.equipped,null);assert.equal(s.collectPiece(ids[0],bag),false);
  assert.equal(s.inspect(),true);const saved=s.capture();s.reset();assert.equal(s.phase,'scattered');assert.equal(s.hung,false);s.restore(saved);assert.equal(s.hung,true);assert.equal(s.collectedAll,true);assert.equal(s.active,true);
 });
 test('assembly works with any last part and leaves the mobile unequipped until explicitly selected',()=>{
  const ids=Object.keys(MOBILE_PIECES);assert.equal(ids.length,5);assert.ok(ids.includes('mobileFrame'));
  for(const last of ids){
-  const s=createMobilePuzzleState(),bag=createInventory();bag.add('ratchet');bag.equip('ratchet');
+  const s=createMobilePuzzleState(),bag=createInventory();bag.add('axe');bag.equip('axe');
   for(const id of ids.filter(id=>id!==last))s.collectPiece(id,bag);
   assert.equal(s.hung,false);assert.equal(s.inspect(),false);
   assert.equal(s.collectPiece(last,bag,{locked:true}),false);assert.equal(s.hung,false);
   assert.equal(s.collectPiece(last,bag),true);assert.equal(s.hung,false);assert.equal(s.active,false,'assembly does not force a camera inspection');
-  assert.deepEqual(bag.items,['ratchet','mobile']);assert.equal(bag.equipped,'ratchet');const saved=s.capture(),savedBag=bag.capture();s.reset();bag.reset();s.restore(saved);bag.restore(savedBag);assert.equal(s.hung,false);assert.equal(s.hang(bag),false);bag.equip('mobile');assert.equal(s.hang(bag),true);assert.deepEqual(bag.items,['ratchet']);assert.equal(s.collectPiece(last,bag),false);
+  assert.deepEqual(bag.items,['axe','mobile']);assert.equal(bag.equipped,'axe');const saved=s.capture(),savedBag=bag.capture();s.reset();bag.reset();s.restore(saved);bag.restore(savedBag);assert.equal(s.hung,false);assert.equal(s.hang(bag),false);bag.equip('mobile');assert.equal(s.hang(bag),true);assert.deepEqual(bag.items,['axe']);assert.equal(s.collectPiece(last,bag),false);
  }
 });
 test('the combined supply repairs the hung mobile in one use and never exposes a partial clue',()=>{
@@ -43,7 +43,7 @@ test('the combined supply repairs the hung mobile in one use and never exposes a
  try{
   const state=createMobilePuzzleState();let equipped=null,time=0;hang(state);collect(state);state.inspect();
   const ui=createMobileInspectionUI({state,time:()=>time,equipped:()=>equipped});ui.sync();assert.ok(classes.has('inspecting-mobile'));
-  ui.activate();assert.equal(state.action,null);equipped='ratchet';ui.activate();assert.equal(state.action,null);
+  ui.activate();assert.equal(state.action,null);equipped='axe';ui.activate();assert.equal(state.action,null);
   equipped='mobileKit';ui.activate();assert.equal(state.action,'repair');assert.equal(state.close(),false);assert.equal(state.repair(1),false);
   assert.equal(state.update(1.6),null);assert.equal(state.phase,'tangled');assert.equal(state.update(3.3),'repair');assert.equal(state.phase,'repaired');assert.equal(state.has('mobileKit'),false);assert.equal(state.repair(4),false);
   state.close();ui.sync();assert.ok(!classes.has('inspecting-mobile'));

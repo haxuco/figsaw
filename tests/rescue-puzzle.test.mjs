@@ -16,28 +16,30 @@ test('D-pad wraps values and slots; direct digits cannot bypass the awkward cont
  k.press('down');k.press('right');k.press('right');for(let i=0;i<7;i++)k.press('up');k.press('right');k.press('up');assert.equal(k.entry,'9071');
  k.press('right');assert.equal(k.selected,0);k.press('left');assert.equal(k.selected,3);assert.equal(k.press('enter'),'Door unlocked.');k.reset();assert.equal(k.unlocked,false);assert.equal(k.entry,'0000');
 });
-test('inventory only equips collected objects, consumes installed parts and preserves reusable tools',()=>{
+test('inventory consumes fitted parts, preserves reusable equipment and rejects removed tools',()=>{
  const i=createInventory(),r=createRescueState();
- for(const removed of['hammer','screwdriver','allen']){assert.equal(i.add(removed),false);assert.equal(i.equip(removed),false);}
- assert.equal(i.equip('ratchet'),false);i.add('ratchet');i.add('caster');i.equip('ratchet');r.use(0,'ratchet',i);assert.equal(r.chairs[0].repaired,false);assert.equal(i.has('ratchet'),true);
- i.equip('caster');r.use(0,'caster',i);assert.equal(i.has('caster'),false);assert.equal(i.equipped,null);r.use(0,'ratchet',i);assert.equal(r.chairs[0].repaired,true);assert.equal(i.has('ratchet'),true);i.putAway();assert.equal(i.has('ratchet'),true);
+ for(const removed of['hammer','screwdriver','allen','ratchet']){assert.equal(i.add(removed),false);assert.equal(i.equip(removed),false);}
+ assert.equal(i.equip('axe'),false);i.add('axe');i.add('caster');i.equip('axe');r.use(0,'axe',i);assert.equal(r.chairs[0].repaired,false);assert.equal(i.has('axe'),true);
+ i.equip('caster');assert.equal(r.use(0,'caster',i),'Chair repaired.');assert.equal(i.has('caster'),false);assert.equal(i.equipped,null);assert.equal(r.chairs[0].repaired,true);assert.equal(i.has('axe'),true);
  i.reset();r.reset();assert.equal(i.items.length,0);assert.equal(r.chairs[0].repaired,false);
 });
 function repairedChairs(puzzle={pmIndex:2}){
  const inventory=createInventory(),state=createRescueState(puzzle);
- for(const item of ['caster','seat','base','ratchet'])inventory.add(item);
- for(const [chair,part,tool]of [[0,'caster','ratchet'],[1,'seat','ratchet'],[1,'base','ratchet']]){state.use(chair,part,inventory);state.use(chair,tool,inventory);}
+ for(const item of ['caster','seat','base'])inventory.add(item);
+ for(const [chair,part]of [[0,'caster'],[1,'seat'],[1,'base']])state.use(chair,part,inventory);
  return {inventory,state};
 }
-test('both chairs require their salvaged parts, with the ratchet as the only repair tool',()=>{
- const i=createInventory(),r=createRescueState();assert.equal(r.chairs.length,2);assert.equal(PLAYER_CHAIR,2);
- for(const id of['seat','base','ratchet'])i.add(id);
- r.use(1,'base',i);assert.equal(i.has('base'),true,'seat must be repaired before the base');
- r.use(1,'seat',i);r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,false);
- r.use(1,'base',i);assert.equal(r.chairs[1].repaired,false,'fitting a base still needs the ratchet');
- i.remove('ratchet');r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,false,'the wrench must be collected');
- i.add('ratchet');r.use(1,'ratchet',i);assert.equal(r.chairs[1].repaired,true);
- assert.equal(i.has('seat'),false);assert.equal(i.has('base'),false);assert.equal(i.has('ratchet'),true);
+test('chairs become usable after their required parts are installed, in either order and without a tool',()=>{
+ for(const order of [['seat','base'],['base','seat']]){
+  const i=createInventory(),r=createRescueState();assert.equal(r.chairs.length,2);assert.equal(PLAYER_CHAIR,2);
+  assert.equal(r.use(1,order[0],i),'Item not in inventory.');assert.equal(r.chairs[1].step,0);
+  for(const id of order)i.add(id);
+  assert.equal(r.use(1,'caster',i),'That item does not fit this chair.');
+  r.use(1,order[0],i);assert.equal(r.chairs[1].repaired,false);assert.equal(r.canPlace(1,0),false);
+  assert.equal(r.use(1,order[0],i),'Part already fitted.');
+  assert.equal(r.use(1,order[1],i),'Chair repaired.');assert.equal(r.chairs[1].repaired,true);assert.equal(r.canPlace(1,0),true);
+  assert.equal(i.has('seat'),false);assert.equal(i.has('base'),false);assert.equal(r.chairs[1].step,2);
+ }
 });
 test('exactly two survivors and two chains complete the train for every randomized PM',()=>{
  for(let pmIndex=0;pmIndex<3;pmIndex++){
@@ -76,8 +78,8 @@ test('PM and damaged captives cannot reserve a rescue chair; retries use the new
  assert.equal(r.board(1,1),-1,'boarding without a pre-descent reservation is forbidden');
  assert.equal(r.reserve(1,1),true);assert.equal(r.place(1,0),false,'the route cannot move during a descent');assert.equal(r.board(1,1),0);
  assert.equal(r.reserve(2,1),false,'no duplicate passenger');
- puzzle.pmIndex=2;r.reset();const i=createInventory();for(const id of ['caster','seat','base','ratchet'])i.add(id);
- for(const [chair,part]of [[0,'caster'],[1,'seat'],[1,'base']]){r.use(chair,part,i);r.use(chair,'ratchet',i);}
+ puzzle.pmIndex=2;r.reset();const i=createInventory();for(const id of ['caster','seat','base'])i.add(id);
+ for(const [chair,part]of [[0,'caster'],[1,'seat'],[1,'base']]){r.use(chair,part,i);}
  r.place(0,0);r.place(1,1);r.connect(PLAYER_CHAIR,0,'chain0');r.connect(0,1,'chain1');
  assert.equal(r.reserve(2,2),false);assert.equal(r.reserve(0,0),true);r.cancelReservation(0);assert.equal(r.board(0,0),-1);assert.equal(r.reserve(0,0),true);assert.equal(r.board(0,0),0);
 });
