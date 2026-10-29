@@ -1,10 +1,21 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createKerningDraft,serializeKerningSettings} from '../dist/kerning-settings.js';
-import {measureKerningLayout} from '../dist/laptop-program.js';
+import {measureKerningLayout,measureKerningLayouts} from '../dist/laptop-program.js';
+import {KERNING_WORDS,scoreKerning} from '../dist/laptop-challenge.js';
 
 const spec={word:'Figma',family:'Arial, sans-serif',style:'normal',weight:'700',fontSize:148,label:'Arial / Bold'};
 const context={measureText(word){return {width:[...word].length*60*Number(this.font.match(/([\d.]+)px/)[1])/148};}};
+
+test('SACRIFICE uses the supplied 118px reference exactly for scoring and export without leaking it into custom words',()=>{
+ const positions=[82.039551,160.059604,243.749577,328.356938,414.431849,445.742385,518.412478,555.469733,639.255371];
+ const wideContext={measureText(word){return {width:word.length*100};}};
+ const layout=measureKerningLayouts(wideContext)[0],settings=JSON.parse(serializeKerningSettings(layout,layout.positions,0));
+ assert.equal(layout.font,'normal 700 118px Arial, sans-serif');assert.deepEqual(layout.positions,positions);assert.equal(scoreKerning(positions,layout),100);
+ assert.equal(settings.word,'SACRIFICE');assert.equal(settings.round,1);assert.equal(settings.typeface.fontSize,118);assert.deepEqual(settings.positions,positions);
+ layout.positions[1]+=10;assert.deepEqual(measureKerningLayouts(wideContext)[0].positions,positions,'layout edits cannot mutate the calibrated reference');
+ const custom=measureKerningLayout(context,{...KERNING_WORDS[0],word:'Figma'});assert.equal(custom.positions.length,5);assert.notEqual(custom.positions[0],positions[0]);
+});
 
 test('custom type keeps its case and font metadata, and long words fit the laptop',()=>{
  const layout=measureKerningLayout(context,spec);assert.equal(layout.word,'Figma');assert.equal(layout.family,spec.family);assert.equal(layout.positions.length,5);assert.equal(layout.widths.length,5);assert.match(layout.font,/148px/);

@@ -4,14 +4,18 @@ import {createKerningDraft,serializeKerningSettings} from './kerning-settings.js
 
 const WIDTH=800,HEIGHT=510;
 export function measureKerningLayouts(context){
- return KERNING_WORDS.map(spec=>measureKerningLayout(context,spec));
+ return KERNING_WORDS.map(spec=>{
+  const layout=measureKerningLayout(context,spec,{fit:!spec.positions});
+  // Calibrated rounds share the exact reference used by scoring and diagnostics.
+  return spec.positions?{...layout,positions:[...spec.positions]}:layout;
+ });
 }
-export function measureKerningLayout(context,spec){
+export function measureKerningLayout(context,spec,{fit=true}={}){
  context.fontKerning='normal';
  let fontSize=spec.fontSize;
  const font=()=>`${spec.style} ${spec.weight} ${fontSize}px ${spec.family}`;
  context.font=font();const measured=context.measureText(spec.word).width;
- if(measured>640){fontSize=Math.floor(fontSize*640/measured);context.font=font();}
+ if(fit&&measured>640){fontSize=Math.floor(fontSize*640/measured);context.font=font();}
  const total=context.measureText(spec.word).width,left=(WIDTH-total)/2;
  const letters=[...spec.word],widths=letters.map(letter=>context.measureText(letter).width);
  const positions=widths.map((width,i)=>left+context.measureText(letters.slice(0,i+1).join('')).width-width);
