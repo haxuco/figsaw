@@ -26,7 +26,7 @@ function paintProgram(canvas,challenge,view=challenge.view){
  c.fillStyle='#252b30';c.fillRect(0,0,WIDTH,HEIGHT);c.fillStyle='#1c2226';c.fillRect(0,0,WIDTH,44);
  c.textBaseline='alphabetic';c.fillStyle='#a9b4b7';c.font='16px Arial';c.fillText('kerning.fig',26,28);
  c.fillStyle='#c9d4c9';c.font='bold 14px Arial';c.fillText(`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`,48,86);
- c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText(challenge.completed?'Spacing approved.':'Fix the spacing.',48,132);
+ c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText(challenge.completed?'Spacing approved.':'Fix the kerning.',48,132);
  c.fillStyle='#a1adb0';c.font='19px Arial';c.fillText('Drag the inner letters. First and last stay fixed.',48,163);
  c.strokeStyle='#ffffff16';c.beginPath();c.moveTo(48,331);c.lineTo(752,331);c.stroke();
  c.font=view.font;[...view.word].forEach((letter,i)=>{c.fillStyle=i===0||i===view.word.length-1?'#7d9296':'#f1f1e9';c.fillText(letter,view.positions[i],318);});
