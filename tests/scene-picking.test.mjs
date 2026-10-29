@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {createSceneRaycaster,preferSkullInspection,preferMobilePickup} from '../dist/scene-picking.js';
+import {createSceneRaycaster,firstInteractionHit,preferAxeTankHit,preferSkullInspection,preferMobilePickup} from '../dist/scene-picking.js';
 import {createInventory} from '../dist/inventory.js';
 import {createMobilePuzzleState} from '../dist/mobile-puzzle-state.js';
 
@@ -78,4 +78,37 @@ test('the mobile priority is confined to real visible pieces, and preserves wall
  body.material.clippingPlanes=[new THREE.Plane(new THREE.Vector3(0,-1,0),-.2)];hits=hitsAt();assert.equal(preferMobilePickup(hits[0],hits),hits[0]);body.material.clippingPlanes=[];
  const wall=new THREE.Mesh(new THREE.BoxGeometry(1,1,.1),new THREE.MeshBasicMaterial());room.add(wall);hits=hitsAt();assert.equal(preferMobilePickup(hits[0],hits),hits[0],'a wall between chair and animal blocks pickup');
  wall.position.z=2;hits=hitsAt();assert.equal(hits[0].object,wall);assert.equal(preferMobilePickup(hits[0],hits),hits[0],'ordinary foreground interactions keep their priority');
+});
+
+function tankBehindParkedChair(){
+ const f=skullBehindChair();f.room.remove(f.skull);
+ const options={axeHeld:true,tanks:[{broken:false},{broken:false},{broken:false}],chairs:[{repaired:true,tank:1}]};
+ return {...f,options};
+}
+test('an equipped axe reaches actual tank glass through a parked chair mesh and its click volume',()=>{
+ const f=tankBehindParkedChair(),hits=f.hitsAt();assert.equal(hits[0].object,f.pick);
+ assert.equal(preferAxeTankHit(hits[0],hits,f.options).object,f.tank);
+ const rail=new THREE.Mesh(new THREE.BoxGeometry(.12,.5,.1),new THREE.MeshBasicMaterial());rail.position.z=1.4;f.chair.add(rail);
+ const solid=f.hitsAt();assert.equal(solid[0].object,rail);assert.equal(preferAxeTankHit(solid[0],solid,f.options).object,f.tank);
+ assert.equal(preferAxeTankHit({object:f.chair},solid,f.options).object,f.tank,'diagnostic chair targets cannot steal an axe strike');
+});
+test('the tank exception requires an axe, a positioned repaired chair and a ray on rendered glass',()=>{
+ const f=tankBehindParkedChair();let hits=f.hitsAt(),hit=hits[0];
+ assert.equal(preferAxeTankHit(hit,hits,{...f.options,axeHeld:false}),hit);
+ for(const state of [{repaired:false,tank:1},{repaired:true,tank:null}])assert.equal(preferAxeTankHit(hit,hits,{...f.options,chairs:[state]}),hit);
+ hits=f.hitsAt(.43);hit=hits[0];assert.equal(preferAxeTankHit(hit,hits,f.options),hit,'empty space beside the tank remains a chair hit');
+ const ghost=new THREE.Mesh(new THREE.BoxGeometry(1.3,1.3,.8),new THREE.MeshBasicMaterial({opacity:0,colorWrite:false}));ghost.position.z=-1;f.tank.add(ghost);
+ hits=f.hitsAt(.43);hit=hits[0];assert.equal(preferAxeTankHit(hit,hits,f.options),hit,'an invisible tank target cannot expand the strike area');
+ f.chair.visible=false;hits=f.hitsAt();const visibleHit=firstInteractionHit(hits,f.options);assert.equal(preferAxeTankHit(visibleHit,hits,f.options),visibleHit,'a hidden chair cannot change a normal tank hit');
+});
+test('walls and unrelated furniture still block axe strikes through parked chairs',()=>{
+ const f=tankBehindParkedChair(),wall=new THREE.Mesh(new THREE.BoxGeometry(1,1,.1),new THREE.MeshBasicMaterial());f.room.add(wall);
+ let hits=f.hitsAt();assert.equal(preferAxeTankHit(hits[0],hits,f.options),hits[0]);
+ wall.position.z=2;hits=f.hitsAt();assert.equal(hits[0].object,wall);assert.equal(preferAxeTankHit(hits[0],hits,f.options),hits[0]);
+});
+test('parked chairs and previously broken tanks do not shield the next intact tank from the axe',()=>{
+ const f=tankBehindParkedChair(),next=new THREE.Group();next.userData.tankIndex=2;next.position.z=-3;
+ next.add(new THREE.Mesh(new THREE.BoxGeometry(.8,.8,.6),new THREE.MeshBasicMaterial()));f.room.add(next);
+ f.options.tanks[1].broken=true;const hits=f.hitsAt();assert.equal(preferAxeTankHit(hits[0],hits,f.options).object,next);
+ f.options.tanks[2].broken=true;assert.equal(preferAxeTankHit(hits[0],hits,f.options),hits[0],'no intact tank means no strike target');
 });

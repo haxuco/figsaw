@@ -28,6 +28,28 @@ function unclipped(hit){
  return material.clipIntersection?!planes.every(p=>p.distanceToPoint(hit.point)<0):!planes.some(p=>p.distanceToPoint(hit.point)<0);
 }
 
+// A chair parked for rescue must not shield the tank from the equipped axe.
+// Only bypass parked rescue chairs and already-broken tanks; desks, walls and
+// other props still block a strike, and the ray must hit real tank geometry.
+export function preferAxeTankHit(hit,hits,{axeHeld=false,tanks=[],chairs=[]}={}){
+ const parked=object=>ancestor(object,o=>{
+  const state=chairs[o.userData.rescueChair];
+  return Number.isInteger(o.userData.rescueChair)&&state?.repaired&&Number.isInteger(state.tank);
+ });
+ if(!axeHeld||!parked(hit?.object))return hit;
+ for(const candidate of hits){
+  if(!visible(candidate.object)||!unclipped(candidate)||parked(candidate.object))continue;
+  const tank=ancestor(candidate.object,o=>Number.isInteger(o.userData.tankIndex));
+  if(!tank)return hit;
+  const state=tanks[tank.userData.tankIndex];
+  if(!state||state.broken)continue;
+  const material=Array.isArray(candidate.object.material)?candidate.object.material[candidate.face?.materialIndex??0]:candidate.object.material;
+  if(!candidate.object.isMesh||material?.colorWrite===false||material?.opacity===0)continue;
+  return {...candidate,object:tank};
+ }
+ return hit;
+}
+
 // Rescue chairs have forgiving hit boxes and alpha-cutout mesh backs. A click
 // aimed at the revealed PM bones must still inspect those bones, rather than
 // start moving the chair. Keep this exception inside the skull's own geometry.
