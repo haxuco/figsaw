@@ -59,9 +59,9 @@ export function createAcidSurface(floorSupport,burnMap,timeUniform){
  return {pool,scorch,jetMaterial,update,setNeutralized,reset(){setNeutralized(0);lastPaint=-Infinity;paint.globalCompositeOperation='source-over';paint.fillStyle='#000';paint.fillRect(0,0,size,size);wetMap.needsUpdate=true;},setEnvironment(map){for(const mat of[material,jetMaterial]){mat.envMap=map;mat.needsUpdate=true;}}};
 }
 
-export function createDrainJet(outlet,floorSupport,material,{width=1}={}){
+export function createDrainJet(outlet,floorSupport,material,{width=1,breach=false}={}){
  const source=new THREE.Vector3(),rotation=new THREE.Quaternion();outlet.getWorldPosition(source);outlet.getWorldQuaternion(rotation);
- const velocity=new THREE.Vector3(0,-.25,.6).applyQuaternion(rotation),gravity=9.81;
+ const velocity=new THREE.Vector3(0,breach?-.12:-.25,breach?1.65:.6).applyQuaternion(rotation),gravity=9.81;
  const floor=floorSupport(source.x,source.z)+.009,height=Math.max(.01,source.y-floor);
  const duration=(velocity.y+Math.sqrt(velocity.y*velocity.y+2*gravity*height))/gravity;
  const origin=source.clone().addScaledVector(velocity,duration);origin.y=floorSupport(origin.x,origin.z)+.009;
@@ -69,15 +69,22 @@ export function createDrainJet(outlet,floorSupport,material,{width=1}={}){
  for(let j=1;j<=rings;j++)for(let i=1;i<=sides;i++){const b=j*(sides+1)+i;indices.push(b,b-sides-2,b-1,b,b-sides-1,b-sides-2);}
  geo.setAttribute('position',new THREE.BufferAttribute(positions,3).setUsage(THREE.DynamicDrawUsage));geo.setAttribute('normal',new THREE.BufferAttribute(normals,3).setUsage(THREE.DynamicDrawUsage));geo.setIndex(indices);
  const mesh=new THREE.Mesh(geo,material);mesh.name='Gravity-fed wavering drain stream';mesh.frustumCulled=false;mesh.raycast=()=>{};
- const center=new THREE.Vector3(),axis=new THREE.Vector3(),x=new THREE.Vector3(),y=new THREE.Vector3(),radial=new THREE.Vector3();
+ const center=new THREE.Vector3(),axis=new THREE.Vector3(),x=new THREE.Vector3(),y=new THREE.Vector3(),radial=new THREE.Vector3(),across=new THREE.Vector3(1,0,0).applyQuaternion(rotation);
  function update(time,strength){
   const fill=THREE.MathUtils.smoothstep(strength,0,.65);
   for(let j=0;j<=rings;j++){
    const u=j/rings,t=u*duration;center.copy(source).addScaledVector(velocity,t);center.y-=.5*gravity*t*t;
-   center.x+=Math.sin(time*19-u*13)*.002*u;center.z+=Math.sin(time*16-u*11)*.0015*u;
-   axis.copy(velocity);axis.y-=gravity*t;axis.normalize();x.set(1,0,0).addScaledVector(axis,-axis.x).normalize();y.crossVectors(x,axis);
-   const radius=width*(.021-.010*u)*(1+.12*Math.sin(u*25-time*23))*fill;
-   for(let i=0;i<=sides;i++){const a=i/sides*Math.PI*2,k=(j*(sides+1)+i)*3;radial.copy(x).multiplyScalar(Math.cos(a)).addScaledVector(y,Math.sin(a));radial.toArray(normals,k);positions[k]=center.x+radial.x*radius;positions[k+1]=center.y+radial.y*radius;positions[k+2]=center.z+radial.z*radius;}
+   const turbulence=breach?5:1;
+   center.x+=Math.sin(time*19-u*13)*.002*u*turbulence;center.z+=Math.sin(time*16-u*11)*.0015*u*turbulence;
+   axis.copy(velocity);axis.y-=gravity*t;axis.normalize();x.copy(across).addScaledVector(axis,-across.dot(axis)).normalize();y.crossVectors(x,axis);
+   const wave=1+.12*Math.sin(u*25-time*23),radius=width*(.021-.010*u)*wave*fill;
+   // A shattered pane releases a thick, widening sheet rather than a round pipe jet.
+   const wide=breach?(.27+.17*u)*wave*Math.sqrt(fill):radius,deep=breach?(.085-.045*u)*wave*fill:radius;
+   for(let i=0;i<=sides;i++){
+    const a=i/sides*Math.PI*2,k=(j*(sides+1)+i)*3,c=Math.cos(a),s=Math.sin(a);
+    radial.copy(x).multiplyScalar(wide>0?c/wide:0).addScaledVector(y,deep>0?s/deep:0).normalize();radial.toArray(normals,k);
+    positions[k]=center.x+x.x*c*wide+y.x*s*deep;positions[k+1]=center.y+x.y*c*wide+y.y*s*deep;positions[k+2]=center.z+x.z*c*wide+y.z*s*deep;
+   }
   }
   geo.attributes.position.needsUpdate=geo.attributes.normal.needsUpdate=true;
  }

@@ -91,7 +91,7 @@ export function createTankLeaks({valves,floorSupport}){
  }
  function breach(index,time,outlet,locked=false){
   if(locked||!valves[index]||!outlet||flow.dying||streams.get(index)?.breached)return false;
-  const stream=createDrainJet(outlet,floorSupport,surface.jetMaterial,{width:3.4});stream.breached=true;stream.source=outlet;
+  const stream=createDrainJet(outlet,floorSupport,surface.jetMaterial,{breach:true});stream.breached=true;stream.source=outlet;
   if(!flow.breach(index,stream.origin,time)){stream.mesh.geometry.dispose();return false;}
   const previous=streams.get(index);if(previous){group.remove(previous.mesh);previous.mesh.geometry.dispose();}
   stream.mesh.name='Acid pouring through shattered tank glass';stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);group.visible=true;return true;
@@ -121,12 +121,12 @@ export function createTankLeaks({valves,floorSupport}){
     const size=(.005+(i%4)*.0025)*Math.sin(life*Math.PI);dummy.scale.set(size,size*.45,size);dummy.quaternion.identity();dummy.updateMatrix();bubbles.setMatrixAt(bubbleCount++,dummy.matrix);
    }
    for(let i=0;i<(leak.pouring>0?14:0);i++){
-    const life=(t*2.7+i*.618)%1,a=i*2.399+leak.index,r=.015+life*(.07+(i%3)*.02),height=.045+(i%4)*.012;
+    const flood=leak.breached,life=(t*(flood?3.8:2.7)+i*.618)%1,a=i*2.399+leak.index,r=flood?.08+life*(.45+(i%3)*.11):.015+life*(.07+(i%3)*.02),height=(flood?.13:.045)+(i%4)*(flood?.025:.012);
     dummy.position.set(leak.origin.x+Math.cos(a)*r,leak.origin.y+4*height*life*(1-life),leak.origin.z+Math.sin(a)*r);
-    const size=(.003+(i%3)*.0015)*(1-life*.45);dummy.scale.set(size,size*(1.3+life),size);dummy.quaternion.identity();dummy.updateMatrix();droplets.setMatrixAt(dropCount++,dummy.matrix);
+    const size=(flood?.009+(i%3)*.004:.003+(i%3)*.0015)*(1-life*.45)*Math.sqrt(leak.pouring);dummy.scale.set(size,size*(1.3+life),size);dummy.quaternion.identity();dummy.updateMatrix();droplets.setMatrixAt(dropCount++,dummy.matrix);
    }
    for(let i=0;i<(leak.pouring>0?4:0);i++){
-    const life=(t*1.6+i*.25)%1,r=.018+life*.16;
+    const life=(t*(leak.breached?2.6:1.6)+i*.25)%1,r=leak.breached?.10+life*.62:.018+life*.16;
     dummy.position.set(leak.origin.x,floorSupport(leak.origin.x,leak.origin.z)+.010,leak.origin.z);dummy.quaternion.identity();dummy.scale.set(r,1,r*.92);dummy.updateMatrix();ripples.setMatrixAt(rippleCount,dummy.matrix);rippleAlpha.setX(rippleCount++,Math.sin(life*Math.PI)*(1-life));
    }
    for(let i=0;i<(flow.neutralized?0:16);i++){
