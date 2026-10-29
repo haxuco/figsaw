@@ -9,7 +9,9 @@ export function createKetchupKey({bottle,contents,cap,floorSupport}){
  bottle.userData.keyAction='pour';
  const direction=new THREE.Vector3(0,1,0).applyQuaternion(homeRotation);
  const pourRotation=new THREE.Quaternion().setFromUnitVectors(direction,new THREE.Vector3(-.12,-.99,.06).normalize()).multiply(homeRotation);
- const raised=home.clone().add(new THREE.Vector3(-.32,.42,-.04));
+ // Bring the tipped bottle toward the player before pouring, so the key lands
+ // within reach while the sauce still falls straight down from the mouth.
+ const raised=home.clone().add(new THREE.Vector3(.40,.42,.12));
  const liquid=createBottleLiquid(contents);
  // The pool is directly below the actual mouth in the fully tipped pose.
  const landing=new THREE.Vector3(0,KETCHUP_MOUTH_Y,0).applyMatrix4(bottle.children[0].matrix).multiply(bottle.scale).applyQuaternion(pourRotation).add(raised);
