@@ -612,7 +612,7 @@ function escapeRoom(){
 function inspectMobile(){
  if(sawBusy()||mobilePuzzle.active)return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
- if(!mobilePuzzle.hung){if(inventory.equipped!=='mobile'||!mobilePuzzle.hang(inventory))return;mobileInspection.update(state.time,reducedMotion);}
+ if(!mobilePuzzle.hung)return;
  clearSawSelection();putAxeBack();prepareSawAction();sawMenu.hide();
  if(mobilePuzzle.inspect()){mobileCamera.start(state.time);mobileUI.sync();mobileUI.activate();}
 }
@@ -632,7 +632,6 @@ function leaveInspection(){
 }
 inspectionBack.addEventListener('click',leaveInspection);
 function inventoryModelFor(id){
- if(id==='mobile')return {object:mobileInspection.packedModel,rotation:[.28,-.4,0]};
  if(fallenMobile.pieces[id])return {object:fallenMobile.pieces[id],rotation:[.45,-.3,-.15]};
  const supply=mobileSupplies.objects[id];
  if(supply)return {object:supply,rotation:id==='mobileKit'?[.7,-.35,-.2]:[.12,-.3,-.55]};
@@ -721,7 +720,9 @@ function takeMobileSupply(item){
 function takeMobilePiece(id){
  if(sawBusy())return;
  if(restraint.locked){restraint.requestReach(state.time);return;}
+ const wasHung=mobilePuzzle.hung;
  mobilePuzzle.collectPiece(id,inventory);mobileInspection.update(state.time,reducedMotion);
+ if(!wasHung&&mobilePuzzle.hung)inventoryUI.notify('Animal mobile assembled and hung.');
 }
 function syncSupplies(){mobileSupplies.sync({has:id=>inventory.has(id),phase:mobilePuzzle.phase});}
 

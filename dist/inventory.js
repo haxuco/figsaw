@@ -1,6 +1,6 @@
 import {MOBILE_PIECES} from './mobile-puzzle-state.js';
 export const ITEMS=Object.freeze({
- key:{name:'Shackle key'},mobileKit:{name:'Scissors + string'},mobile:{name:'Animal mobile'},
+ key:{name:'Shackle key'},mobileKit:{name:'Scissors + string'},
  ...Object.fromEntries(Object.entries(MOBILE_PIECES).map(([id,name])=>[id,{name}])),
  ratchet:{name:'Ratchet wrench'},
  caster:{name:'Salvaged caster'},seat:{name:'Salvaged seat'},base:{name:'Salvaged base'},

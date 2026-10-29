@@ -117,22 +117,21 @@ export function createFallenMobile(viewerPosition,floorSupport=()=>.003,puzzle=n
   });
   object.userData.floorProp=true;
  }
- // The mobile has broken apart: each crossbar, the hub and every animal
- // is a separate floor pickup, rather than one intact frame lying down.
+ // Keep the small wooden bars attached to the music-box base as one clear pickup.
  const wood=new THREE.MeshStandardMaterial({color:0x81745a,map:fabricMap,roughness:1});
- for(const [i,p]of [[-.48,.72,-.35],[-.15,1.45,1.12]].entries()){
-  const bar=new THREE.Group();bar.name=`Broken mobile crossbar ${i+1}`;bar.userData.mobilePiece='mobileBar'+i;
-  bar.position.set(p[0],floorSupport(group.position.x+p[0],group.position.z+p[1])+.013,p[1]);bar.rotation.y=p[2];group.add(bar);
-  rod([-.33,0,0],[.33,0,0],.012,wood,bar);
-  for(const side of[-1,1]){const end=mesh(new THREE.ConeGeometry(.010,.035,5),wood,bar);end.position.set(side*.335,.002,0);end.rotation.z=side*Math.PI/2;}
-  const pick=mesh(new THREE.BoxGeometry(.74,.14,.15),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}),bar);pick.castShadow=false;pieces['mobileBar'+i]=bar;
+ const frame=new THREE.Group();frame.name='Attached mobile crossbars and music box base';frame.userData.mobilePiece='mobileFrame';frame.position.set(-.18,0,1.30);frame.rotation.y=-.18;group.add(frame);pieces.mobileFrame=frame;
+ for(let i=0;i<2;i++){
+  const bar=new THREE.Group();bar.name=`Attached mobile crossbar ${i+1}`;bar.position.y=.050+i*.024;bar.rotation.y=i*Math.PI/2;frame.add(bar);
+  rod([-.33,0,0],[.33,0,0],.012,wood,bar).name='Mobile wooden crossbar';
+  for(const side of[-1,1]){const cap=mesh(new THREE.SphereGeometry(.014,8,6),wood,bar);cap.position.x=side*.33;}
  }
- const hub=new THREE.Group();hub.name='Detached mobile music box hub';hub.userData.mobilePiece='mobileHub';hub.position.set(.10,.116,1.10);hub.rotation.set(.21,0,-.18);group.add(hub);pieces.mobileHub=hub;
+ const hub=new THREE.Group();hub.name='Attached mobile music box base';frame.add(hub);
  mesh(new THREE.CylinderGeometry(.103,.103,.068,24),agedIvory,hub);
  const seam=mesh(new THREE.TorusGeometry(.103,.002,6,24),thread,hub);seam.rotation.x=Math.PI/2;
  ball([0,.039,0],[.034,.009,.034],ochre,hub);
  for(let j=0;j<5;j++)box([.030,.002,.002],[-.049+j*.019,.035,.041],thread,hub);
- group.updateMatrixWorld(true);settleOnFloor(hub,floorSupport);
+ group.updateMatrixWorld(true);settleOnFloor(frame,floorSupport);
+ const framePick=mesh(new THREE.BoxGeometry(.82,.18,.82),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}),frame);framePick.position.y=.04;framePick.castShadow=false;
  const placements=[
   {kind:'Pig',x:.46,z:.96,rear:true,yaw:-.12,roll:.08,arm:3},
   {kind:'Tiger',x:-.62,z:.22,rear:true,yaw:.36,roll:-.12,arm:0},

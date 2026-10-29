@@ -24,7 +24,7 @@ export function createEscapePuzzle(random=Math.random){
 }
 export const MOBILE_PIECES=Object.freeze({
  mobilePig:'Pig plush',mobileTiger:'Tiger plush',mobileElephant:'Elephant plush',mobileFox:'Fox plush',
- mobileBar0:'Mobile crossbar',mobileBar1:'Mobile crossbar',mobileHub:'Mobile hub'
+ mobileFrame:'Mobile frame + base'
 });
 export function createMobilePuzzleState(){
  const inventory=new Set(),pieces=new Set();let phase='scattered',hung=false,active=false,action=null,started=0,progress=0;
@@ -35,10 +35,9 @@ export function createMobilePuzzleState(){
   collectPiece(id,bag,{locked=false}={}){
    if(locked||hung||!MOBILE_PIECES[id]||pieces.has(id)||!bag.add(id))return false;
    pieces.add(id);
-   if(complete()){phase='tangled';for(const piece of Object.keys(MOBILE_PIECES))bag.remove(piece);bag.add('mobile');}
+   if(complete()){phase='tangled';hung=true;for(const piece of Object.keys(MOBILE_PIECES))bag.remove(piece);}
    return true;
   },
-  hang(bag,{locked=false}={}){if(locked||hung||!complete()||!bag.has('mobile'))return false;bag.remove('mobile');hung=true;return true;},
   inspect(locked=false){if(locked||!hung||active)return false;active=true;return true;},
   close(force=false){if(action&&!force)return false;active=false;return true;},
   collect(item,{locked=false,drawerReady=false}={}){if(locked||!drawerReady||item!=='mobileKit'||inventory.has(item)||phase==='repaired')return false;inventory.add(item);return true;},
