@@ -55,6 +55,20 @@ test('exactly two survivors and two chains complete the train for every randomiz
   r.reset();assert.equal(r.chairs.length,2);assert.equal(r.safe,false);assert.equal(r.links.length,0);assert.equal(r.ready,false);
  }
 });
+test('chairs lock at survivor tanks, remain movable at the PM tank, and keep their towing connections usable',()=>{
+ for(let pmIndex=0;pmIndex<3;pmIndex++){
+  const puzzle={pmIndex},{state:r}=repairedChairs(puzzle),survivors=[0,1,2].filter(n=>n!==pmIndex),unplaced=r.capture();
+  assert.equal(r.place(0,pmIndex),true);assert.equal(r.isParked(0),false);
+  assert.equal(r.place(0,survivors[0]),true);assert.equal(r.isParked(0),true);
+  for(let tank=0;tank<3;tank++)assert.equal(r.place(0,tank),false,'a correct placement cannot be moved again');
+  assert.equal(r.place(1,survivors[1]),true);
+  assert.equal(r.connect(PLAYER_CHAIR,0,'chain0'),true);assert.equal(r.connect(0,1,'chain1'),true);
+  assert.equal(r.arranged,true);assert.equal(r.reserve(survivors[0],survivors[0]),true);assert.equal(r.board(survivors[0],survivors[0]),0);
+  const parked=r.capture();r.restore(unplaced);assert.equal(r.isParked(0),false);assert.equal(r.canPlace(0,pmIndex),true);
+  r.restore(parked);assert.equal(r.isParked(0),true);assert.equal(r.canPlace(0,pmIndex),false);
+  r.reset();assert.equal(r.isParked(0),false);
+ }
+});
 test('PM and damaged captives cannot reserve a rescue chair; retries use the new PM identity',()=>{
  const puzzle={pmIndex:0},{state:r}=repairedChairs(puzzle);
  r.place(0,1);r.place(1,2);r.connect(PLAYER_CHAIR,0,'chain0');r.connect(0,1,'chain1');

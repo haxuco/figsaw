@@ -17,7 +17,8 @@ export function createRescueState(puzzle={pmIndex:2}){
   c.step++;if(c.step<REPAIRS[index].steps.length)return 'Part secured.';
   c.repaired=true;return 'Chair repaired.';
  }
- function canPlace(index,tank){const c=chairs[index];return !!c?.repaired&&c.passenger===null&&!chairs.some(c=>c.reservation!==null)&&!pulling&&!safe&&Number.isInteger(tank)&&tank>=0&&tank<3&&!chairs.some((o,i)=>i!==index&&o.tank===tank);}
+ const isParked=index=>{const c=chairs[index];return !!c?.repaired&&c.tank!==null&&c.tank!==puzzle.pmIndex;};
+ function canPlace(index,tank){const c=chairs[index];return !!c?.repaired&&!isParked(index)&&c.passenger===null&&!chairs.some(c=>c.reservation!==null)&&!pulling&&!safe&&Number.isInteger(tank)&&tank>=0&&tank<3&&!chairs.some((o,i)=>i!==index&&o.tank===tank);}
  function place(index,tank){if(!canPlace(index,tank))return false;chairs[index].tank=tank;return true;}
  // Both chairs and their towing chains must be arranged before a descent starts.
  const arranged=()=>links.length===PLAYER_CHAIR&&chairs.every((c,i)=>c.repaired&&c.tank!==null&&c.tank!==puzzle.pmIndex&&connected(i,PLAYER_CHAIR));
@@ -35,5 +36,5 @@ export function createRescueState(puzzle={pmIndex:2}){
   links.push({a,b,chain});usedChains.add(chain);return true;
  }
  const ready=()=>links.length===PLAYER_CHAIR&&chairs.every((c,i)=>c.repaired&&c.passenger!==null&&c.passenger!==puzzle.pmIndex&&connected(i,PLAYER_CHAIR));
- return {capture(){return structuredClone({chairs,links,usedChains:[...usedChains],pulling,safe});},restore(value){({chairs,links,pulling,safe}=structuredClone(value));usedChains=new Set(value.usedChains);},reset,use,canPlace,place,board,reserve,cancelReservation,canBoard,connect,canStartLink,canConnect,get arranged(){return arranged();},get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
+ return {capture(){return structuredClone({chairs,links,usedChains:[...usedChains],pulling,safe});},restore(value){({chairs,links,pulling,safe}=structuredClone(value));usedChains=new Set(value.usedChains);},reset,use,isParked,canPlace,place,board,reserve,cancelReservation,canBoard,connect,canStartLink,canConnect,get arranged(){return arranged();},get chairs(){return chairs;},get links(){return links;},get ready(){return ready();},get pulling(){return pulling;},get safe(){return safe;},startPull(){if(!ready()||pulling||safe)return false;pulling=true;return true;},finishPull(){if(pulling){pulling=false;safe=true;}},chairAt:tank=>chairs.findIndex(c=>c.tank===tank&&c.repaired)};
 }

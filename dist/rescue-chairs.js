@@ -99,6 +99,9 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   return message;
  }
  function canMove(index){return !rolls.size&&!transfers.size&&slots.some((s,i)=>state.canPlace(index,i));}
+ // Parked frames stop accepting clicks; equipped chains still need their loops.
+ function canInteract(index,item){return !state.isParked(index)||!!item?.startsWith('chain')&&canHook(index,item);}
+ const canHook=(index,item)=>firstAnchor===null?state.canStartLink(index,item):state.canConnect(firstAnchor,index,item);
  function availableSlots(){return moving===null?[]:slots.flatMap((s,i)=>state.canPlace(moving,i)?[i]:[]);}
  function select(index){if(!canMove(index))return false;moving=index;slots.forEach((s,i)=>{s.marker.visible=s.target.visible=state.canPlace(index,i);});return true;}
  function cancelMove(){moving=null;slots.forEach(s=>s.marker.visible=s.target.visible=false);}
@@ -151,5 +154,5 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   for(const [id,visible]of Object.entries(value.parts))parts[id].visible=visible;
   value.chains.forEach((v,i)=>{if(v.dropped)dropChain(i);chains[i].collected=v.collected;if(v.collected)chains[i].mesh.visible=chains[i].pick.visible=false;});linksDirty=true;syncPartHighlights(lastTime);
  }
- return {group,state,objects,parts,capture,restore,inventoryChain:index=>chains[index]?.mesh,canCollectChain:index=>!!chains[index]?.dropped&&!chains[index].collected,canHook:(index,item)=>firstAnchor===null?state.canStartLink(index,item):state.canConnect(firstAnchor,index,item),setHighlightsEnabled(value){discoveryEnabled=value;syncPartHighlights(lastTime);},takeMessage(){const result=message;message='';return result;},use,canMove,availableSlots,select,cancelMove,place,prepare,cancelPreparation:state.cancelReservation,board,isTransferring:index=>transfers.has(index)||rolls.has(state.chairs.findIndex(c=>c.passenger===index)),dropChain,collectChain,hook,pull,update,reset,cancelHook(){firstAnchor=null;},get moving(){return moving;},get playerOffset(){return playerOffset;},get busy(){return rolls.size>0||transfers.size>0||state.pulling;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
+ return {group,state,objects,parts,capture,restore,inventoryChain:index=>chains[index]?.mesh,canCollectChain:index=>!!chains[index]?.dropped&&!chains[index].collected,canHook,canInteract,setHighlightsEnabled(value){discoveryEnabled=value;syncPartHighlights(lastTime);},takeMessage(){const result=message;message='';return result;},use,canMove,availableSlots,select,cancelMove,place,prepare,cancelPreparation:state.cancelReservation,board,isTransferring:index=>transfers.has(index)||rolls.has(state.chairs.findIndex(c=>c.passenger===index)),dropChain,collectChain,hook,pull,update,reset,cancelHook(){firstAnchor=null;},get moving(){return moving;},get playerOffset(){return playerOffset;},get busy(){return rolls.size>0||transfers.size>0||state.pulling;},collectPart(id,inventory){const p=parts[id];if(!p?.visible||!inventory.add(id))return false;p.visible=false;syncPartHighlights(lastTime);return true;}};
 }

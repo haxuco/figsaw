@@ -30,7 +30,7 @@ export function createInteractionTargets({office,model,restraint,laptop,catMug,h
  add(laptop.object,{kind:'laptop'});add(catMug,{kind:'mug'});
  add(handsaw,{kind:'pickup',item:'saw'},()=>!inventory.has('saw'));
  add(fireAxe.object,{kind:'pickup',item:'axe'},()=>!inventory.has('axe'));
- rescueChairs.objects.forEach((o,index)=>add(o,{kind:'chair',index}));add(chairRefuge.object,{kind:'chair',index:PLAYER_CHAIR});
+ rescueChairs.objects.forEach((o,index)=>add(o,{kind:'chair',index},()=>rescueChairs.canInteract(index,inventory.equipped)));add(chairRefuge.object,{kind:'chair',index:PLAYER_CHAIR});
  for(const [id,o]of Object.entries(rescueChairs.parts))add(o,{kind:'pickup',item:id},()=>!inventory.has(id));
  add(restraint.target.getObjectByName('Close-fitting oval wrist cuff')??restraint.target,{kind:'shackle'},()=>restraint.locked);
  add(fallenMobile.group,{kind:'mobile'});add(mobileInspection.group.children[0],{kind:'mobile'});

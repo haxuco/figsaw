@@ -78,6 +78,10 @@ test('a repaired chair offers large clickable destinations and rolls to the chos
  assert.equal(rescue.place(0),true);assert.equal(rescue.moving,null);assert.deepEqual(rescue.availableSlots(),[]);
  for(const o of rescue.group.children.filter(o=>o.name.startsWith('Chair destination')))assert.equal(o.visible,false);
  rescue.update(4);assert.ok(objects[0].position.distanceTo(new THREE.Vector3(.9,.003,-.95))<1e-9);
+ assert.equal(rescue.canMove(0),false);assert.equal(rescue.select(0),false,'parked chairs cannot reopen destination controls');
+ assert.equal(rescue.canInteract(0),false);assert.equal(rescue.canInteract(0,'ratchet'),false,'held equipment cannot reactivate the parked frame');
+ inventory.add('chain0');assert.equal(rescue.canInteract(0,'chain0'),true,'a parked chair still accepts a towing chain');
+ rescue.hook(2,'chain0',inventory);rescue.hook(0,'chain0',inventory);assert.equal(inventory.has('chain0'),false);assert.equal(rescue.canInteract(0,'chain0'),false);
  rescue.state.chairs[1].repaired=true;assert.equal(rescue.select(1),true);
  assert.deepEqual(rescue.availableSlots(),[1,2],'an occupied destination is disabled, without revealing the randomized PM');
  assert.equal(rescue.place(0),false);assert.equal(rescue.moving,1,'an invalid placement keeps the selection');

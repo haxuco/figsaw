@@ -573,7 +573,10 @@ function interactionAt(event){
  // when unrelated clutter is in front of its matching chair or tool socket.
  const matchedHit=testingMode.enabled&&inventory.equipped?testingHighlights.pickMatching(interactionRay)??sceneHit:sceneHit;
  const hit=preferSkullInspection(matchedHit,sceneHits,figpalHoists.fishInspectionTarget,figpalHoists.fishClueReady);
- for(let object=hit?.object;object;object=object.parent){if(object===model&&departure.finished)return puppet;if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
+ for(let object=hit?.object;object;object=object.parent){
+  const chairIndex=Number.isInteger(object.userData.chainAnchor)?object.userData.chainAnchor:object.userData.rescueChair;
+  if(Number.isInteger(chairIndex))return rescueChairs.canInteract(chairIndex,inventory.equipped)?object:null;
+  if(object===model&&departure.finished)return puppet;if(object===restraint.target||object===laptop.object||object===catMug||object===handsaw||object.userData.stuffedAnimal||object===puppet||Number.isInteger(object.userData.rescueChair)||Number.isInteger(object.userData.rescueSlot)||Number.isInteger(object.userData.chainAnchor)||Number.isInteger(object.userData.chainPickup)||object.userData.salvagePart||object.userData.chairSeat||object.userData.chargingAction||object.userData.keyAction||object.userData.fireAlarm||object.userData.fireAxe||object.userData.supplyAction||object.userData.mobilePuzzle||object.userData.exitKeypad||object.userData.keypadKey||object.userData.wallDocument||(object.userData.fishClue&&figpalHoists.fishClueReady)||(axeInteraction.held&&Number.isInteger(object.userData.tankIndex))||Number.isInteger(object.userData.valveIndex)||Number.isInteger(object.userData.hoistIndex))return object;}
  return null;
 }
 const leaveChairButton=document.querySelector('#leave-chair');
@@ -669,7 +672,7 @@ rescueControls.querySelector('[data-cancel]').onclick=()=>{rescueChairs.cancelMo
 rescueControls.querySelector('[data-pull]').onclick=()=>{if(!chairSeat.seated){return;}rescueChairs.pull();};
 function syncRescueControls(){
  const moving=rescueChairs.moving!==null,c=movePromptChair===null?null:rescueChairs.state.chairs[movePromptChair];
- const prompt=!moving&&c?.repaired&&c.passenger===null&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;
+ const prompt=!moving&&c?.repaired&&rescueChairs.canMove(movePromptChair);
  const pull=rescueChairs.state.ready&&!rescueChairs.busy&&!rescueChairs.state.safe&&!rescueChairs.state.pulling;
  rescueControls.hidden=gameEnded||gameWon||inventoryUI.active||sawBusy()||documentViewer.active||mobilePuzzle.active||laptopProgram.active||drawerCamera.active||(!moving&&!prompt&&!pull);
  const label=moving?'Choose a spot in front of a tank.':prompt?'Chair repaired.':'';if(moveLabel.textContent!==label)moveLabel.textContent=label;moveLabel.hidden=!moving&&!prompt;
