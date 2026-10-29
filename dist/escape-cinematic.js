@@ -19,30 +19,45 @@ export function escapeDoorAngle(age,reducedMotion=false){
 }
 
 export function createExitDoorMotion({object,frame,light,scenery=null}){
- let started=null;
+ let started=null,parade=false;
+ const lightHome=light?.position.clone(),lightRange=light?.distance;
  if(scenery)scenery.visible=false;
  return {object,scenery,
-  unlock(time=0){if(started===null)started=time;},
-  reset(){started=null;object.rotation.y=0;if(light)light.intensity=0;if(scenery)scenery.visible=false;},
+  unlock(time=0,{restart=false}={}){if(started===null||restart)started=time;},
+  reset(){started=null;parade=false;object.rotation.y=0;if(light){light.intensity=0;light.position.copy(lightHome);light.distance=lightRange;}if(scenery)scenery.visible=false;},
+  lightParade(){parade=true;if(light){light.position.set(-.85,2.35,-4.45);light.distance=7;}},
   update(time,reducedMotion=false){
    const angle=started===null?0:escapeDoorAngle(Math.max(0,time-started),reducedMotion);
-   object.rotation.y=angle;if(light)light.intensity=Math.min(2.4,Math.abs(angle)*1.5);
+   object.rotation.y=angle;if(light)light.intensity=parade?7:Math.min(2.4,Math.abs(angle)*1.5);
    if(scenery)scenery.visible=angle>0;
   },
-  getEscapeView(eye,target){frame.updateWorldMatrix(true,false);frame.localToWorld(eye.set(0,1.05,2.25));frame.localToWorld(target.set(0,1.28,0));}
+  getEscapeView(eye,target){frame.updateWorldMatrix(true,false);frame.localToWorld(eye.set(0,1.05,2.25));frame.localToWorld(target.set(0,1.28,0));},
+  getParadeView(eye,target){frame.updateWorldMatrix(true,false);frame.localToWorld(eye.set(-1.35,1.55,-4.62));frame.localToWorld(target.set(0,.97,-1.70));}
  };
 }
 
 export function createEscapeCinematic({camera,position,state,door,baseFov}){
- let shot=null;
+ let shot=null,paradeStarted=null;
  const destination=new THREE.Vector3(),target=new THREE.Vector3(),away=new THREE.Vector3(),direction=new THREE.Vector3();
  function start(time){
+  paradeStarted=null;
   door.getEscapeView(destination,target);away.subVectors(destination,target).setY(0).normalize();
   shot={time,from:position.clone(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom};
-  door.unlock(time);
+  // A code entered earlier may already have unlocked the door. Replay the
+  // opening for the actual victory reveal, before any chairs cross it.
+  door.unlock(time,{restart:true});
  }
  function update(time,reducedMotion=false){
   if(!shot)return false;
+  if(paradeStarted!==null){
+   // Cut to a three-quarter hallway shot: faces and the chair seats stay in
+   // view instead of disappearing behind their mesh backs in the doorway.
+   door.getParadeView(destination,target);
+   if(camera.aspect<.8){const extra=(.8-camera.aspect)*2.2;destination.z+=extra;destination.x-=extra*.15;}
+   position.copy(destination);camera.position.copy(position);camera.lookAt(target);
+   direction.subVectors(target,position).normalize();state.yaw=Math.atan2(-direction.x,-direction.z);state.pitch=Math.asin(direction.y);state.zoom=.90;
+   camera.fov=baseFov*state.zoom;camera.updateProjectionMatrix();return true;
+  }
   const age=Math.max(0,time-shot.time),progress=reducedMotion?1:ease(age,0,1.15),lean=reducedMotion?1:ease(age,.35,1.65);
   door.getEscapeView(destination,target);
   // Pull farther back on narrow screens so the full frame and swinging leaf fit.
@@ -60,5 +75,5 @@ export function createEscapeCinematic({camera,position,state,door,baseFov}){
   camera.fov=baseFov*state.zoom;camera.updateProjectionMatrix();
   return age>=(reducedMotion?.85:ESCAPE_DURATION);
  }
- return {start,update,reset(){shot=null;},get active(){return shot!==null;}};
+ return {start,update,beginParade(time){paradeStarted=time;door.lightParade?.();},reset(){shot=null;paradeStarted=null;},get active(){return shot!==null;}};
 }

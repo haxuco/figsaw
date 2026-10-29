@@ -47,6 +47,10 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   }
   if(expression==='afraid')ball([0,y-.075,z+.003],[.026,.038,.012],ink,expressionGroup);
   else line([[-.052,y-.091,z],[0,y-.060,z+.005],[.052,y-.091,z]],.012,ink,expressionGroup);
+  const happy=new THREE.Group();happy.name='Happy rescued expression';happy.visible=false;parent.add(happy);
+  for(const side of[-1,1])line([[side*spacing-.025,y-.004,z],[side*spacing,y+.024,z+.005],[side*spacing+.025,y-.004,z]],.011,ink,happy);
+  line([[-.062,y-.059,z],[0,y-.108,z+.009],[.062,y-.059,z]],.013,ink,happy);
+  parent.expressions={worried:expressionGroup,happy};
  }
  function pudding(){
   const g=new THREE.Group();g.name='Party-hat pudding Figpal';
@@ -224,13 +228,15 @@ export function createFigpalVats({floorSupport,puzzle}={}){
    const tag=mesh(new THREE.PlaneGeometry(.49,.138),new THREE.MeshStandardMaterial({map,roughness:.95}),nameTag);tag.position.set(0,-.31,.10);tag.name='Character name tag';
    for(const side of[-1,1])rod([side*.14,-.18,.07],[side*.14,-.248,.10],.003,steel,nameTag);
   }
-  batchRigid(captive.object,{exclude:[captive.propeller],minObjects:2,dispose:false});
+  for(const expression of Object.values(captive.object.expressions)){const visible=expression.visible;expression.visible=true;batchRigid(expression,{minObjects:2,dispose:false});expression.visible=visible;}
+  batchRigid(captive.object,{exclude:[captive.propeller,...Object.values(captive.object.expressions)],minObjects:2,dispose:false});
   transformation.skeleton.visible=true;batchRigid(transformation.skeleton,{exclude:[skullClue?.mesh],minObjects:2,dispose:false});transformation.skeleton.visible=false;
   const speechAnchor=new THREE.Object3D();speechAnchor.position.set(0,.50,0);hanger.add(speechAnchor);speechAnchors.push(speechAnchor);
   // A spreader and two linked chain slings support the body, leaving its face clear.
-  rod([-.22,.45,0],[.22,.45,0],.019,steel,hanger);
-  const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,hanger);hook.position.set(0,.49,0);hook.rotation.z=-.5;rod([-.028,.476,.008],[.016,.511,.008],.004,darkMetal,hanger);
-  for(const side of[-1,1])chainRun([[side*.21,.45,0],[side*.245,.11,0],[side*.23,-.12,.015],[side*.16,-.205,.04],[0,-.222,.045]],hanger);
+  const sling=new THREE.Group();sling.name='Captive lifting sling';hanger.add(sling);
+  rod([-.22,.45,0],[.22,.45,0],.019,steel,sling);
+  const hook=mesh(new THREE.TorusGeometry(.045,.010,6,18,Math.PI*1.65),fastener,sling);hook.position.set(0,.49,0);hook.rotation.z=-.5;rod([-.028,.476,.008],[.016,.511,.008],.004,darkMetal,sling);
+  for(const side of[-1,1])chainRun([[side*.21,.45,0],[side*.245,.11,0],[side*.23,-.12,.015],[side*.16,-.205,.04],[0,-.222,.045]],sling);
   const loadChain=chainRun([[0,winchY-.10,.025],[0,height+.52,0]],rig,72);
   const returnChain=chainRun([[-.10,winchY-.01,-.11],[-.11,winchY-.36,-.12],[-.16,winchY-.40,-.10],[-.20,winchY-.05,-.08]],rig,96);
   returnChain.object.name='Winch return chain loop';
@@ -243,7 +249,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
   batchRigid(vat,{exclude:[liquid,meniscus,shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
-  rigs.push({rig,hanger,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3()});
+  rigs.push({rig,hanger,sling,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3()});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
  const movingIndex=()=>{const index=rigs.findIndex(rig=>!rig.rescued&&(rig.escaping||Math.abs(rig.height-rig.targetHeight)>.005));return index<0?null:index;};

@@ -84,3 +84,17 @@ test('hallway walls and ceiling begin beyond the rear wall so they cannot peek i
   const ray=new THREE.Raycaster(new THREE.Vector3(-1.2,.003,8.10),new THREE.Vector3(0,-1,0));assert.ok(ray.intersectObject(hallway,true).length,'the lead chair has a floor beneath it at the end of the exit route');
  }finally{globalThis.document=previous;}
 });
+
+test('the hallway shot keeps both passengers visible on portrait and landscape screens before showing results',()=>{
+ for(const aspect of [.4,.55,1,16/9]){
+  const f=fixture(aspect);f.shot.start(0);f.shot.update(4.8);f.shot.beginParade(4.8);f.shot.update(7);f.door.update(7);f.camera.updateMatrixWorld(true);
+  assert.ok(f.camera.position.z>8.5,'the victory camera watches the riders from inside the hallway');
+  for(const z of [5.78,6.94])for(const y of [.55,1.35]){const p=new THREE.Vector3(-1.2,y,z).project(f.camera);assert.ok(Math.abs(p.x)<.95&&Math.abs(p.y)<.95,'both saved characters fit in the shot');}
+  assert.ok(f.light.intensity>2.4,'the existing doorway light now illuminates their faces');f.door.reset();assert.equal(f.light.intensity,0);assert.ok(f.light.position.equals(new THREE.Vector3()));
+ }
+});
+
+test('winning still shows the opening when the keypad was unlocked earlier',()=>{
+ const f=fixture();f.door.unlock(0);f.door.update(8);assert.equal(f.hinge.rotation.y,1.84);
+ f.shot.start(10);f.door.update(10.5);assert.equal(f.hinge.rotation.y,0);f.door.update(12.25);assert.ok(f.hinge.rotation.y>Math.PI/2);
+});

@@ -1,3 +1,4 @@
+import {createVictoryParade} from './victory-parade.js';
 import {createLocalLeaderboard,captureRankedEscape} from './leaderboard.js';
 import {createLeaderboardUI} from './leaderboard-ui.js';
 import {createDiagnostics,createDiagnosticUI} from './diagnostics.js';
@@ -473,6 +474,7 @@ const acidCamera=createAcidCamera({position:cameraPosition,state});
 const chairSeat=createChairSeat({position:cameraPosition,state,getView:chairRefuge.getView});
 const chairTowDelta=new THREE.Vector3();
 const alarmCamera=createAlarmCamera({position:cameraPosition,state});
+const victoryParade=createVictoryParade({rigs:figpalHoists.rigs});
 const escapeCinematic=createEscapeCinematic({camera,position:cameraPosition,state,door:exitDoor,baseFov:homeCamera.fov});
 const hazardClock=createHazardClock(state.time);
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
@@ -616,7 +618,7 @@ function escapeRoom(){
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;
  putEquipmentAway();inventoryUI.setHidden(true);document.body.classList.add('escape-active');
- escapeCinematic.start(state.time);
+ escapeCinematic.start(state.time);victoryParade.start(state.time);
  restraintStatus.textContent='The code works. The door opens. You escaped.';
  victoryShare.prepare(result);leaderboardUI.close();leaderboardUI.showResult(result);
 }
@@ -946,7 +948,7 @@ function resetView({skipIntro=false}={}){
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();movePromptChair=null;inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
- gameEnded=false;gameWon=false;escapeCinematic.reset();document.body.classList.remove('escape-active');escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
+ gameEnded=false;gameWon=false;victoryParade.reset();escapeCinematic.reset();document.body.classList.remove('escape-active');escapeScreen.hidden=true;escapePuzzle.reset();documents.refreshRoles().catch(()=>{});fallenMobile.refreshDigits();documentViewer.hide();closeMobileInspection(true);mobilePuzzle.reset();mobileInspection.reset();mobileCamera.reset();syncSupplies();doorKeypadUI.reset();exitDoor.reset();chairSeat.reset();hoveredChair=false;leaveChairButton.hidden=true;canvas.classList.remove('over-chair');acidLeaks.reset();fireHazard.reset();fireAlarm.reset();hazardClock.reset(state.time);hoveredAlarm=false;canvas.classList.remove('over-alarm');mugTrap.reset();sawTrap.reset();plushCut.reset();sawMenu.hide();clearSawSelection();putAxeBack();mugImpactOverlay.reset();deathTransition.reset();
  gameOver.hidden=true;gameOver.style.opacity='0';gameOverContent.hidden=true;gameOverReasonText.textContent='';fireWarning.hidden=true;
  document.body.classList.remove('game-over','death-active');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
@@ -1170,9 +1172,10 @@ function render(){
  const dt=Math.min(clock.getDelta(),.1),t=state.time+=dt,eased=1-Math.exp(-dt*12);
  if(gameWon){
   const revealed=escapeCinematic.update(t,reducedMotion);exitDoor.update(t,reducedMotion);
-  if(revealed&&rescueChairs.state.towPhase==='at-door')rescueChairs.exit(t);
+  if(revealed&&rescueChairs.state.towPhase==='at-door'&&rescueChairs.exit(t)){escapeCinematic.beginParade(t);escapeCinematic.update(t,reducedMotion);exitDoor.update(t,reducedMotion);}
   rescueChairs.update(t,reducedMotion);
-  const finished=rescueChairs.state.towPhase==='escaped';
+  victoryParade.update(t,camera.position,reducedMotion);
+  const finished=victoryParade.readyForResults(t,rescueChairs.state.towPhase==='escaped',reducedMotion);
   if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
   renderer.render(scene,camera);frameRate.frame(performance.now());
   if(finished){escapeScreen.hidden=false;if(!leaderboardUI.focusResult())document.querySelector('#new-game').focus({preventScroll:true});frameRate.reset();return;}
