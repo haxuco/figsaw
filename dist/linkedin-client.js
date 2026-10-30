@@ -44,5 +44,10 @@ export function createLinkedInClient({config=linkedinConfig,fetcher=fetch,win=wi
   if(!response.ok)throw Error(data.message||'LinkedIn could not confirm the post. Check your profile before trying again.');
   return data;
  }
- return {connect,post,get connected(){return Boolean(session&&session.expiresAt>Date.now());},get name(){return session?.name||'';}};
+ return {connect,post,get configured(){return Boolean(configured());},get connected(){return Boolean(session&&session.expiresAt>Date.now());},get name(){return session?.name||'';},leaderboardIdentity(){
+  if(!session||session.expiresAt<=Date.now())throw Error('Reconnect LinkedIn before using your name.');
+  return {accessToken:session.accessToken,providerToken:session.providerToken,name:session.name};
+ }};
 }
+let sharedClient;
+export function getLinkedInClient(){return sharedClient??=createLinkedInClient();}

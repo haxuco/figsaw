@@ -1,6 +1,7 @@
 import {FIGPAL_INTERVAL_SECONDS} from './countdown-clock.js';
 import {captureVictoryResult} from './victory-result.js';
 import {validateDisplayName,displayNameKey} from './display-name.js';
+import {linkedInDisplayName} from './linkedin-name.js';
 
 export const LEADERBOARD_LIMIT=10,LEADERBOARD_STORAGE_KEY='figsaw-top-10-v1';
 export const ESCAPE_BUDGET_SECONDS=FIGPAL_INTERVAL_SECONDS*2;
@@ -23,14 +24,15 @@ export function captureRankedEscape({attempt,intervalSeconds,scheduledDrops=0,re
 }
 
 const compare=(a,b)=>b.remainingSeconds-a.remainingSeconds||a.createdAt-b.createdAt||a.id.localeCompare(b.id);
-function validEntry(value){
+function validEntry(value,trustedServer=false){
  if(!value||typeof value!=='object'||typeof value.id!=='string'||value.id.length>100||!value.id)return null;
- const name=validateDisplayName(value.name);
+ const verified=trustedServer&&value.nameSource==='linkedin';
+ const name=verified?{name:linkedInDisplayName(value.name),ok:Boolean(linkedInDisplayName(value.name))}:validateDisplayName(value.name);
  if(!name.ok||!Number.isInteger(value.remainingSeconds)||value.remainingSeconds<0||value.remainingSeconds>ESCAPE_BUDGET_SECONDS||!Number.isSafeInteger(value.attempt)||value.attempt<1||!Number.isSafeInteger(value.createdAt)||value.createdAt<0)return null;
- return {id:value.id,name:name.name,remainingSeconds:value.remainingSeconds,attempt:value.attempt,createdAt:value.createdAt};
+ return {id:value.id,name:name.name,remainingSeconds:value.remainingSeconds,attempt:value.attempt,createdAt:value.createdAt,...(verified?{nameSource:'linkedin'}:{})};
 }
-export function rankedEntries(values){
- const names=new Set(),ids=new Set();return (Array.isArray(values)?values:[]).map(validEntry).filter(Boolean).sort(compare).filter(entry=>{
+export function rankedEntries(values,{trustedServer=false}={}){
+ const names=new Set(),ids=new Set();return (Array.isArray(values)?values:[]).map(value=>validEntry(value,trustedServer)).filter(Boolean).sort(compare).filter(entry=>{
   const key=displayNameKey(entry.name);if(names.has(key)||ids.has(entry.id))return false;names.add(key);ids.add(entry.id);return true;
  }).slice(0,LEADERBOARD_LIMIT);
 }

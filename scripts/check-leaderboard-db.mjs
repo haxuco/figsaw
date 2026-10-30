@@ -7,6 +7,7 @@ const db=new PGlite();
 try{
  await db.exec('create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key);');
  await db.exec(await readFile(new URL('../supabase/migrations/202610300001_leaderboard.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../supabase/migrations/202610300003_linkedin_names.sql',import.meta.url),'utf8'));
  const user='123e4567-e89b-12d3-a456-426614174001',other='123e4567-e89b-12d3-a456-426614174002';
  await db.query('insert into auth.users values ($1),($2)',[user,other]);
  let counter=0;const nextId=()=>`123e4567-e89b-12d3-a456-${String(++counter).padStart(12,'0')}`;
@@ -29,5 +30,10 @@ try{
   await db.exec('reset role');
  }
  await db.exec('set role service_role');assert.equal((await db.query('select public.figsaw_top_ten() as entries')).rows[0].entries.length,10);
+ const verified=async(consent)=>(await db.query('select public.figsaw_submit_score_with_identity($1,$2,$3,$4,$5,$6,$7,$8) as result',[user,nextId(),'Jane Alexandra Example Long Name','linkedin:'+user,1190,1,'linkedin',consent])).rows[0].result;
+ await assert.rejects(()=>verified(false));await assert.rejects(()=>verified(null));
+ const approved=await verified(true);assert.equal(approved.entry.nameSource,'linkedin');assert.equal(approved.rank,1);
+ const consentRow=(await db.query('select name_consented_at from public.figsaw_scores where name_source=$1',['linkedin'])).rows[0];assert.ok(consentRow.name_consented_at);
+ await db.exec('reset role; set role authenticated');await assert.rejects(()=>verified(true));await db.exec('reset role');
  console.log('PostgreSQL migration, ranking, duplicate protection, quotas and browser-role denial passed.');
 }finally{await db.close();}

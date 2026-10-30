@@ -22,7 +22,7 @@ The leaderboard remains unconnected. LinkedIn sharing uses the separate setup be
 
 ## Name review contract (required)
 
-The Edge Function first normalizes names and blocks known profanity, slurs, sexual/anatomical terms, negative language, and **all Figma references**, including friendly brand references. Spaces, dots, repeated letters, leetspeak and common Unicode lookalikes are checked. This policy is not a complete semantic moderation system; free-text filters and reviewers can make mistakes.
+For typed nicknames, the Edge Function first normalizes names and blocks known profanity, slurs, sexual/anatomical terms, negative language, and **all Figma references**, including friendly brand references. Spaces, dots, repeated letters, leetspeak and common Unicode lookalikes are checked. This policy is not a complete semantic moderation system; free-text filters and reviewers can make mistakes. LinkedIn account names use the explicit-consent exception below.
 
 After the deterministic check, the function sends a POST over HTTPS to your private review service:
 
@@ -68,5 +68,15 @@ To finish activation:
 4. Set `enabled:true` in `dist/linkedin-config.js`, rebuild and publish. The configuration contains only the public publishable key. Session and provider tokens stay in memory and are discarded on refresh.
 
 The video is loaded only when opening the share preview. The backend uploads its fixed production video URL; it does not accept arbitrary fetch URLs. Graphic uploads must be PNG and at most 4 MiB. Closing the preview pauses and releases video loading. Without sign-in configuration, players can still preview, save media and copy the caption.
+
+## LinkedIn names in the Top 10
+
+Qualified players may choose **Use my LinkedIn name**. Sign-in displays a private preview of the exact name, an unchecked approval checkbox, **Publish my name and score**, **Use a nickname instead**, and **Keep my name private**. Neither signing in nor checking the box submits a score: the separate publish button is required. Approval resets for every new result. Declining makes no leaderboard write and does not attach the name to the result graphic.
+
+The server retrieves `/v2/userinfo` directly from LinkedIn and matches its subject to the Supabase user's LinkedIn identity. Only that returned name bypasses nickname moderation. A client-supplied name, profile metadata, or `nameSource` flag cannot approve it. The approved preview must match the current provider name and `nameConsent` must be boolean `true`. Profile names are rendered as text, never HTML. This verifies account ownership, not the legal identity of the person.
+
+Apply `202610300003_linkedin_names.sql` after the leaderboard migration, then deploy the updated leaderboard function before enabling the worldwide adapter. The new RPC records the source and consent timestamp; it does not store the provider token. Backend reads preserve consented LinkedIn names, while untrusted local-storage names still go through the nickname filter. The name/consent migration and updated leaderboard function are prepared and tested locally, not yet deployed. The worldwide leaderboard and LinkedIn provider must be connected before the real-name option is enabled.
+
+The LinkedIn callback and both official/staging Supabase redirect URLs listed above are now saved. The app secret and provider activation remain an owner handoff. Figma Make must also serve `linkedin-callback.html` and its script at the official domain; an allowlist alone does not deploy these files to Figma Make.
 
 Verification: 335 automated tests pass, including mocked LinkedIn uploads, exact caption enforcement, identity mismatch rejection, duplicate requests, and no publication during sign-in. The migration also passed isolated PostgreSQL permissions/quota checks. Production OPTIONS returns 204 and an unauthenticated POST returns 401. UI posting was tested only with a mock client; no real LinkedIn test post was published. Authenticated live posting remains untested by the owner's instruction.
