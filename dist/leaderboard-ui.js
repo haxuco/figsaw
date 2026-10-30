@@ -3,9 +3,9 @@ import {prospectiveRank,LEADERBOARD_STORAGE_KEY} from './leaderboard.js';
 import {validateDisplayName,DISPLAY_NAME_GUIDANCE} from './display-name.js';
 
 function boardMarkup(){return '<header class="leaderboard-header"><div><p class="leaderboard-eyebrow">THE ONES WHO MADE IT</p><h2>Top 10 escapes</h2></div><span data-scope>On this device</span></header><p class="leaderboard-caption">Both Figpals saved. Ranked by time remaining.</p><table><thead><tr><th scope="col">Rank</th><th scope="col">Name</th><th scope="col">Time left</th></tr></thead><tbody data-scores></tbody></table><p data-empty>No perfect escapes recorded here yet.</p>';}
-function renderBoard(root,entries,highlight,persistent){
+function renderBoard(root,entries,highlight,scopeLabel){
  const body=root.querySelector('[data-scores]');body.replaceChildren();root.querySelector('[data-empty]').hidden=entries.length>0;root.querySelector('[data-empty]').textContent='No perfect escapes recorded here yet.';
- root.querySelector('table').hidden=entries.length===0;root.querySelector('[data-scope]').textContent=persistent?'On this device':'This visit only';
+ root.querySelector('table').hidden=entries.length===0;root.querySelector('[data-scope]').textContent=scopeLabel;
  entries.forEach((entry,index)=>{
   const row=document.createElement('tr');if(entry.id===highlight){row.className='leaderboard-you';row.setAttribute('aria-label','Your ranked escape');}
   for(const text of [String(index+1).padStart(2,'0'),entry.name,formatCountdown(entry.remainingSeconds)]){const cell=document.createElement('td');cell.textContent=text;row.append(cell);}body.append(row);
@@ -25,7 +25,7 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
   root.querySelector('[data-celebration-title]').textContent=name?`${name}, you made it.`:'You made the top 10.';
   root.querySelector('[data-celebration-copy]').textContent=name?'Two Figpals. One remarkable escape.':`${formatCountdown(run.remainingSeconds)} left. Both Figpals safe.`;
  }
- function draw(entries){for(const target of [board,dialogBoard])renderBoard(target,entries,currentEntry?.id,repository.persistent);}
+ function draw(entries){for(const target of [board,dialogBoard])renderBoard(target,entries,currentEntry?.id,repository.scopeLabel);}
  function close(){if(dialog.open)dialog.close();}
  function update(){if(!dialog.open)return;const seconds=getCountdown(),clock=dialog.querySelector('[data-live-countdown]'),text=seconds===null?'':formatCountdown(seconds);if(clock.textContent!==text)clock.textContent=text;}
  dialog.querySelector('button').onclick=close;
@@ -46,7 +46,7 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
    draw(result.entries);form.hidden=true;
    if(!result.rank){celebrate(null);feedback.textContent='This escape is outside the current top 10.';return;}
    currentEntry=result.entry;draw(result.entries);celebrate(result.rank,result.entry.name);
-   feedback.textContent=result.improved?`Your escape is #${result.rank}. ${repository.persistent?'Saved on this device.':'Saved for this visit.'}`:`Your best escape is already #${result.rank}.`;
+   feedback.textContent=result.improved?`Your escape is #${result.rank}. ${repository.savedMessage}`:`Your best escape is already #${result.rank}.`;
    onRank({...completedRun,name:result.entry.name,rank:result.entry.id===completedRun.id?result.rank:null});
   }catch{if(ticket===revision)error.textContent='Your name could not be saved. Please try again.';}
   finally{if(ticket===revision){busy=false;submit.disabled=input.disabled=false;}}

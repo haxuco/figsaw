@@ -1,5 +1,6 @@
 import {createVictoryParade} from './victory-parade.js';
-import {createLocalLeaderboard,captureRankedEscape} from './leaderboard.js';
+import {captureRankedEscape} from './leaderboard.js';
+import {createLeaderboardRepository} from './leaderboard-remote.js';
 import {createLeaderboardUI} from './leaderboard-ui.js';
 import {createGamePause} from './game-pause.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
@@ -493,7 +494,7 @@ const deathTransition=createGameOverTransition(document.querySelector('#death-tr
 const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
 const escapeScreen=document.querySelector('#escaped');
 const victoryShare=createVictoryShare(document.querySelector('#victory-share'));
-const leaderboardUI=createLeaderboardUI({repository:createLocalLeaderboard(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){
+const leaderboardUI=createLeaderboardUI({repository:createLeaderboardRepository(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){
  leaderboardPause.pause(countdown);releaseControls();chainMenu.hide();sawMenu.hide();itemHover.clear();fireAlarm.silence();frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;
 },onClose(){
  leaderboardPause.resume();lastRenderAt=0;clock.getDelta();scheduleFrame();canvas.focus({preventScroll:true});

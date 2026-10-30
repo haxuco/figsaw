@@ -1,0 +1,4 @@
+# The endpoint handles public GETs and explicitly verifies Auth on every POST.
+# Publishable keys are not JWTs; do not rely on the legacy gateway JWT check.
+[functions.leaderboard]
+verify_jwt = false

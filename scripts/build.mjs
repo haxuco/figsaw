@@ -2,6 +2,8 @@ import {build} from 'esbuild';
 import {readFile,writeFile,cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {stageProductionAssets} from './production-assets.mjs';
+// Deploy the identical policy used by the browser; tests guard against drift.
+await cp('dist/display-name.js','supabase/functions/_shared/display-name.js');
 const options={entryPoints:['dist/app.js'],bundle:true,minify:true,format:'esm',target:['es2022'],legalComments:'external',sourcemap:false,logLevel:'info'};
 async function updateEntrypoints(directory,production=false){
  const hash=createHash('sha256').update(await readFile(`${directory}/game.bundle.js`)).digest('hex').slice(0,12);

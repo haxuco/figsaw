@@ -47,9 +47,9 @@ test('display names reject insults, threats and disguised words inside a longer 
  }
 });
 
-test('negative Figma messages are blocked across spacing, leetspeak and lookalikes',()=>{
- for(const name of ['Figma sucks','FigmaSucks','Figma is bad','Figma is a joke','I hate Figma','FigmaIsSh1t','F1gm4sucks','f.i.g.m.a s.u.c.k.s','Ｆｉｇｍａ ｓｕｃｋｓ','Fіgmа sucks','Figma\u200bsucks','Figmma is baaadd','Figma not good','Dont use Figma','Boycott Figma','Figma is overpriced','Figma is garbage','Figma basurа','NoToFigma','Figma ruined design'])assert.equal(validateDisplayName(name).ok,false,name);
- for(const name of ['Figma Fan','FigmaFriend','I love Figma','Figma Forever','Figpal Friend','Maya Chen','Anne-Marie','O’Connor','José','Zoë','李 明','Ada_42','Scunthorpe','Hancock','Dickens','Cassandra','Shital','Badawi'])assert.equal(validateDisplayName(name).ok,true,name);
+test('all Figma references are blocked across spacing, leetspeak and lookalikes',()=>{
+ for(const name of ['Figma Fan','FigmaFriend','I love Figma','Figma Forever','Figma sucks','FigmaSucks','Figma is bad','Figma is a joke','I hate Figma','FigmaIsSh1t','F1gm4sucks','f.i.g.m.a s.u.c.k.s','Ｆｉｇｍａ ｓｕｃｋｓ','Fіgmа sucks','Figma\u200bsucks','Figmma is baaadd','Figma not good','Dont use Figma','Boycott Figma','Figma is overpriced','Figma is garbage','Figma basurа','NoToFigma','Figma ruined design'])assert.equal(validateDisplayName(name).ok,false,name);
+ for(const name of ['Figpal Friend','Maya Chen','Anne-Marie','O’Connor','José','Zoë','李 明','Ada_42','Scunthorpe','Hancock','Dickens','Cassandra','Shital','Badawi'])assert.equal(validateDisplayName(name).ok,true,name);
 });
 
 test('name moderation covers repository submission and previously stored scores',async()=>{
@@ -61,7 +61,7 @@ test('name moderation covers repository submission and previously stored scores'
  assert.deepEqual(await repo.list(),[]);
  const names=['Figma sucks','FigmaFan','Go die','Scunthorpe'];
  s.data.set(LEADERBOARD_STORAGE_KEY,JSON.stringify(names.map((name,i)=>({id:`saved-${i}`,name,remainingSeconds:1000-i,attempt:1,createdAt:i}))));
- assert.deepEqual((await repo.list()).map(e=>e.name),['FigmaFan','Scunthorpe']);
+ assert.deepEqual((await repo.list()).map(e=>e.name),['Scunthorpe']);
 });
 
 test('the board keeps ten names, descending time, and stable earlier-first ties',async()=>{

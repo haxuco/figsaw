@@ -7,29 +7,34 @@ function folded(value){return value.normalize('NFKD').replace(/\p{M}/gu,'').toLo
 const repeated=word=>[...word].map(c=>c+'+').join('');
 const forbiddenWord=new RegExp('^(?:'+[...BLOCKED,...NEGATIVE].map(repeated).join('|')+')$','u');
 const forbiddenPhrase=new RegExp(PHRASES.map(p=>repeated(p.replaceAll(' ',''))).join('|'),'u');
+const negativeMessage=new RegExp(['stupid','idiot','garbage','trash','loser','worthless','useless','disgusting','hate','scammer','thisisbad','notgood','dontplay','dontuse','godies','ripoff','boycott'].map(repeated).join('|'),'u');
 const figmaName=/f+i+g+m+a+/u;
-const figmaAttack=new RegExp(['fuck','shit','bitch','asshole','bastard','cunt','bad','suck','hate','trash','garbage','rubbish','scam','fraud','stupid','dumb','idiot','awful','terrible','worst','useless','worthless','pathetic','disgusting','ugly','broken','buggy','slow','laggy','overpriced','expensive','ripoff','boycott','avoid','uninstall','delete','evil','toxic','fail','loser','incompetent','greedy','liar','lies','lying','steal','stole','copycat','ruined','ruins','joke','meh','mid','isdead','notgood','nogood','dontuse','neveruse','isnot','isnt','doesnot','doesnt','dontlike','dontlove','notafan','onestar','zerostars','noto','downwith','isntgood','nobodylikes','nobodyneeds','unusable','inferior','malo','mala','basura','odio','nul','nulle','schlecht'].map(repeated).join('|'),'u');
-export const DISPLAY_NAME_GUIDANCE='Use a name or friendly nickname. No offensive language or negative messages.';
+const SEXUAL=['boob','boobs','boobie','boobies','penis','penises','cock','cocks','dick','dicks','pussy','vagina','vulva','clitoris','clit','testicle','testicles','ballsack','scrotum','tits','titty','titties','nipple','nipples','porn','porno','pornhub','xxx','sex','sexual','sexy','sexting','cum','cumming','jizz','semen','orgasm','masturbate','masturbation','blowjob','handjob','dildo','anal','anus','boner','erection','hentai','horny','milf','nudes','nude'];
+const sexualContent=new RegExp(SEXUAL.map(repeated).join('|'),'u');
+// Whole-name exceptions avoid rejecting familiar surnames solely because they
+// contain a short syllable. Appended words still go through every check.
+const ORDINARY_NAMES=new Set(['hancock','peacock','dickens','dickinson','cassandra','scunthorpe','shital','badawi','sussex','essex']);
+export const DISPLAY_NAME_GUIDANCE='Use a name or friendly nickname. No offensive or sexual language, Figma references, or negative messages.';
 
 function inappropriate(name){
  const words=folded(name).split(/[ ._'’\-]+/u).filter(Boolean),compact=words.join('');
+ if(figmaName.test(compact)||negativeMessage.test(compact))return true;
  // Check every contiguous token span so splitting an insult into letters, or
  // surrounding it with a name, does not bypass the filter. Avoid indiscriminate
  // substring bans that reject legitimate names such as Hancock or Shital.
  for(let start=0;start<words.length;start++){
-  let span='';
+  let span='',sexualSpan='';
   for(let end=start;end<words.length;end++){
-   span+=words[end];
-   if(forbiddenWord.test(span))return true;
+   span+=words[end];sexualSpan+=ORDINARY_NAMES.has(words[end])?'':words[end];
+   if(forbiddenWord.test(span)||sexualContent.test(sexualSpan))return true;
   }
  }
  // Strip literal numeric handles before folding leetspeak; otherwise a numeric
  // suffix like 123 becomes "ize" and conceals an otherwise prohibited word.
  const bare=folded(name.replace(/\p{N}+/gu,'')).replace(/[ ._'’\-]/gu,'');
- if(forbiddenWord.test(bare)||/f+u+c+k+/u.test(compact)||forbiddenPhrase.test(compact))return true;
- // Brand-directed messages need context: e.g. "bad" in a real surname is fine,
- // but "FigmaIsBad" and its separated/lookalike variants are not display names.
- return figmaName.test(compact)&&figmaAttack.test(compact.replace(figmaName,''));
+ const sexualBare=folded(name.replace(/\p{N}+/gu,'')).split(/[ ._'’\-]+/u).filter(word=>!ORDINARY_NAMES.has(word)).join('');
+ if(forbiddenWord.test(bare)||sexualContent.test(sexualBare)||/f+u+c+k+/u.test(compact)||forbiddenPhrase.test(compact))return true;
+ return false;
 }
 export function validateDisplayName(value){
  if(typeof value!=='string')return {ok:false,message:'Enter a display name.'};

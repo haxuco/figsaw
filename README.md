@@ -127,3 +127,8 @@ Equipped inventory items appear as small camera-relative 3D models; the axe reta
 Testing highlights are on by default during this testing build. The top-right Testing button persists the preference in this browser; `?testing=1` and `?testing=0` override it. Yellow marks interactive objects, cyan marks targets for the equipped item. Chair parts identify their matching repair chair, the ratchet marks fitted repairs, chains follow valid towing connections, and supplies/charging tools follow their current puzzle stage. In testing mode cyan bounds also accept clicks through clutter; normal scene occlusion remains in effect when testing is off. Outlines are batched into two line draws and their local bounds are cached.
 
 The game-over share graphic exports as a 1080 × 1080 PNG. Its square composition keeps the attempt count, Figsaw on his tricycle, and game URL visible together; the in-game preview uses the same 1:1 ratio and fits shorter screens.
+
+
+### Supabase leaderboard integration
+
+The leaderboard has an opt-in cloud adapter, protected SQL migration and authenticated Edge Function. Cloud name submissions require server-side moderation approval before storage. The game continues using device-local scores until configured. See [the Supabase setup guide](supabase/README.md) for deployment, secret handling, name-review requirements and the remaining score-authenticity limitations.

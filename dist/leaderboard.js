@@ -43,6 +43,8 @@ export function createLocalLeaderboard({storage=browserStorage(),now=()=>Date.no
  let memory=[],persistent=!!storage;
  function read(){
   if(persistent)try{const raw=storage.getItem(LEADERBOARD_STORAGE_KEY);try{memory=rankedEntries(JSON.parse(raw??'[]'));}catch{memory=[];}}catch{persistent=false;}
+  // Remove legacy rejected names from storage as well as from the UI.
+  if(persistent)try{storage.setItem(LEADERBOARD_STORAGE_KEY,JSON.stringify(memory));}catch{persistent=false;}
   return memory.map(entry=>({...entry}));
  }
  function write(entries){memory=entries;if(persistent)try{storage.setItem(LEADERBOARD_STORAGE_KEY,JSON.stringify(entries));}catch{persistent=false;}}
@@ -61,6 +63,8 @@ export function createLocalLeaderboard({storage=browserStorage(),now=()=>Date.no
    write(entries);const index=entries.findIndex(entry=>entry.id===chosen.id);
    return {ok:true,entries:entries.map(entry=>({...entry})),entry:index<0?null:{...chosen},rank:index<0?null:index+1,improved};
   },
-  get persistent(){return persistent;}
+  get persistent(){return persistent;},
+  get scopeLabel(){return persistent?'On this device':'This visit only';},
+  get savedMessage(){return persistent?'Saved on this device.':'Saved for this visit.';}
  };
 }
