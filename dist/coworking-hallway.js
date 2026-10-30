@@ -61,7 +61,7 @@ export function createCoworkingHallway(){
  box([3.1,2.90,.10],[0,1.50,-8.36],0xbda681);
  for(let i=0;i<32;i++)box([.050,2.90,.045],[-1.50+i*.097,1.50,-8.285],i%3?0xd2bb96:0xcab28c);
  picture(1.75,.875,[0,2.15,-8.25],ctx=>{
-  ctx.fillStyle='#f5f1e8';ctx.fillRect(0,0,768,384);ctx.fillStyle='#303934';ctx.textAlign='center';ctx.font='700 122px Arial, sans-serif';ctx.fillText('wework',384,185);ctx.font='500 24px Arial';ctx.fillText('MAKE A LIFE, NOT JUST A LIVING.',384,254);
+  ctx.fillStyle='#f5f1e8';ctx.fillRect(0,0,768,384);ctx.fillStyle='#303934';ctx.textAlign='center';ctx.font='700 64px Arial, sans-serif';ctx.fillText('NosotrosTrabajamos',384,185,704);ctx.font='500 24px Arial';ctx.fillText('MAKE A LIFE, NOT JUST A LIVING.',384,254);
  });
  box([2.35,.94,.64],[0,.47,-7.45],0xdac4a3);box([2.43,.06,.72],[0,.97,-7.45],0xfaf8ee);
  box([2.20,.06,.04],[0,.085,-7.11],0x9d8c73);
