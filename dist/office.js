@@ -33,7 +33,7 @@ import { createFireAlarm } from './fire-alarm.js';
 
 export async function createOffice(renderer,viewerPosition,onProgress=async()=>{},puzzle=null,powerClock){
  const office=new THREE.Group();office.name='Abandoned technology office';
- const documents=await createWallDocuments(puzzle);
+ const documentsReady=createWallDocuments(puzzle);
  const wallDecay=createWallDecay();
  const floorProps=[],floorCables=[];
  const onFloor=object=>{floorProps.push(object);return object;};
@@ -372,6 +372,7 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  for(let i=0;i<14;i++){const p=box([range(.3,.7),.012,range(.3,.8)],[range(-3.4,3.4),.007,range(-3.5,3.7)],material(i%2?0x888c7c:0x9b9a85,.98,fabricMap));p.rotation.y=range(-.15,.15);carpetPatches.push(p);}
  const floorSupport=createFloorSupport(carpetPatches);
 
+ const documents=await documentsReady;
  // Inspectable design documents share their vector source with the close-up viewer.
  function wireframeMap(mobile){return documents.map(mobile?'onboarding':'workspace');}
 

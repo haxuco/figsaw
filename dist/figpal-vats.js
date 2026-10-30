@@ -2,6 +2,7 @@ import {RESCUE_HEIGHT} from './rescue-swing.js';
 import {createDesignCap} from './design-cap.js';
 import {createFishSkullClue} from './fish-skull-clue.js';
 import {createTankBreakage} from './tank-breakage.js';
+import {createTankFoam} from './tank-foam.js';
 import {batchStaticScenery} from './static-batching.js';
 import {useMobileMaterials} from './scene-budget.js';
 import * as THREE from './vendor/three.module.js';
@@ -14,7 +15,7 @@ import { createFigpalTransformation } from './figpal-transformation.js?v=figpal-
 // The three little captives are modeled from the supplied Figpals illustration.
 // Shapes, glass, liquid and wear are procedural.
 export function createFigpalVats({floorSupport,puzzle}={}){
- function batchRigid(root,options={}){useMobileMaterials(root);return batchStaticScenery(root,{...options,palette:quality.mobile});}
+ function batchRigid(root,options={}){useMobileMaterials(root);return batchStaticScenery(root,{...options,palette:true});}
  const group=new THREE.Group();group.name='Three suspended Figpals over bubbling green canisters';
  const TAU=Math.PI*2;
  let seed=193108;const random=()=>{seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;};
@@ -157,7 +158,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   const meniscus=ring(.441,.006,1.075,liquidTop,vat);meniscus.name='Tank acid meniscus';meniscus.renderOrder=4;
   const bubbleData=Array.from({length:quality.mobile?18:48},()=>({x:(random()-.5)*.61,z:(random()-.5)*.61,r:.007+random()**2*.023,phase:random(),speed:.15+random()*.17}));
   const bubbles=new THREE.InstancedMesh(new THREE.SphereGeometry(1,12,8),bubbleMat,bubbleData.length);bubbles.name='Rising liquid bubbles';bubbles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);bubbles.frustumCulled=false;bubbles.renderOrder=3;vat.add(bubbles);
-  const foam=[];for(let j=0;j<(quality.mobile?6:24);j++){const a=random()*TAU,r=j<18?.40+random()*.025:random()*.34,baseRadius=.006+random()*.016;const m=ball([Math.cos(a)*r,1.074,Math.sin(a)*r],[baseRadius,baseRadius*.65,baseRadius],foamMat,vat);m.castShadow=false;m.renderOrder=5;foam.push({mesh:m,baseRadius,phase:random()*TAU});}
+  const foam=createTankFoam(foamMat,{mobile:quality.mobile,random});vat.add(foam.mesh);
   const ripples=[];for(let j=0;j<(quality.mobile?2:5);j++){const m=mesh(new THREE.RingGeometry(.96,1,quality.mobile?20:40),rippleMat.clone(),vat);m.rotation.x=-Math.PI/2;m.position.set((random()-.5)*.45,1.078,(random()-.5)*.45);m.castShadow=false;m.renderOrder=5;ripples.push({mesh:m,phase:random()});}
   // Stenciled identification, a pressure gauge and weathered lower-band stripes.
   const labelCanvas=document.createElement('canvas');labelCanvas.width=256;labelCanvas.height=128;const labelCtx=labelCanvas.getContext('2d');labelCtx.fillStyle='#bec39f';labelCtx.fillRect(0,0,256,128);labelCtx.fillStyle='#242c22';labelCtx.font='bold 67px monospace';labelCtx.textAlign='center';labelCtx.fillText(`0${i+1}`,128,87);
@@ -248,7 +249,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
   for(const rigid of[drum,crank,control,wheel])batchRigid(rigid,{minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(winch,{exclude:[drumMount,crank],minObjects:2,allowInteractiveRoot:true,dispose:false});
   batchRigid(rig,{exclude:[hanger,winch],minObjects:2,dispose:false});
-  batchRigid(vat,{exclude:[liquid,meniscus,shell,deposits,breakage.group,surface,floatingBones.group,...foam.map(f=>f.mesh),...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
+  batchRigid(vat,{exclude:[liquid,meniscus,shell,deposits,breakage.group,surface,floatingBones.group,foam.mesh,...ripples.map(r=>r.mesh)],minObjects:2,dispose:false});
   rigs.push({rig,hanger,sling,nameTag,transformation,skullClue,vat,captive:captive.object,propeller:captive.propeller,drum,crank,loadChain,returnChain,height,homeHeight:height,targetHeight:height,winchY,phase:i*2.1,index:i,lowered:false,rescued:false,rescuePlanned:false,escaping:false,releasedAt:null,releasedFrom:new THREE.Vector3()});
  }
  const faceLight=new THREE.PointLight(0xb2b8ad,.75,3.8,2);faceLight.position.set(-1.75,2.75,-.20);group.add(faceLight);
@@ -343,7 +344,7 @@ export function createFigpalVats({floorSupport,puzzle}={}){
    }
    positions.needsUpdate=true;normals.needsUpdate=true;
    vat.bubbleData.forEach((bubble,j)=>{const life=(t*bubble.speed+bubble.phase)%1;dummy.position.set(bubble.x+Math.sin(t*1.3+j)*.012,.23+life*.84*remaining,bubble.z+Math.cos(t+j)*.009);dummy.scale.setScalar(bubble.r*(.65+life*.5));dummy.updateMatrix();vat.bubbles.setMatrixAt(j,dummy.matrix);});vat.bubbles.instanceMatrix.needsUpdate=true;
-   for(const foam of vat.foam){foam.mesh.visible=wet;foam.mesh.position.y=level;const pulse=(Math.sin(t*2.4+foam.phase)+1)*.5;foam.mesh.scale.set(foam.baseRadius,foam.baseRadius*(.12+pulse*.28),foam.baseRadius);}
+   vat.foam.update(t,level,wet);
    for(const ripple of vat.ripples){const life=(t*.48+ripple.phase)%1;const size=.012+life*.075;ripple.mesh.scale.setScalar(size);ripple.mesh.position.y=level+.004;ripple.mesh.visible=wet&&life<.88;ripple.mesh.material.opacity=(1-life)*.16;}
   }
  }

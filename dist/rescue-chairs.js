@@ -1,7 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {createRescueState,REPAIRS} from './rescue-state.js';
 import {batchStaticScenery} from './static-batching.js';
-import {renderQuality} from './render-quality.js';
 import {visibleLocalBounds} from './testing-highlights.js';
 import {createRescueSwingPath,CHAIR_PASSENGER_HEIGHT,RESCUE_SWING_SECONDS} from './rescue-swing.js';
 import {createChairRoute,CHAIR_RADIUS} from './chair-route.js';
@@ -19,7 +18,7 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
  let message='',moving=null,lastTime=0,discoveryEnabled=true;
  const chain=createRescueChain({chairs:[...objects,player],state,floorSupport});group.add(chain.group);
  const tow=createChairTow({chairs:[...objects,player],state,tankObstacles,floorSupport});
- for(const [id,object]of Object.entries(parts)){object.userData.salvagePart=id;object.userData.ignoreAcid=true;object.name=`Salvage ${id} from donor chair`;batchStaticScenery(object,{minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});}
+ for(const [id,object]of Object.entries(parts)){object.userData.salvagePart=id;object.userData.ignoreAcid=true;object.name=`Salvage ${id} from donor chair`;batchStaticScenery(object,{minObjects:2,allowInteractiveRoot:true,palette:true});}
  // Keep forgiving hit volumes and temporary markers outside the collectible
  // models, so inventory previews and installed replacements remain unchanged.
  const partHighlights=new THREE.Group();partHighlights.name='Temporary chair part highlights';partHighlights.userData.testingDecoration=true;group.add(partHighlights);
@@ -47,9 +46,9 @@ export function createRescueChairs({objects,parts,player,tanks,floorSupport,puzz
   object.userData.rescueChair=i;object.userData.ignoreAcid=true;object.name=`Aeron rescue chair — ${REPAIRS[i].label}`;
   const repair=object.chairParts;
   // Keep repaired pieces separate from the static frame so the defect visibly disappears.
-  batchStaticScenery(object,{exclude:[repair.base,repair.seat],minObjects:2,allowInteractiveRoot:true,palette:renderQuality.mobile});
-  batchStaticScenery(repair.base,{exclude:[repair.caster],minObjects:2,palette:renderQuality.mobile});
-  batchStaticScenery(repair.seat,{minObjects:2,palette:renderQuality.mobile});
+  batchStaticScenery(object,{exclude:[repair.base,repair.seat],minObjects:2,allowInteractiveRoot:true,palette:true});
+  batchStaticScenery(repair.base,{exclude:[repair.caster],minObjects:2,palette:true});
+  batchStaticScenery(repair.seat,{minObjects:2,palette:true});
   // A chair has many thin rails and gaps. Use a modest, attached hit volume
   // so mouse and touch clicks between those rails still reach the chair.
   const bounds=visibleLocalBounds(object).expandByScalar(.025);

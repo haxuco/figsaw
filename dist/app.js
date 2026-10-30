@@ -9,6 +9,7 @@ import {createItemHover,resolveHoverItem} from './item-hover.js';
 import {PLAYER_CHAIR} from './rescue-state.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
+import {separatePickVolumes,createShadowScheduler} from './render-work.js';
 import {batchStaticScenery} from './static-batching.js';
 import {createRoomReflections} from './room-reflections.js';
 import {createFrameRateCounter} from './frame-rate.js';
@@ -550,15 +551,17 @@ acidLeaks.bindTargets([office,model]);
 // Simplify first: mobile materials that differed only in unused PBR properties
 // can now share a draw call without changing their colours or moving parts.
 useMobileMaterials(scene);
-for(const rigid of[...spinningWheels,...pedalPlatforms,bowTie])batchStaticScenery(rigid,{minObjects:2,dispose:false,palette:quality.mobile});
-batchStaticScenery(crank,{exclude:pedalPlatforms,minObjects:2,dispose:false,palette:quality.mobile});
-batchStaticScenery(tricycle,{exclude:[...spinningWheels,crank],minObjects:2,dispose:false,palette:quality.mobile});
+for(const rigid of[...spinningWheels,...pedalPlatforms,bowTie])batchStaticScenery(rigid,{minObjects:2,dispose:false,palette:true});
+batchStaticScenery(crank,{exclude:pedalPlatforms,minObjects:2,dispose:false,palette:true});
+batchStaticScenery(tricycle,{exclude:[...spinningWheels,crank],minObjects:2,dispose:false,palette:true});
 for(const animal of stuffedAnimals){
- batchStaticScenery(animal.headPose,{minObjects:2,palette:quality.mobile});
- batchStaticScenery(animal.object,{exclude:[animal.headPose,animal.object.getObjectByName('Split fabric seam and exposed stuffing')],minObjects:2,palette:quality.mobile});
+ batchStaticScenery(animal.headPose,{minObjects:2,palette:true});
+ batchStaticScenery(animal.object,{exclude:[animal.headPose,animal.object.getObjectByName('Split fabric seam and exposed stuffing')],minObjects:2,palette:true});
 }
-batchStaticScenery(chairRefuge.object,{minObjects:2,palette:quality.mobile});
-batchStaticScenery(office,{exclude:[rescueChairs.group,...rescueChairs.objects,...Object.values(rescueChairs.parts),chairRefuge.object,laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object,exitDoor.scenery,...documents.targets],minObjects:2,palette:quality.mobile});
+batchStaticScenery(chairRefuge.object,{minObjects:2,palette:true});
+batchStaticScenery(office,{exclude:[rescueChairs.group,...rescueChairs.objects,...Object.values(rescueChairs.parts),chairRefuge.object,laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object,exitDoor.scenery,...documents.targets],minObjects:2,palette:true});
+separatePickVolumes(scene);
+const shadowScheduler=createShadowScheduler(renderer,[fluorescent,windowLight],quality.shadowHz);
 const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
 function updateArrivalDialogue(time){
  if(documentViewer.active||laptopProgram.active||mobilePuzzle.active||doorKeypadUI.active||!entranceArrived||(departure.active&&!cornerReaction.visible(time))||figpalRounds.active||fireAlarm.dying){arrivalDialogue.hidden=true;return;}
@@ -1127,7 +1130,7 @@ function resize(){
 }
 const resizeObserver=new ResizeObserver(resize);resizeObserver.observe(canvas);resize();
 const clock=new THREE.Clock();
-let contextLost=false,sceneReady=false,frameRequest=0,lastRenderAt=0,lastShadowTime=-Infinity,lastQualityCheck=0,slowFrames=0,frameSamples=0;
+let contextLost=false,sceneReady=false,frameRequest=0,lastRenderAt=0,lastQualityCheck=0,slowFrames=0,frameSamples=0;
 function scheduleFrame(){if(sceneReady&&!contextLost&&!frameRequest&&!document.hidden&&!leaderboardPause.active)frameRequest=requestAnimationFrame(render);}
 document.addEventListener('visibilitychange',()=>{frameRate.reset();if(document.hidden){fireAlarm.silence();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();}else{lastRenderAt=0;clock.getDelta();scheduleFrame();}});
 function render(){
@@ -1143,7 +1146,7 @@ function render(){
   rescueChairs.update(t,reducedMotion);
   victoryParade.update(t,camera.position,reducedMotion);
   const finished=victoryParade.readyForResults(t,rescueChairs.state.towPhase==='escaped',reducedMotion);
-  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
+  shadowScheduler.update(t);
   renderer.render(scene,camera);frameRate.frame(performance.now());
   if(finished){escapeScreen.hidden=false;if(!leaderboardUI.focusResult())document.querySelector('#new-game').focus({preventScroll:true});frameRate.reset();return;}
   scheduleFrame();return;
@@ -1232,10 +1235,11 @@ function render(){
   previousEyeRotation.copy(eye.quaternion);eye.lookAt(gazeTarget);
   if(!reducedMotion)eye.quaternion.copy(previousEyeRotation.slerp(eye.quaternion,1-Math.exp(-dt*16)));
  }
- if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
  if(inventoryUI.active)inventoryPreviews.update();
  updateEquipment(t);
- renderer.render(scene,camera);
+ // The inventory covers the room. Keep the game clock and hazards running,
+ // but retain the last room frame while cached model previews are displayed.
+ if(!inventoryUI.active){shadowScheduler.update(t);renderer.render(scene,camera);}
  if(canHoverItems())itemHover.render(t);else itemHover.clear();
  countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active||laptopProgram.active,warningEnabled:figpalRounds.willLowerNext});
  frameRate.frame(performance.now());
@@ -1252,9 +1256,9 @@ function render(){
 }
 await yieldStartup('Warming up the lights…');
 camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera.lookAt));camera.updateMatrixWorld(true);
-// On phones compile only what the first render actually uses. Precompiling the
-// entire scene also compiles hidden traps/skeletons and duplicates clipping variants.
-(quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
+// Let the first render compile only programs actually used by that view.
+// Whole-scene prewarming compiled hidden effects and duplicate light variants.
+Promise.resolve().then(()=>{sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
 installGraphicsRecovery(canvas,{
  status:loadingStatus,
  pause(){contextLost=true;frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},

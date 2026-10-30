@@ -1,10 +1,24 @@
 import * as THREE from './vendor/three.module.js';
+import {PICK_LAYER} from './render-work.js';
 
 export function createSceneRaycaster(){
- const ray=new THREE.Raycaster();
+ const ray=new THREE.Raycaster();ray.layers.enable(PICK_LAYER);
  // The default one-metre line radius makes thin table outlines intercept
  // clicks and visibility checks on objects clearly visible beside them.
  ray.params.Line.threshold=.008;
+ // Three's default raycaster traverses invisible subtrees. Hidden inventory
+ // models, skeletons and effects cannot receive input and need no ray tests.
+ const intersect=(object,hits,recursive)=>{
+  if(!object.visible)return;
+  let descend=true;
+  if(object.layers.test(ray.layers))descend=object.raycast(ray,hits)!==false;
+  if(descend&&recursive)for(const child of object.children)intersect(child,hits,true);
+ };
+ ray.intersectObjects=(objects,recursive=true,hits=[])=>{
+  for(const object of objects)if(visible(object))intersect(object,hits,recursive);
+  return hits.sort((a,b)=>a.distance-b.distance);
+ };
+ ray.intersectObject=(object,recursive=true,hits=[])=>ray.intersectObjects([object],recursive,hits);
  return ray;
 }
 
