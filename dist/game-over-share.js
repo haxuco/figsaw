@@ -68,12 +68,13 @@ export function createVictoryShare(root){
 
 function createResultShare(root,{normalize,draw,describe,filename,title,text}){
  const canvas=root.querySelector('canvas'),save=root.querySelector('[data-save-graphic]'),share=root.querySelector('[data-share-graphic]'),status=root.querySelector('[data-share-status]');
+ const linkedin=root.querySelector('[data-share-linkedin]');let linkedinUI;
  let ctx,revision=0,currentResult=null,blob=null;
  share.hidden=true;save.disabled=true;
  const toBlob=()=>new Promise((resolve,reject)=>canvas.toBlob(result=>result?resolve(result):reject(new Error('Image unavailable')),'image/png'));
  async function prepare(value){
   if(!ctx){canvas.width=SHARE_WIDTH;canvas.height=SHARE_HEIGHT;ctx=canvas.getContext('2d');}
-  const ticket=++revision,result=normalize(value);currentResult=result;blob=null;save.disabled=true;share.hidden=true;status.textContent='';
+  const ticket=++revision,result=normalize(value);currentResult=result;blob=null;save.disabled=true;if(linkedin)linkedin.disabled=true;share.hidden=true;status.textContent='';
   canvas.setAttribute('aria-label',describe(result));
   root.querySelector('[data-attempt]').textContent=attemptLabel(result.attempt);
   draw(ctx,result);
@@ -81,7 +82,7 @@ function createResultShare(root,{normalize,draw,describe,filename,title,text}){
    const [artwork]=await Promise.all([loadArtwork(),document.fonts?.load('600 148px "Grenze Gotisch"')]);
    if(ticket!==revision)return;
    draw(ctx,{...result,artwork});const image=await toBlob();if(ticket!==revision)return;
-   blob=image;save.disabled=false;
+   blob=image;save.disabled=false;if(linkedin)linkedin.disabled=false;
    try{share.hidden=!(navigator.share&&navigator.canShare?.({files:[new File([blob],'figsaw.png',{type:'image/png'})]}));}catch{share.hidden=true;}
   }catch{if(ticket===revision)status.textContent='The graphic couldn’t load. Try again to reload it.';}
  }
@@ -90,11 +91,12 @@ function createResultShare(root,{normalize,draw,describe,filename,title,text}){
   const url=URL.createObjectURL(blob),link=document.createElement('a');link.href=url;link.download=filename(currentResult);document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),30000);
   status.textContent='Graphic saved. Ready to post.';
  }
+ linkedin?.addEventListener('click',async()=>{if(!blob)return;const snapshot=blob,name=filename(currentResult);linkedin.disabled=true;try{if(!linkedinUI){const {createLinkedInShare}=await import('./linkedin-share.js');linkedinUI=createLinkedInShare();}if(blob===snapshot)linkedinUI.open({blob:snapshot,name});}catch{status.textContent='The post preview could not open. Please try again.';}finally{linkedin.disabled=!blob;}});
  save.addEventListener('click',download);
  share.addEventListener('click',async()=>{
   if(!blob)return;
   const file=new File([blob],filename(currentResult),{type:'image/png'});
   try{await navigator.share({files:[file],title:title(currentResult),text:text(currentResult)});status.textContent='Graphic shared.';}catch(error){if(error.name!=='AbortError')status.textContent='Sharing is unavailable here. Save the graphic instead.';}
  });
- return{prepare,reset(){revision++;blob=null;save.disabled=true;share.hidden=true;status.textContent='';}};
+ return{prepare,reset(){linkedinUI?.close();revision++;blob=null;save.disabled=true;if(linkedin)linkedin.disabled=true;share.hidden=true;status.textContent='';}};
 }

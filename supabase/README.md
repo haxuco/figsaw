@@ -1,7 +1,7 @@
 # Connect the Top 10 leaderboard
 
 The game is still local-only until `dist/leaderboard-config.js` is configured.
-No Supabase project, secrets, remote tables, or moderation provider have been connected.
+The leaderboard remains unconnected. LinkedIn sharing uses the separate setup below.
 
 ## Prepared components
 
@@ -53,3 +53,20 @@ Top 10 = highest time remaining from the total 1,200-second budget, then earlies
 `npm test` covers moderation, local cleanup, adapter failures, and the Edge Function handler with fake Auth/database/reviewer dependencies. `npm run build` synchronizes the shared policy and builds the game. The migration was also exercised in an isolated PostgreSQL runtime (PGlite), covering ranking, duplicates, quotas and role permissions. Re-run `scripts/check-leaderboard-db.mjs` with a temporary PGlite installation via `PGLITE_MODULE` when changing SQL. The Deno entrypoint passes an esbuild syntax/import check. Auth, Edge deployment and the real reviewer still require end-to-end validation in your Supabase staging project.
 
 Primary documentation: [Edge Function authorization](https://supabase.com/docs/guides/functions/auth-headers), [RLS](https://supabase.com/docs/guides/database/postgres/row-level-security), [database function permissions](https://supabase.com/docs/guides/database/functions).
+
+## LinkedIn preview and posting
+
+The result screens offer a preview of the existing game video or the player's result graphic, with the exact caption `I want to play a game.\n\n#Figma`. Connecting an account never posts. A separate **Post to LinkedIn** click confirms publication to the signed-in member's public feed.
+
+The `linkedin-share` function and `202610300002_linkedin_posts.sql` migration were deployed to project `adkmqnituettpcneiiej` on October 30, 2026. Legacy gateway JWT verification is off; the function verifies the Supabase session through Auth, then verifies that the LinkedIn token belongs to that user's LinkedIn identity. It reserves each request ID before upload, limits submissions to six per user per hour, and never automatically retries an uncertain publication. The database stores request IDs, user IDs, attachment kind, timestamps and successful post URLs, not provider tokens or uploaded images.
+
+To finish activation:
+
+1. In Supabase Auth, enable LinkedIn OIDC with public client ID `78i1wvb54wyzdc` and the app's secret. Enter the secret directly in the dashboard; never put it in source control or chat.
+2. In the LinkedIn app, authorize `https://adkmqnituettpcneiiej.supabase.co/auth/v1/callback`.
+3. In Supabase Auth's redirect allowlist, add `https://figsaw.figma.site/linkedin-callback.html` and `https://figsaw.haxuco.chatgpt.site/linkedin-callback.html`.
+4. Set `enabled:true` in `dist/linkedin-config.js`, rebuild and publish. The configuration contains only the public publishable key. Session and provider tokens stay in memory and are discarded on refresh.
+
+The video is loaded only when opening the share preview. The backend uploads its fixed production video URL; it does not accept arbitrary fetch URLs. Graphic uploads must be PNG and at most 4 MiB. Closing the preview pauses and releases video loading. Without sign-in configuration, players can still preview, save media and copy the caption.
+
+Verification: 335 automated tests pass, including mocked LinkedIn uploads, exact caption enforcement, identity mismatch rejection, duplicate requests, and no publication during sign-in. The migration also passed isolated PostgreSQL permissions/quota checks. Production OPTIONS returns 204 and an unauthenticated POST returns 401. UI posting was tested only with a mock client; no real LinkedIn test post was published. Authenticated live posting remains untested by the owner's instruction.

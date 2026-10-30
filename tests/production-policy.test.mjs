@@ -24,11 +24,11 @@ test('the public package excludes raw source, QA pages, maps and asset notes, in
  const root=await mkdtemp(join(tmpdir(),'figsaw-public-'));
  try{
   for(const directory of ['assets/documents','fonts','labels','client'])await mkdir(join(root,directory),{recursive:true});
-  const fixtures={'index.html':'<title>Figsaw</title>','boot.js':'boot','style.css':'style','robots.txt':'User-agent: *\nDisallow: /\n','app.js':'private source','_qa.html':'answers','game.bundle.js.map':'source map','client/old-answer.js':'stale','assets/documents/org-chart.svg':'poster','assets/documents/asset-sources.md':'notes','assets/hidden.js':'source','fonts/font.woff':'font','labels/bottle.svg':'label'};
+  const fixtures={'linkedin-callback.html':'callback','linkedin-callback.js':'callback code','assets/figsaw-promo.mp4':'video','index.html':'<title>Figsaw</title>','boot.js':'boot','style.css':'style','robots.txt':'User-agent: *\nDisallow: /\n','app.js':'private source','_qa.html':'answers','game.bundle.js.map':'source map','client/old-answer.js':'stale','assets/documents/org-chart.svg':'poster','assets/documents/asset-sources.md':'notes','assets/hidden.js':'source','fonts/font.woff':'font','labels/bottle.svg':'label'};
   for(const [file,content]of Object.entries(fixtures))await writeFile(join(root,file),content);
   await stageProductionAssets(root,join(root,'client'));
-  assert.deepEqual((await readdir(join(root,'client'))).sort(),['assets','boot.js','fonts','index.html','labels','robots.txt','style.css']);
-  assert.deepEqual(await readdir(join(root,'client/assets/documents')),['org-chart.svg']);assert.deepEqual(await readdir(join(root,'client/assets')),['documents']);
+  assert.deepEqual((await readdir(join(root,'client'))).sort(),['assets','boot.js','fonts','index.html','labels','linkedin-callback.html','linkedin-callback.js','robots.txt','style.css']);
+  assert.deepEqual(await readdir(join(root,'client/assets/documents')),['org-chart.svg']);assert.deepEqual(await readdir(join(root,'client/assets')),['documents','figsaw-promo.mp4']);
   assert.match(await readFile(join(root,'client/robots.txt'),'utf8'),/Disallow: \//);
   await assert.rejects(()=>stageProductionAssets(root,root));
  }finally{await rm(root,{recursive:true,force:true});}

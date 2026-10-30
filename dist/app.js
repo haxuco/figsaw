@@ -997,7 +997,7 @@ function resetView({skipIntro=false}={}){
 function releaseControls(){state.space=false;dragPointer=null;itemHover.clear();}
 
 document.addEventListener('keydown',event=>{
- if(leaderboardUI.active||event.target.closest('#victory-leaderboard form'))return;
+ if(leaderboardUI.active||event.target.closest('#victory-leaderboard form,.linkedin-share-dialog'))return;
  // A browser refresh starts its own attempt on load; do not also restart here.
  if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
