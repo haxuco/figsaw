@@ -299,3 +299,36 @@ body.escape-active #mission-hud,body.escape-active .view-tools,body.escape-activ
 /* In inventory, align the persistent countdown with the panel navigation. */
 body:has(#inventory-panel:not([hidden])) #mission-hud{top:39px;left:auto;right:clamp(20px,5vw,64px)}
 @media(max-width:600px){body:has(#inventory-panel:not([hidden])) #mission-hud{top:31px;right:20px}}
+
+/* Result actions: replay and LinkedIn first, quieter sharing tools below. */
+:is(#game-over,#escaped) .result-actions{display:block;margin-top:20px}
+.result-primary-actions{display:grid;grid-template-columns:1fr 1.35fr;gap:10px}
+:is(#game-over,#escaped) .result-primary-actions button{display:flex;align-items:center;justify-content:center;gap:9px;min-height:50px;padding:12px 14px;font-size:14px;font-weight:650;border-radius:10px;white-space:nowrap;box-shadow:0 2px 8px #0003}
+:is(#game-over,#escaped) .result-primary-actions .result-retry{background:#e3eacb;border-color:#e3eacb;color:#182019}
+:is(#game-over,#escaped) .result-primary-actions .result-retry:hover{background:#f0f4e2;border-color:#f0f4e2;color:#182019}
+:is(#game-over,#escaped) .result-primary-actions .result-linkedin{background:#0a66c2;border-color:#3385d6;color:#fff}
+:is(#game-over,#escaped) .result-primary-actions .result-linkedin:hover:not(:disabled){background:#0b76df;border-color:#65a5e4;color:#fff}
+.result-actions [data-result-icon]{display:inline-flex;flex:none;width:20px;height:20px}
+.result-actions svg{display:block;width:100%;height:100%}
+.result-secondary-actions{display:flex;justify-content:center;gap:5px;margin-top:18px;padding-top:14px;border-top:1px solid #ffffff1a}
+:is(#game-over,#escaped) .result-secondary-actions button{display:flex;flex:1 1 0;flex-direction:column;align-items:center;justify-content:center;gap:7px;min-width:0;min-height:62px;padding:8px 3px;border:1px solid transparent;border-radius:9px;background:transparent;color:#aeb5a9;font-size:11px;font-weight:500;box-shadow:none}
+:is(#game-over,#escaped) .result-secondary-actions button:hover:not(:disabled){background:#ffffff0b;border-color:#ffffff24;color:#f0f2e9;outline:none}
+:is(#game-over,#escaped) .result-actions button:focus-visible{outline:2px solid #d1dfbd;outline-offset:3px}
+:is(#game-over,#escaped) .result-actions button:disabled{opacity:.4;cursor:default}
+.game-over-share-status{max-width:40ch;margin:8px auto 0;text-wrap:pretty}
+.instagram-share-dialog{box-sizing:border-box;width:min(460px,calc(100vw - 28px));max-height:90dvh;overflow:auto;padding:24px;background:#101812;color:var(--ui-text);border:1px solid var(--ui-border);border-radius:14px;box-shadow:var(--ui-shadow);font:14px/1.5 var(--ui-font)}
+.instagram-share-dialog::backdrop{background:#000b;backdrop-filter:blur(5px)}
+.instagram-share-dialog header{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:16px}
+.instagram-share-dialog h2{margin:0;font:500 32px/1.1 var(--ui-display)}
+.instagram-share-dialog img{display:block;width:min(100%,280px);height:auto;aspect-ratio:1;object-fit:contain;margin:0 auto;border-radius:6px}
+.instagram-share-dialog p{color:var(--ui-muted);font-size:13px}
+.instagram-share-dialog textarea{box-sizing:border-box;resize:vertical;width:100%;padding:12px;border:1px solid var(--ui-border);border-radius:8px;background:#080d09;color:var(--ui-text);font:13px/1.5 var(--ui-font)}
+.instagram-share-dialog footer{display:flex;flex-wrap:wrap;gap:8px}
+.instagram-share-dialog :is(button,a){box-sizing:border-box;display:inline-flex;align-items:center;justify-content:center;min-height:44px;border:1px solid var(--ui-border);border-radius:8px;padding:10px 12px;background:var(--ui-surface);color:var(--ui-text);font:500 13px var(--ui-font);text-decoration:none;cursor:pointer}
+.instagram-share-dialog [data-close]{font-size:24px;width:44px;padding:0;background:transparent;border-color:transparent}
+.instagram-share-dialog [data-export]{background:var(--ui-accent);border-color:var(--ui-accent);color:var(--ui-ink)}
+.instagram-share-dialog :is(button,a,textarea):focus-visible{outline:2px solid var(--ui-accent);outline-offset:3px}
+.instagram-share-dialog [data-status]:empty{display:none}
+@media(max-width:380px){.result-primary-actions{gap:8px;grid-template-columns:1fr 1.35fr}:is(#game-over,#escaped) .result-primary-actions button{padding:12px 8px;font-size:12px;gap:6px}.result-secondary-actions{gap:2px}.result-actions [data-result-icon]{width:18px;height:18px}}
+
+.instagram-share-dialog [hidden]{display:none!important}

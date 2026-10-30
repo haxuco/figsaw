@@ -1,5 +1,15 @@
 # Crawler opt-out only. This is not authentication or protection against
 # screenshots, browser extensions, or clients that ignore robots.txt.
+# Social preview fetchers may read the public page and its share artwork.
+User-agent: facebookexternalhit
+Allow: /
+
+User-agent: Twitterbot
+Allow: /
+
+User-agent: LinkedInBot
+Allow: /
+
 User-agent: *
 Disallow: /
 

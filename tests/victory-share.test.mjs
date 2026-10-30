@@ -33,9 +33,9 @@ test('a ranked victory adds a top 10 badge and the approved winner name to the s
 
 function root(){
  const ctx=context(),exports=[],nodes={};
- for(const selector of ['canvas','[data-save-graphic]','[data-share-graphic]','[data-share-status]','[data-attempt]','[data-words-completed]'])nodes[selector]={hidden:false,disabled:false,textContent:'',listeners:{},attributes:{},addEventListener(type,fn){this.listeners[type]=fn;},setAttribute(key,value){this.attributes[key]=value;}};
+ for(const selector of ['canvas','[data-save-graphic]','[data-share-graphic]','[data-share-status]','[data-attempt]','[data-words-completed]'])nodes[selector]={hidden:false,disabled:false,textContent:'',listeners:{},attributes:{},querySelector:()=>null,addEventListener(type,fn){this.listeners[type]=fn;},setAttribute(key,value){this.attributes[key]=value;}};
  Object.assign(nodes.canvas,{getContext:()=>ctx,toBlob:callback=>exports.push(callback)});
- return {querySelector:selector=>nodes[selector],nodes,exports,ctx};
+ return {querySelector:selector=>nodes[selector],querySelectorAll:()=>[],nodes,exports,ctx};
 }
 test('victory save/share keeps its own frozen stats and filename, ignores cancelled exports and preserves the loss graphic',async()=>{
  const previous={document:globalThis.document,Image:globalThis.Image,navigator:Object.getOwnPropertyDescriptor(globalThis,'navigator')};

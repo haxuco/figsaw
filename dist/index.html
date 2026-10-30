@@ -6,11 +6,23 @@
   <meta name="theme-color" content="#161d18">
   <title>Figsaw</title>
   <meta name="description" content="Figsaw in an abandoned technology office, with three worried Figpals hanging from chain winches over bubbling green vats along the left side.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Figsaw — Let’s play a game">
+  <meta property="og:description" content="A design escape game. Can you make it out?">
+  <meta property="og:url" content="https://figsaw.figma.site/">
+  <meta property="og:image" content="https://figsaw.figma.site/assets/figsaw-social-1200x630.png">
+  <meta property="og:image:width" content="1200">
+  <meta property="og:image:height" content="630">
+  <meta property="og:image:alt" content="Figsaw on his red tricycle in a haunted office. Let’s play a game. figsaw.figma.site">
+  <meta name="twitter:card" content="summary_large_image">
+  <meta name="twitter:title" content="Figsaw — Let’s play a game">
+  <meta name="twitter:description" content="A design escape game. Can you make it out?">
+  <meta name="twitter:image" content="https://figsaw.figma.site/assets/figsaw-social-1200x630.png">
   <link rel="icon" href="data:,">
   <link rel="preload" href="./assets/loading-environment.webp" as="image" fetchpriority="high">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=ca8c1debe3b1">
-  <link rel="modulepreload" href="./game.bundle.js?v=f2059c09e3dd">
+  <link rel="stylesheet" href="./style.css?v=8c106d6a51aa">
+  <link rel="modulepreload" href="./game.bundle.js?v=a51b0405547a">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -34,11 +46,18 @@
       <div id="game-over-share">
         <p class="game-over-attempt" data-attempt></p>
         <canvas class="game-over-graphic" role="img" aria-label="Your Figsaw result" width="1080" height="1080"></canvas>
-        <div class="game-over-share-actions">
-          <button type="button" data-save-graphic disabled>Save graphic</button>
-          <button type="button" data-share-graphic hidden>Share graphic</button>
-          <button type="button" data-share-linkedin disabled>Share on LinkedIn</button>
-          <button id="restart-game" type="button">Try again</button>
+        <div class="game-over-share-actions result-actions">
+          <div class="result-primary-actions">
+            <button id="restart-game" class="result-retry" type="button"><span data-result-icon="retry"></span>Try again</button>
+            <button class="result-linkedin" type="button" data-share-linkedin disabled><span data-result-icon="linkedin"></span>Share on LinkedIn</button>
+          </div>
+          <div class="result-secondary-actions" role="group" aria-label="More sharing options">
+            <button type="button" data-share-x aria-label="Share on X" title="Share on X" disabled><span data-result-icon="x"></span><span>X</span></button>
+            <button type="button" data-share-instagram aria-label="Share on Instagram" title="Share on Instagram" disabled><span data-result-icon="instagram"></span><span>Instagram</span></button>
+            <button type="button" data-share-facebook aria-label="Share on Facebook" title="Share on Facebook" disabled><span data-result-icon="facebook"></span><span>Facebook</span></button>
+            <button type="button" data-save-graphic aria-label="Save result graphic" title="Save result graphic" disabled><span data-result-icon="download"></span><span>Save</span></button>
+            <button type="button" data-share-graphic aria-label="More sharing options" disabled><span data-result-icon="share"></span><span data-share-label>More</span></button>
+          </div>
         </div>
         <p class="game-over-share-status" data-share-status role="status" aria-live="polite"></p>
       </div>
@@ -101,11 +120,18 @@
         <p class="game-over-attempt" data-attempt></p>
         <p class="victory-words" data-words-completed aria-live="polite"></p>
         <canvas class="game-over-graphic victory-graphic" role="img" aria-label="Your Figsaw victory" width="1080" height="1080"></canvas>
-        <div class="game-over-share-actions">
-          <button type="button" data-save-graphic disabled>Save graphic</button>
-          <button type="button" data-share-graphic hidden>Share graphic</button>
-          <button type="button" data-share-linkedin disabled>Share on LinkedIn</button>
-          <button id="new-game" type="button">Play again</button>
+        <div class="game-over-share-actions result-actions">
+          <div class="result-primary-actions">
+            <button id="new-game" class="result-retry" type="button"><span data-result-icon="retry"></span>Play again</button>
+            <button class="result-linkedin" type="button" data-share-linkedin disabled><span data-result-icon="linkedin"></span>Share on LinkedIn</button>
+          </div>
+          <div class="result-secondary-actions" role="group" aria-label="More sharing options">
+            <button type="button" data-share-x aria-label="Share on X" title="Share on X" disabled><span data-result-icon="x"></span><span>X</span></button>
+            <button type="button" data-share-instagram aria-label="Share on Instagram" title="Share on Instagram" disabled><span data-result-icon="instagram"></span><span>Instagram</span></button>
+            <button type="button" data-share-facebook aria-label="Share on Facebook" title="Share on Facebook" disabled><span data-result-icon="facebook"></span><span>Facebook</span></button>
+            <button type="button" data-save-graphic aria-label="Save result graphic" title="Save result graphic" disabled><span data-result-icon="download"></span><span>Save</span></button>
+            <button type="button" data-share-graphic aria-label="More sharing options" disabled><span data-result-icon="share"></span><span data-share-label>More</span></button>
+          </div>
         </div>
         <p class="game-over-share-status" data-share-status role="status" aria-live="polite"></p>
       </div>
@@ -142,6 +168,6 @@
     <button id="top10-button" type="button" aria-haspopup="dialog">Top 10</button>
     <button id="about-button" type="button" aria-haspopup="dialog">About</button>
   </div>
-  <script type="module" src="./boot.js?v=f2059c09e3dd"></script>
+  <script type="module" src="./boot.js?v=a51b0405547a"></script>
 </body>
 </html>
