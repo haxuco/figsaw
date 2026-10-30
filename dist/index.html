@@ -9,8 +9,8 @@
   <link rel="icon" href="data:,">
   <link rel="preload" href="./assets/loading-environment.webp" as="image" fetchpriority="high">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=4805654fa5e4">
-  <link rel="modulepreload" href="./game.bundle.js?v=9a8e4cab9bdb">
+  <link rel="stylesheet" href="./style.css?v=fc857ff04f51">
+  <link rel="modulepreload" href="./game.bundle.js?v=266a56ae533e">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -52,7 +52,7 @@
     <main data-play>
       <aside class="kern-layers" aria-label="Challenge progress">
         <h2>Pages <span>3</span></h2>
-        <ol class="kern-progress"><li data-progress><span>01</span> Word 1 <i aria-hidden="true"></i></li><li data-progress><span>02</span> Word 2 <i aria-hidden="true"></i></li><li data-progress><span>03</span> Word 3 <i aria-hidden="true"></i></li></ol>
+        <ol class="kern-progress"><li data-progress class="current" aria-current="step"><span>01</span><span data-page-label>Word 1</span><i aria-hidden="true"></i></li><li data-progress class="locked" aria-disabled="true"><span>02</span><span data-page-label>Locked</span><i aria-hidden="true"></i></li><li data-progress class="locked" aria-disabled="true"><span>03</span><span data-page-label>Locked</span><i aria-hidden="true"></i></li></ol>
       </aside>
       <div class="kern-brief"><p class="program-eyebrow" data-round>WORD 01 / 03</p><h1>Fix the kerning</h1><p class="program-instruction">Drag the inner letters<br> First and last stay fixed</p></div>
       <aside class="kern-inspector" aria-label="Text properties">
@@ -138,6 +138,6 @@
     <button id="top10-button" type="button" aria-haspopup="dialog">Top 10</button>
     <button id="about-button" type="button" aria-haspopup="dialog">About</button>
   </div>
-  <script type="module" src="./boot.js?v=9a8e4cab9bdb"></script>
+  <script type="module" src="./boot.js?v=266a56ae533e"></script>
 </body>
 </html>

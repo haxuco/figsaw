@@ -41,7 +41,9 @@ function paintProgram(canvas,challenge){
  c.fillStyle='#333';c.font='600 12px Arial';c.fillText('Pages',28,90);c.fillText('Design',630,90);
  for(let i=0;i<3;i++){
   if(i===challenge.round){c.fillStyle='#e5f0ff';c.fillRect(21,104+i*28,156,28);}
-  c.fillStyle=i===challenge.round?'#075dc1':'#727272';c.font='12px Arial';c.fillText(`${String(i+1).padStart(2,'0')}    Word ${i+1}${challenge.passed[i]?'  ✓':''}`,29,122+i*28);
+  const locked=i>challenge.round;
+  c.fillStyle=locked?'#969696':i===challenge.round?'#075dc1':'#727272';c.font='12px Arial';c.fillText(`${String(i+1).padStart(2,'0')}    ${locked?'Locked':`Word ${i+1}`}${challenge.passed[i]?'  ✓':''}`,29,122+i*28);
+  if(locked){const y=113+i*28;c.strokeStyle='#969696';c.lineWidth=1;c.strokeRect(163,y+4,8,7);c.beginPath();c.arc(167,y+4,3,Math.PI,0);c.stroke();}
  }
  c.fillStyle='#606060';c.font='12px Arial';c.fillText(view.label,630,117);c.fillText(`Size   ${view.fontSize} px`,630,146);c.fillText('Text layer',630,175);
  c.textAlign='center';c.fillStyle='#606060';c.font='600 11px Arial';c.fillText(`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`,400,91);
@@ -100,7 +102,14 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   letters.forEach((letter,i)=>{letter.style.left=`${view.positions[i]}px`;if(letter.tagName==='BUTTON')letter.disabled=accepted;});selection();
   roundLabel.textContent=`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`;typeLabel.textContent=view.label;
   if(fontSizeLabel)fontSizeLabel.textContent=view.fontSize;if(artboardName)artboardName.textContent=view.word;
-  progress.forEach((node,i)=>{node.classList.toggle('passed',challenge.passed[i]);node.classList.toggle('current',i===challenge.round);node.setAttribute('aria-label',`Word ${i+1}: ${challenge.passed[i]?'complete':i===challenge.round?'in progress':'locked'}`);});
+  // This list is read-only progress, never a route to another round.
+  progress.forEach((node,i)=>{
+   const locked=i>challenge.round,label=node.querySelector?.('[data-page-label]');
+   node.classList.toggle('passed',challenge.passed[i]);node.classList.toggle('current',i===challenge.round);node.classList.toggle('locked',locked);
+   node.setAttribute('aria-disabled',String(locked));node.setAttribute('aria-current',i===challenge.round?'step':'false');
+   node.setAttribute('aria-label',`Word ${i+1}: ${locked?'locked; pass the current word first':challenge.passed[i]?'complete':'in progress'}`);
+   if(label)label.textContent=locked?'Locked':`Word ${i+1}`;
+  });
   play.hidden=challenge.completed;result.hidden=!challenge.completed;check.hidden=challenge.completed;
   completedWords.replaceChildren();
   if(!result.hidden)challenge.completedWords.forEach(layout=>{

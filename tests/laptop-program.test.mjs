@@ -51,8 +51,9 @@ test('laptop views preserve scoring, completed words, power state and progress w
  const previous=globalThis.document;
  const context=new Proxy({measureText:text=>({width:text.length*70-(text.includes('TY')?10:0)})},{get:(target,key)=>key in target?target[key]:()=>{},set:(target,key,value)=>{target[key]=value;return true;}}),paintCanvas={getContext:()=>context};
  const element=(tag='div')=>({tagName:tag.toUpperCase(),hidden:false,value:'',dataset:{},children:[],listeners:{},classList:{toggle(){},add(){}},style:{setProperty(){}},setAttribute(name,value){this.attributes??={};this.attributes[name]=String(value);},focus(){this.focused=true;},select(){this.selected=true;},addEventListener(type,fn){this.listeners[type]=fn;},append(node){this.children.push(node);},replaceChildren(){this.children=[];},closest(selector){return selector==='[data-letter]'&&this.dataset.letter!==undefined?this:null;},getBoundingClientRect:()=>({width:800}),setPointerCapture(){},hasPointerCapture:()=>false});
- const position=element('input'),selection=element(),fontSize=element(),artboard=element();
+ const position=element('input'),selection=element(),fontSize=element(),artboard=element(),pageLabels=Array.from({length:3},()=>element());
  const completedWords=element(),play=element(),result=element(),status=element(),check=element('button'),back=element('button'),word=element(),round=element(),type=element(),power=element(),nudge=[element('button'),element('button')],progress=Array.from({length:3},()=>element()),root=element();nudge[0].dataset.nudge='-1';nudge[1].dataset.nudge='1';
+ progress.forEach((node,i)=>node.querySelector=()=>pageLabels[i]);
  root.querySelector=selector=>({'[data-position]':position,'[data-selection]':selection,'[data-font-size]':fontSize,'[data-artboard-name]':artboard,'[data-completed-words]':completedWords,'[data-play]':play,'[data-result]':result,'[data-status]':status,'[data-check]':check,'[data-return]':back,'[data-word]':word,'[data-round]':round,'[data-typeface]':type,'[data-power]':power}[selector]);root.querySelectorAll=selector=>selector==='[data-progress]'?progress:nudge;
  globalThis.document={createElement:element,createElementNS:(_,tag)=>element(tag),querySelector:()=>root,body:{classList:{add(){},remove(){}}}};
  try{
@@ -60,6 +61,7 @@ test('laptop views preserve scoring, completed words, power state and progress w
   const camera=new THREE.PerspectiveCamera(62,1.78,.01,100);camera.position.set(1.85,.82,3.11);camera.lookAt(.4,.3,2.18);camera.updateMatrixWorld(true);
   const start=camera.position.clone(),rotation=camera.quaternion.clone(),canvas={focus(){},getBoundingClientRect:()=>({left:0,top:0,width:853,height:480})};
   const program=createLaptopProgram({camera,canvas,laptop}),layouts=measureKerningLayouts(context);assert.equal(program.start(),true);program.update(1,1,true);assert.equal(root.hidden,false);
+  assert.deepEqual(pageLabels.map(node=>node.textContent),['Word 1','Locked','Locked']);assert.deepEqual(progress.map(node=>node.attributes['aria-disabled']),['false','true','true']);
   const reopen=time=>{laptop.open();laptop.update(1);assert.equal(program.start(),true);program.update(1,time,true);};
   program.restore({...program.capture(),positions:layouts[0].positions});reopen(1);
   assert.equal(artboard.textContent,'SACRIFICE');assert.equal(fontSize.textContent,118);assert.equal(selection.textContent,'T A');
@@ -72,7 +74,9 @@ test('laptop views preserve scoring, completed words, power state and progress w
   const saved=program.capture();program.cancel();assert.equal(laptop.isOpen,false);assert.equal(laptop.isMoving,true);assert.equal(program.completed,false);assert.ok(camera.position.distanceTo(start)<1e-9);assert.ok(camera.quaternion.angleTo(rotation)<1e-7);assert.equal(camera.fov,62);
   laptop.update(1);assert.equal(laptop.openProgress,0);assert.equal(program.start(),false,'a closed lid cannot enter the screen view');
   reopen(2);assert.deepEqual(program.capture(),saved);check.onclick();assert.equal(program.completed,false);assert.match(status.textContent,/Try again/);assert.doesNotMatch(status.textContent,/score|[0-9]/i);
+  for(let attempt=0;attempt<3;attempt++)check.onclick();assert.equal(program.capture().round,0);assert.equal(artboard.textContent,'SACRIFICE');assert.equal(result.hidden,true);assert.deepEqual(pageLabels.map(node=>node.textContent),['Word 1','Locked','Locked']);
   for(let r=0;r<3;r++){
+   assert.equal(artboard.textContent,layouts[r].word);assert.deepEqual(pageLabels.map(node=>node.textContent),[0,1,2].map(i=>i>r?'Locked':`Word ${i+1}`));assert.deepEqual(progress.map(node=>node.attributes['aria-disabled']),[0,1,2].map(i=>String(i>r)));
    const targets=layouts[r].positions;
    for(let i=1;i<targets.length-1;i++){
     const current=program.capture().positions[i];word.listeners.pointerdown({button:0,target:word.children[i],pointerId:1,clientX:100,preventDefault(){}});word.listeners.pointermove({pointerId:1,clientX:100+targets[i]-current});word.listeners.pointerup();
