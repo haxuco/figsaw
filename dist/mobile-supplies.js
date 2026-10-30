@@ -1,34 +1,51 @@
 import * as THREE from './vendor/three.module.js';
 
 export function createScissors(){
- const group=new THREE.Group();group.name='Steel scissors with worn red handles';
- const steel=new THREE.MeshStandardMaterial({color:0xb5bdbb,metalness:.88,roughness:.34});
- const edge=new THREE.MeshStandardMaterial({color:0xe1e5df,metalness:.92,roughness:.23});
- const red=new THREE.MeshStandardMaterial({color:0x933d31,roughness:.62});
- const dark=new THREE.MeshStandardMaterial({color:0x343c39,metalness:.65,roughness:.48});
- const blades=[];
+ const group=new THREE.Group();group.name='Tailored steel scissors with ergonomic red grips';
+ const steel=new THREE.MeshStandardMaterial({color:0xaab4b4,metalness:.82,roughness:.36});
+ const edge=new THREE.MeshStandardMaterial({color:0xe0e5e3,metalness:.9,roughness:.22});
+ const red=new THREE.MeshStandardMaterial({color:0x862d24,roughness:.56});
+ const rubber=new THREE.MeshStandardMaterial({color:0x222b29,roughness:.86});
+ const dark=new THREE.MeshStandardMaterial({color:0x424b49,metalness:.75,roughness:.44});
+ const arms=[];
  function add(parent,geometry,material,name){const mesh=new THREE.Mesh(geometry,material);mesh.name=name;mesh.castShadow=mesh.receiveShadow=true;parent.add(mesh);return mesh;}
- function profile(points,side){const shape=new THREE.Shape();points.forEach(([x,y],i)=>shape[i?'lineTo':'moveTo'](x*side,y));shape.closePath();return shape;}
+ function extrude(shape,depth,bevel){return new THREE.ExtrudeGeometry(shape,{depth,bevelEnabled:true,bevelSize:bevel,bevelThickness:bevel,bevelSegments:2,steps:1,curveSegments:12});}
+ function mirroredShape(side){const shape=new THREE.Shape();return {shape,move:(x,y)=>shape.moveTo(x*side,y),line:(x,y)=>shape.lineTo(x*side,y),curve:(a,b,c,d,e,f)=>shape.bezierCurveTo(a*side,b,c*side,d,e*side,f)};}
  for(const side of[-1,1]){
-  const arm=new THREE.Group();arm.name=side<0?'Thumb blade and grip':'Finger blade and grip';group.add(arm);blades.push(arm);
-  // Each half includes the steel tang: the blade and handle rotate together
-  // around the same rivet, on separate planes so the cutting edges can cross.
-  const shape=profile([[-.006,-.016],[-.013,-.048],[.017,-.056],[.021,-.043],[.010,-.012],[.018,.030],[.014,.083],[.002,.145],[-.003,.138],[-.007,.036]],side);
-  const blade=add(arm,new THREE.ExtrudeGeometry(shape,{depth:.0028,bevelEnabled:true,bevelSize:.00055,bevelThickness:.0005,bevelSegments:1,curveSegments:8}),steel,'Tapered stainless steel blade and tang');blade.position.z=side*.0024;
-  const bevel=profile([[-.007,.024],[-.003,.138],[.002,.145],[.001,.103],[-.003,.024]],side);
-  const cuttingEdge=add(arm,new THREE.ShapeGeometry(bevel),edge,'Polished cutting bevel');cuttingEdge.position.z=blade.position.z+.0034;cuttingEdge.material.side=THREE.DoubleSide;
-  const grip=new THREE.Shape(),hole=new THREE.Path();
-  const rx=side<0?.022:.026,ry=side<0?.027:.033;
-  grip.absellipse(0,0,rx,ry,0,Math.PI*2,false);hole.absellipse(0,0,rx-.0065,ry-.007,0,Math.PI*2,true);grip.holes.push(hole);
-  const handle=add(arm,new THREE.ExtrudeGeometry(grip,{depth:.006,bevelEnabled:true,bevelSize:.0015,bevelThickness:.0015,bevelSegments:2,steps:1,curveSegments:16}),red,'Rounded red finger loop');
-  handle.position.set(side*.029,-.066,blade.position.z-.0016);handle.rotation.z=side*-.20;
-  const collar=add(arm,new THREE.BoxGeometry(.017,.022,.007),red,'Moulded handle neck');collar.position.set(side*.014,-.039,blade.position.z+.001);collar.rotation.z=side*.40;
+  const arm=new THREE.Group();arm.name=side<0?'Thumb blade and grip':'Finger blade and grip';group.add(arm);arms.push(arm);
+  // The complete half pivots at the screw. Offset blade planes allow the two
+  // bevelled cutting edges to pass each other without coplanar faces.
+  const z=side*.0022,p=mirroredShape(side);
+  p.move(.007,-.033);p.curve(.018,-.025,.015,-.011,.014,.002);
+  p.curve(.015,.031,.013,.083,.003,.137);p.curve(.002,.143,.0008,.147,-.0005,.146);
+  p.curve(-.0016,.145,-.002,.141,-.002,.137);p.line(-.002,.024);
+  p.curve(-.002,.013,-.010,.010,-.009,-.002);p.curve(-.008,-.016,.001,-.026,.007,-.033);
+  const blade=add(arm,extrude(p.shape,.0026,.0005),steel,'Forged tapered blade and curved tang');blade.position.z=z;
+  const b=mirroredShape(side);b.move(-.002,.025);b.line(-.002,.137);b.curve(-.0016,.143,-.0003,.148,.001,.143);b.line(.0023,.109);b.line(.0018,.025);b.shape.closePath();
+  const bevelGeometry=new THREE.ShapeGeometry(b.shape,12);
+  for(const face of[-1,1]){const bevel=add(arm,bevelGeometry,edge,'Ground cutting edge');bevel.position.z=z+(face>0?.00315:-.00055);if(face<0){bevel.rotation.y=Math.PI;bevel.scale.x=-1;}}
+  // One continuous moulded handle, with a small thumb loop and a longer
+  // finger loop. The rubber liner follows the opening instead of covering it.
+  const cx=.029,cy=side<0?-.064:-.072,rx=side<0?.023:.025,ry=side<0?.027:.035;
+  const h=mirroredShape(side);h.move(.004,-.020);h.curve(.014,-.019,.019,cy+ry,cx,cy+ry);
+  h.curve(cx+rx*.56,cy+ry,cx+rx,cy+ry*.56,cx+rx,cy);
+  h.curve(cx+rx,cy-ry*.56,cx+rx*.56,cy-ry,cx,cy-ry);
+  h.curve(cx-rx*.56,cy-ry,cx-rx,cy-ry*.56,cx-rx,cy);
+  h.curve(cx-rx,cy+ry*.48,.008,-.039,.004,-.020);h.shape.closePath();
+  const hole=new THREE.Path();hole.absellipse(cx*side,cy,rx-.006,ry-.006,0,Math.PI*2,true);h.shape.holes.push(hole);
+  const grip=add(arm,extrude(h.shape,.0064,.0018),red,'Continuous contoured red handle');grip.position.z=z-.002;
+  const lining=new THREE.Shape();lining.absellipse(cx*side,cy,rx-.0054,ry-.0054,0,Math.PI*2,false);
+  const opening=new THREE.Path();opening.absellipse(cx*side,cy,rx-.008,ry-.008,0,Math.PI*2,true);lining.holes.push(opening);
+  const liner=add(arm,extrude(lining,.0068,.0008),rubber,'Inset soft black finger liner');liner.position.z=z-.0022;
  }
- const washer=add(group,new THREE.CylinderGeometry(.009,.009,.003,20),dark,'Pivot washer');washer.rotation.x=Math.PI/2;washer.position.z=.006;
- const rivet=add(group,new THREE.CylinderGeometry(.007,.007,.0035,20),edge,'Slotted pivot screw');rivet.rotation.x=Math.PI/2;rivet.position.z=.009;
- const slot=add(group,new THREE.BoxGeometry(.009,.0012,.0006),dark,'Screw slot');slot.position.z=.011;slot.rotation.z=-.35;
- function setOpen(value){const angle=.06+THREE.MathUtils.clamp(value,0,1)*.34;blades.forEach((blade,i)=>blade.rotation.z=(i?1:-1)*angle);}
- setOpen(.24);
+ // Rounded hardware on both sides, including a recessed slot and washer.
+ const hardware=new THREE.Group();group.add(hardware);
+ const washer=add(hardware,new THREE.CylinderGeometry(.0086,.0086,.0014,20),dark,'Pivot washer');washer.rotation.x=Math.PI/2;washer.position.z=.0061;
+ const screw=add(hardware,new THREE.SphereGeometry(.0067,20,10,0,Math.PI*2,0,Math.PI/2),edge,'Domed pivot screw');screw.rotation.x=Math.PI/2;screw.scale.y=.35;screw.position.z=.0068;
+ const slot=add(hardware,new THREE.BoxGeometry(.0075,.00085,.0002),dark,'Recessed screw slot');slot.position.z=.00935;slot.rotation.z=-.45;
+ const back=add(hardware,new THREE.CylinderGeometry(.0064,.0064,.0016,16),steel,'Rear pivot rivet');back.rotation.x=Math.PI/2;back.position.z=-.0037;
+ function setOpen(value){const angle=.012+THREE.MathUtils.clamp(value,0,1)*.38;arms.forEach((arm,i)=>arm.rotation.z=(i?1:-1)*angle);}
+ setOpen(.23);
  return {group,setOpen};
 }
 export function createMobileSupplies(drawer){
