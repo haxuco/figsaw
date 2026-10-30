@@ -2,7 +2,7 @@ import {validateDisplayName} from './display-name.js';
 import {formatCountdown} from './countdown-clock.js';
 import {victoryResult} from './victory-result.js';
 
-export const SHARE_WIDTH=1080,SHARE_HEIGHT=1080,SHARE_URL='https://figsaw.haxuco.chatgpt.site/';
+export const SHARE_WIDTH=1080,SHARE_HEIGHT=1080,SHARE_URL='https://figsaw.figma.site/';
 export function attemptLabel(count){return `Attempt ${Number.isSafeInteger(count)&&count>0?count:1}`;}
 
 // The artwork is a single pre-render of the real game model. It is fetched only
@@ -27,7 +27,7 @@ export function drawShareGraphic(ctx,{attempt,artwork}){
  ctx.fillStyle='#141510';ctx.beginPath();ctx.ellipse(670,1004,280,24,0,0,Math.PI*2);ctx.fill();
  if(artwork)ctx.drawImage(artwork,235,265,790,790);
  ctx.fillStyle='#e1d9ca';ctx.font='30px Georgia,serif';ctx.fillText('Can you escape?',70,952);
- ctx.fillStyle='#a3968f';ctx.font='22px monospace';ctx.fillText('figsaw.haxuco.chatgpt.site',70,1008);
+ ctx.fillStyle='#a3968f';ctx.font='22px monospace';ctx.fillText(new URL(SHARE_URL).host,70,1008);
 }
 
 export function drawVictoryGraphic(ctx,{attempt,remainingSeconds,figpalsSaved,artwork,rank,name}){
@@ -44,7 +44,7 @@ export function drawVictoryGraphic(ctx,{attempt,remainingSeconds,figpalsSaved,ar
  if(rank){ctx.strokeStyle='#c0a66b';ctx.strokeRect(775,84,230,132);ctx.fillStyle='#c9ad73';ctx.font='19px monospace';ctx.fillText('TOP 10 ESCAPE',798,117);ctx.font='500 86px "Grenze Gotisch",Georgia,serif';ctx.fillText(`#${rank}`,798,197);if(name){ctx.fillStyle='#d6c497';fittedText(ctx,name,72,353,'24px monospace',570);}}
  const metrics=[['TIME REMAINING',formatCountdown(remainingSeconds)],['FIGPALS SAVED',`${figpalsSaved} / 2`],['ESCAPE ATTEMPTS',String(attempt).padStart(2,'0')]];
  metrics.forEach(([label,value],index)=>{const y=403+index*197;ctx.fillStyle='#aebfa8';ctx.font='19px monospace';ctx.fillText(label,72,y);ctx.fillStyle='#e0e8d1';fittedText(ctx,value,65,y+103,'500 94px monospace',325);});
- ctx.fillStyle='#94a38c';ctx.font='22px monospace';ctx.fillText('figsaw.haxuco.chatgpt.site',70,1008);
+ ctx.fillStyle='#94a38c';ctx.font='22px monospace';ctx.fillText(new URL(SHARE_URL).host,70,1008);
 }
 
 export function createGameOverShare(root){
