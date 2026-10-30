@@ -55,7 +55,7 @@ import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
 import {installGraphicsRecovery} from './graphics-recovery.js';
 import {createStartupProgress} from './startup-progress.js';
 import {createGameOverTransition,gameOverReason,resolveGameOverCause} from './game-over-transition.js';
-import {hasFailedFloodObjectives} from './flood-objectives.js';
+import {createFloodObjectiveFailure} from './flood-objectives.js';
 const loadingStatus=document.querySelector('#loading-status');
 const startupProgress=createStartupProgress(loadingStatus);
 startupProgress.update('Creating Figsaw…');
@@ -475,6 +475,7 @@ const alarmCamera=createAlarmCamera({position:cameraPosition,state});
 const victoryParade=createVictoryParade({rigs:figpalHoists.rigs});
 const escapeCinematic=createEscapeCinematic({camera,position:cameraPosition,state,door:exitDoor,baseFov:homeCamera.fov});
 const hazardClock=createHazardClock(state.time);
+const floodObjectiveFailure=createFloodObjectiveFailure();
 const mugTrap=createMugTrap({mug:catMug,camera,restraint});
 const sawTrap=createSawTrap({saw:handsaw,camera,restraint,hasKey:()=>ketchupKey.hasKey});
 const axeInteraction=createAxeInteraction({axe:fireAxe,camera,tanks:figpalHoists.tanks,onBreak(index,time,outlet){
@@ -958,6 +959,7 @@ let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
  itemHover.clear();
+ floodObjectiveFailure.reset();
  leaderboardUI.reset();laptopProgram.reset();
  attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
@@ -1201,7 +1203,7 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion),inventory.equipped==='key'&&restraint.locked);
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const floodFailure=hasFailedFloodObjectives({acid:acidLeaks,rescue:rescueChairs.state,mobile:mobilePuzzle,laptopComplete:laptopProgram.completed,pmIndex:escapePuzzle.pmIndex,paused:hazardFrame.paused});
+ const floodFailure=floodObjectiveFailure.update({acid:acidLeaks,rescue:rescueChairs.state,mobile:mobilePuzzle,laptopComplete:laptopProgram.completed,pmIndex:escapePuzzle.pmIndex,paused:hazardFrame.paused});
  const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,flood:floodFailure});
  if(failureCause){deathTransition.start(t,reducedMotion);document.body.classList.add('death-active');}
  const deathFrame=updateGameOver(t);

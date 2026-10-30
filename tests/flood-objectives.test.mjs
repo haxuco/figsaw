@@ -5,7 +5,7 @@ import {createRescueState} from '../dist/rescue-state.js';
 import {createInventory} from '../dist/inventory.js';
 import {createMobilePuzzleState,MOBILE_PIECES} from '../dist/mobile-puzzle-state.js';
 import {createHazardClock} from '../dist/hazard-clock.js';
-import {hasFailedFloodObjectives} from '../dist/flood-objectives.js';
+import {hasFailedFloodObjectives,createFloodObjectiveFailure} from '../dist/flood-objectives.js';
 import {gameOverReason,resolveGameOverCause} from '../dist/game-over-transition.js';
 
 const origin={x:0,y:0,z:0};
@@ -77,4 +77,32 @@ test('ordinary water is not a corrosive floor, and the failure reason gives no s
  assert.equal(resolveGameOverCause({flood:true,acid:true}),'acid');
  assert.equal(gameOverReason('flood'),'The acid flood made escape impossible.');
  assert.doesNotMatch(gameOverReason('flood'),/mobile|chain|repair|laptop|before|should/i);
+});
+
+test('the failure screen waits for the full outflow, for both valve and axe floods',()=>{
+ for(const kind of ['open','breach']){
+  const f=fixture({skip:'repair'}),failure=createFloodObjectiveFailure();f.spill(kind);
+  const finish=kind==='breach'?1.84:25.48;
+  for(const time of [.01,.6,finish-.01]){
+   f.tick(time);assert.equal(failure.update(f),false,'no fade while acid is still pouring');
+  }
+  assert.ok(f.acid.leaks[0].points.length>20,'the floor is visibly flooded before the result');
+  f.tick(finish+.01);assert.equal(f.acid.leaks[0].pouring,0);assert.equal(failure.update(f),true);
+  assert.equal(f.acid.dying,false,'the delayed objective failure still applies from a safe chair');
+ }
+});
+
+test('waiting for the flood does not erase an already failed objective',()=>{
+ const f=fixture({skip:'repair'}),failure=createFloodObjectiveFailure();f.spill();f.tick(.6);
+ assert.equal(failure.update(f),false);
+ f.mobile.repair(4);f.mobile.update(8);assert.equal(f.check(),false,'preparation is now complete, but was late');
+ f.tick(2);assert.equal(failure.update(f),true);
+});
+
+test('lowering pauses the pending result, retry clears it, and prepared players remain safe',()=>{
+ const f=fixture({skip:'repair'}),failure=createFloodObjectiveFailure();f.spill();f.tick(.6);failure.update(f);
+ f.tick(2);assert.equal(failure.update({...f,paused:true}),false);assert.equal(failure.update(f),true);
+ failure.reset();f.acid.reset();assert.equal(failure.update(f),false);
+ const ready=fixture();ready.spill();ready.tick(.6);assert.equal(failure.update(ready),false);
+ ready.tick(30);assert.equal(failure.update(ready),false,'a fully prepared flood never schedules game over');
 });
