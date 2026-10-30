@@ -54,6 +54,7 @@ import {applySceneBudget,useMobileMaterials} from './scene-budget.js';
 import {installGraphicsRecovery} from './graphics-recovery.js';
 import {createStartupProgress} from './startup-progress.js';
 import {createGameOverTransition,gameOverReason,resolveGameOverCause} from './game-over-transition.js';
+import {hasFailedFloodObjectives} from './flood-objectives.js';
 const loadingStatus=document.querySelector('#loading-status');
 const startupProgress=createStartupProgress(loadingStatus);
 startupProgress.update('Creating Figsaw…');
@@ -1199,7 +1200,8 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion),inventory.equipped==='key'&&restraint.locked);
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0});
+ const floodFailure=hasFailedFloodObjectives({acid:acidLeaks,rescue:rescueChairs.state,mobile:mobilePuzzle,laptopComplete:laptopProgram.completed,pmIndex:escapePuzzle.pmIndex,paused:hazardFrame.paused});
+ const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,flood:floodFailure});
  if(failureCause){deathTransition.start(t,reducedMotion);document.body.classList.add('death-active');}
  const deathFrame=updateGameOver(t);
  if(deathFrame.visible||deathFrame.blackout>0)mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap);
@@ -1209,6 +1211,7 @@ function render(){
  else if(sawFinished)endGame('saw');
  else if(fireFinished)endGame('fire');
  else if(acidFinished)endGame('acid');
+ else if(floodFailure)endGame('flood');
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);

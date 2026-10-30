@@ -8,16 +8,18 @@ export function gameOverReason(cause){
   case 'explosion':return 'You were caught in the explosion.';
   case 'laptop':return 'Water destroyed the laptop.';
   case 'deadline':return 'You ran out of time.';
+  case 'flood':return 'The acid flood made escape impossible.';
   default:return 'The challenge ended in failure.';
  }
 }
-export function resolveGameOverCause({alarm,deadline,saw,fire,acid}={}){
+export function resolveGameOverCause({alarm,deadline,saw,fire,acid,flood}={}){
  if(alarm==='acid')return 'explosion';
  if(alarm==='laptop')return 'laptop';
  if(deadline)return 'deadline';
  if(saw)return 'saw';
  if(fire)return 'fire';
- return acid?'acid':null;
+ if(acid)return 'acid';
+ return flood?'flood':null;
 }
 
 // Every failure uses a flat red fade, a short hold, then solid black. The title
