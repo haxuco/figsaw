@@ -1,9 +1,10 @@
 import * as THREE from './vendor/three.module.js';
 import {createObjectInspectionCamera} from './object-inspection-camera.js';
 import {renderQuality as quality} from './render-quality.js';
+import {createInfoPosterEntries} from './info-posters.js';
 const specs=[['org-chart','Figpal Labs — people & practice',1600,1100],['onboarding','Onboarding wireframes',1600,1000],['workspace','Workspace design review',1600,1000],['planning','Sprint planning whiteboard',1600,1020],...Array.from({length:8},(_,i)=>[`note-${i}`,['Research note','Product planning note','Design note','Engineering note','Review note','Sprint checklist','Retrospective note','Content note'][i],480,500])];
 export async function createWallDocuments(puzzle){
- const entries=new Map(),targets=[];
+ const entries=new Map(createInfoPosterEntries().map(entry=>[entry.id,entry])),targets=[];
  // Start the randomized chart and static artwork together, rather than making
  // every poster wait for the chart's SVG request and parse.
  const templateRequest=fetch('./assets/documents/org-chart.svg?v=haunted-wear-2').then(r=>r.text());
@@ -42,7 +43,7 @@ export function createDocumentViewer({documents,position,state,aspect,baseFov,sc
  let detail=null,revision=0;
  function releaseDetail(){revision++;if(detail){detail.target.material=detail.original;detail.material.dispose();detail=null;}}
  async function sharpen(target){
-  const entry=documents.entries.get(target.userData.wallDocument);if(!entry)return;
+  const entry=documents.entries.get(target.userData.wallDocument);if(!entry||entry.infoPoster)return;
   const request=revision,src=entry.detailSrc??entry.src;let map=maps.get(src);
   if(map){maps.delete(src);maps.set(src,map);}
   else{

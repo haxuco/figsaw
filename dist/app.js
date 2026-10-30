@@ -4,6 +4,7 @@ import {captureRankedEscape} from './leaderboard.js';
 import {createLeaderboardRepository} from './leaderboard-remote.js';
 import {createLeaderboardUI} from './leaderboard-ui.js';
 import {createAboutUI} from './about-ui.js';
+import {createInfoPosterViewer} from './info-poster-view.js';
 import {createGamePause} from './game-pause.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
 import {createInventoryModelPreviews} from './inventory-models.js';
@@ -503,8 +504,8 @@ function pauseForInfo(){
 function resumeFromInfo(){
  leaderboardPause.resume();lastRenderAt=0;clock.getDelta();scheduleFrame();canvas.focus({preventScroll:true});
 }
-const leaderboardUI=createLeaderboardUI({repository:createLeaderboardRepository(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>canOpenInfo()&&!aboutUI.active,onOpen:pauseForInfo,onClose:resumeFromInfo,getCountdown:()=>countdown.status==='waiting'?null:countdown.update(),onRank:result=>victoryShare.prepare(result)});
-const aboutUI=createAboutUI({button:document.querySelector('#about-button'),canOpen:()=>canOpenInfo()&&!leaderboardUI.active,onOpen:pauseForInfo,onClose:resumeFromInfo});
+const leaderboardUI=createLeaderboardUI({repository:createLeaderboardRepository(),root:document.querySelector('#victory-leaderboard'),onRank:result=>victoryShare.prepare(result),onEntries(entries){documents.entries.get('top10').paint(entries);infoPosterViewer.refresh();}});
+const aboutUI=createAboutUI();
 for(const dialog of[gameOver,escapeScreen])dialog.addEventListener('keydown',event=>{
  if(event.key!=='Tab')return;
  const buttons=[...dialog.querySelectorAll('button,input,select,textarea')].filter(control=>!control.disabled&&!control.closest('[hidden]')),index=buttons.indexOf(document.activeElement);
@@ -522,6 +523,7 @@ const mobileCamera=createMobileCamera({position:cameraPosition,state,getTarget:m
 const mobileUI=createMobileInspectionUI({state:mobilePuzzle,time:()=>state.time,equipped:()=>inventory.equipped});
 const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,puzzle:escapePuzzle,onOpen:target=>documentViewer.show(target),onClose:immediate=>documentViewer.hide(immediate)});
 const documentViewer=createDocumentViewer({documents,position:cameraPosition,state,aspect:()=>camera.aspect,baseFov:homeCamera.fov,scene,light:inspectionLight,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;chainMenu.hide();sawMenu.hide();canvas.focus({preventScroll:true});},onClose(){canvas.focus({preventScroll:true});}});
+const infoPosterViewer=createInfoPosterViewer({renderer,scene,camera,state,baseFov:homeCamera.fov,light:inspectionLight,reducedMotion,onOpen:pauseForInfo,onClose(){leaderboardUI.close();resumeFromInfo();},getCountdown:()=>countdown.status==='waiting'?null:countdown.update()});
 let selectingAnimal=false;
 const cancelSawSelection=document.querySelector('#cancel-saw-selection');
 cancelSawSelection.addEventListener('click',()=>{clearSawSelection();canvas.focus({preventScroll:true});});
@@ -639,6 +641,12 @@ function syncChairButton(){
 }
 function inspectDocument(hit){
  if(sawBusy())return;
+ if(documents.entries.get(hit?.userData.wallDocument)?.infoPoster){
+  if(!canOpenInfo()||infoPosterViewer.active)return;
+  const scores=hit.userData.wallDocument==='top10';
+  if(infoPosterViewer.open(hit,scores?leaderboardUI.element:aboutUI.element)&&scores)leaderboardUI.open();
+  return;
+ }
  if(hit?.userData.wallDocument){if(hit.userData.wallDocument==='org-chart')analytics.mark('org_chart_viewed');puzzleHints.inspect(hit.userData.wallDocument,leaderboardPause.now());documentViewer.show(hit);}
  else if(hit?.userData.fishClue&&figpalHoists.fishClueReady){analytics.mark('skull_viewed');puzzleHints.inspect('skull',leaderboardPause.now());documentViewer.show(figpalHoists.fishInspectionTarget);}
 }
@@ -982,7 +990,7 @@ const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-
 function resetView({skipIntro=false}={}){
  itemHover.clear();
  floodObjectiveFailure.reset();
- leaderboardUI.reset();laptopProgram.reset();
+ infoPosterViewer.close(true);leaderboardUI.reset();laptopProgram.reset();
  analytics.retry();attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
@@ -1015,7 +1023,7 @@ function resetView({skipIntro=false}={}){
 function releaseControls(){state.space=false;dragPointer=null;itemHover.clear();}
 
 document.addEventListener('keydown',event=>{
- if(leaderboardUI.active||aboutUI.active||event.target.closest('#victory-leaderboard,.linkedin-share-dialog'))return;
+ if(infoPosterViewer.active||event.target.closest('#victory-leaderboard,.linkedin-share-dialog'))return;
  // A browser refresh starts its own attempt on load; do not also restart here.
  if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
@@ -1241,7 +1249,7 @@ function render(){
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
- inventoryUI.sync();syncRescueControls();leaderboardUI.update();
+ inventoryUI.sync();syncRescueControls();
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.

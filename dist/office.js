@@ -533,15 +533,17 @@ export async function createOffice(renderer,viewerPosition,onProgress=async()=>{
  }
 
  // The left wall carries the remains of the design team's work and reference library.
- for(const[z,y,w,h,mobile]of[[-2.53,2.13,1.52,1.08,true],[-.62,2.13,1.78,1.10,false]]){
-  const g=new THREE.Group();g.name='Left-wall design whiteboard';g.position.set(-3.86,y,z);g.rotation.y=Math.PI/2;office.add(g);
-  box([w,h,.045],[0,0,0],wallDecay.frame,g);const map=wireframeMap(mobile);
-  const face=mesh(new THREE.PlaneGeometry(w-.07,h-.07),new THREE.MeshStandardMaterial({map,roughness:.85,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.025}),g);face.position.z=.026;documents.tag(face,mobile?'onboarding':'workspace');
-  box([w-.07,.025,.10],[0,-h/2,.035],wallDecay.frame,g);
-  wallDecay.cobweb(g,w-.07,h-.07,.037,mobile?-1:1);
-  rod([-.4,-h/2+.025,.06],[-.23,-h/2+.025,.06],.011,black,g);
-  box([.13,.035,.065],[w*.29,-h/2+.029,.045],fabric,g);
-  sticky(g,w*.35,h*.21,.034,mobile?6:9);
+ // Replace duplicate side-wall wireframes with two readable office notices.
+ for(const[id,z]of [['top10',-2.53],['about',-.62]]){
+  const w=1.32,h=1.65,g=new THREE.Group();g.name=documents.entries.get(id).title+' notice board';g.position.set(-3.85,2.02,z);g.rotation.y=Math.PI/2;office.add(g);
+  box([w+.10,h+.10,.045],[0,0,0],wallDecay.cork,g);
+  for(const x of[-w/2-.04,w/2+.04])box([.035,h+.13,.055],[x,0,.01],wallDecay.frame,g);
+  for(const y of[-h/2-.04,h/2+.04])box([w+.115,.035,.055],[0,y,.01],wallDecay.frame,g);
+  const map=documents.map(id),face=mesh(new THREE.PlaneGeometry(w,h),new THREE.MeshStandardMaterial({map,roughness:1,emissive:0xffffff,emissiveMap:map,emissiveIntensity:.035}),g);
+  face.position.z=.028;face.castShadow=false;documents.tag(face,id);
+  for(const x of[-w*.42,w*.42]){const tape=box([.16,.055,.002],[x,h*.47,.032],wallDecay.tape,g);tape.rotation.z=x*.12;}
+  wallDecay.cobweb(g,w,h,.038,id==='about'?1:-1);
+  random(); // Preserve the removed sticky note's seed step for the rest of the room.
  }
  const library=new THREE.Group();library.name='Worn bookshelf of design books';library.position.set(-3.65,0,1.65);library.rotation.y=Math.PI/2;office.add(library);
  const shelfWood=material(0xb1a893,.92,woodMap),bookPages=material(0xa6a28d,.98);

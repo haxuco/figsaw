@@ -3,7 +3,7 @@ const wrap=a=>THREE.MathUtils.euclideanModulo(a+Math.PI,Math.PI*2)-Math.PI;
 
 // Inspect existing scene geometry. The saved player position is separate from
 // the moving inspection camera, so zooming cannot dodge floor hazards.
-export function createObjectInspectionCamera({position,state,aspect=()=>1,baseFov=62}){
+export function createObjectInspectionCamera({position,state,aspect=()=>1,baseFov=62,fitEntireFrame=false}){
  const center=new THREE.Vector3(),normal=new THREE.Vector3(),right=new THREE.Vector3(),up=new THREE.Vector3(),eye=new THREE.Vector3(),aim=new THREE.Vector3(),direction=new THREE.Vector3();
  let saved=null,target=null,frame=null,move=null,panX=0,panY=0,zoom=1;
  const capture=()=>({position:position.clone(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom});
@@ -21,7 +21,7 @@ export function createObjectInspectionCamera({position,state,aspect=()=>1,baseFo
   right.crossVectors(new THREE.Vector3(0,1,0),normal).normalize();up.crossVectors(normal,right).normalize();
   const scale=new THREE.Vector3().setFromMatrixScale(m),width=frame.width*scale.x,height=frame.height*scale.y;
   const fit=Math.max(height,width/Math.max(.3,aspect()))/ .76;
-  const distance=Math.max(frame.distance||.42,Math.min(1.1,fit/(2*Math.tan(Math.PI/8))));
+  const distance=Math.max(frame.distance||.42,Math.min(1.1,fit/(2*Math.tan(Math.PI/8))),fitEntireFrame?fit/(2*Math.tan(THREE.MathUtils.degToRad(48))):0);
   eye.copy(center).addScaledVector(normal,distance);eye.y=Math.max(.16,eye.y);
   if(frame.lift)eye.y+=frame.lift;
   aim.copy(center).addScaledVector(right,panX*width).addScaledVector(up,panY*height);

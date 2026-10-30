@@ -14,7 +14,7 @@ function renderBoard(root,entries,highlight,scopeLabel){
  });
 }
 
-export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onOpen=()=>{},onClose=()=>{},onRank=()=>{},getCountdown=()=>null}){
+export function createLeaderboardUI({repository,root,onRank=()=>{},onEntries=()=>{}}){
  root.innerHTML='<div class="leaderboard-celebration" data-celebration hidden><span class="leaderboard-laurel" aria-hidden="true">✦</span><div><p class="leaderboard-eyebrow">TOP 10 ESCAPE</p><h2 data-celebration-title></h2><p data-celebration-copy></p></div><strong data-rank></strong></div><div class="leaderboard-card" data-victory-board>'+boardMarkup()+'<form data-name-form hidden novalidate autocomplete="off"><label for="escape-display-name">Leave your name among the survivors.</label><div class="leaderboard-name-row"><input id="escape-display-name" name="escapeLeaderboardName" type="text" maxlength="48" autocomplete="off" autocapitalize="words" spellcheck="false" placeholder="Your name" aria-describedby="winner-name-error"><button type="submit">Claim your place</button></div><p id="winner-name-error" class="leaderboard-form-error" role="alert"></p><small>2–24 characters · Best escape per name</small><small>'+DISPLAY_NAME_GUIDANCE+'</small></form><p class="leaderboard-feedback" data-feedback role="status" aria-live="polite"></p></div>';
  const board=root.querySelector('[data-victory-board]'),form=root.querySelector('form'),input=root.querySelector('input'),submit=form.querySelector('button'),error=form.querySelector('[role="alert"]'),feedback=root.querySelector('[data-feedback]'),celebration=root.querySelector('[data-celebration]');
  board.insertBefore(form,board.querySelector('table'));
@@ -35,26 +35,24 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
  identityChoice.querySelector('[data-use-nickname]').onclick=()=>{if(busy)return;clearConsent();form.hidden=false;input.focus();};
  identityChoice.querySelector('[data-private]').onclick=()=>{if(busy)return;clearConsent();identityChoice.hidden=form.hidden=true;feedback.textContent='Your name and score have not been published.';};
  confirmName.onclick=()=>{if(consent.checked&&approvedName)saveName(approvedName,'linkedin');};
- const dialog=document.createElement('dialog');dialog.id='leaderboard-dialog';dialog.setAttribute('aria-label','Top 10 escapes');dialog.innerHTML='<button type="button" class="leaderboard-close" aria-label="Back to room">← Back</button><output class="leaderboard-view-timer" data-live-countdown aria-label="Game countdown"></output><div class="leaderboard-card">'+boardMarkup()+'</div>';document.body.append(dialog);
- const dialogBoard=dialog.querySelector('.leaderboard-card');
- const signInRoot=document.createElement('section');signInRoot.className='leaderboard-identity leaderboard-sign-in';dialogBoard.insertBefore(signInRoot,dialogBoard.querySelector('table'));
+ const posterBoard=document.createElement('section');posterBoard.className='leaderboard-poster';posterBoard.setAttribute('aria-label','Top 10 escapes');posterBoard.innerHTML=boardMarkup();
+ const signInRoot=document.createElement('section');signInRoot.className='leaderboard-identity leaderboard-sign-in';posterBoard.insertBefore(signInRoot,posterBoard.querySelector('table'));
  const signIn=createLeaderboardSignIn(signInRoot);
- let run=null,revision=0,currentEntry=null,currentRank=null,busy=false,lastFocus=null;
+ let run=null,revision=0,currentEntry=null,currentRank=null,busy=false,posterOpen=false,posterRevision=0;
  function celebrate(rank,name=null){
   currentRank=rank;celebration.hidden=!rank;if(!rank)return;
   root.querySelector('[data-rank]').textContent=`#${rank}`;
   root.querySelector('[data-celebration-title]').textContent=name?`${name}, you made it.`:'You made the top 10.';
   root.querySelector('[data-celebration-copy]').textContent=name?'Two Figpals. One remarkable escape.':`${formatCountdown(run.remainingSeconds)} left. Both Figpals safe.`;
  }
- function draw(entries){for(const target of [board,dialogBoard])renderBoard(target,entries,currentEntry?.id,repository.scopeLabel);}
- function close(){if(dialog.open)dialog.close();}
- function update(){if(!dialog.open)return;const seconds=getCountdown(),clock=dialog.querySelector('[data-live-countdown]'),text=seconds===null?'':formatCountdown(seconds);if(clock.textContent!==text)clock.textContent=text;}
- dialog.querySelector('button').onclick=close;
- dialog.addEventListener('close',()=>{onClose();if(lastFocus?.isConnected)lastFocus.focus({preventScroll:true});});
- button.onclick=async()=>{
-  if(dialog.open||!canOpen())return;lastFocus=document.activeElement;signIn.sync();dialog.showModal();onOpen();update();dialog.querySelector('button').focus({preventScroll:true});
-  try{draw(await repository.list());}catch{dialogBoard.querySelector('[data-empty]').textContent='The top 10 could not load. Try opening it again.';}
- };
+ function draw(entries){for(const target of [board,posterBoard])renderBoard(target,entries,currentEntry?.id,repository.scopeLabel);onEntries(entries);}
+ function close(){posterOpen=false;posterRevision++;}
+ async function open(){
+  if(posterOpen)return;posterOpen=true;const ticket=++posterRevision;signIn.sync();
+  posterBoard.querySelector('[data-empty]').hidden=false;posterBoard.querySelector('[data-empty]').textContent='Loading escapes…';
+  try{const entries=await repository.list();if(posterOpen&&ticket===posterRevision)draw(entries);}
+  catch{if(posterOpen&&ticket===posterRevision)posterBoard.querySelector('[data-empty]').textContent='The top 10 could not load. Try opening it again.';}
+ }
  input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});
  form.addEventListener('submit',async event=>{
   event.preventDefault();if(busy||!run?.eligible)return;
@@ -88,8 +86,8 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
  }
  function reset(){revision++;clearConsent();identityChoice.hidden=true;consent.disabled=false;run=currentEntry=null;currentRank=null;busy=false;celebration.hidden=form.hidden=true;feedback.textContent=error.textContent='';input.disabled=submit.disabled=false;close();}
  window.addEventListener('storage',async event=>{
-  if(event.key!==null&&event.key!==LEADERBOARD_STORAGE_KEY||!dialog.open&&!run)return;const ticket=revision;
+  if(event.key!==null&&event.key!==LEADERBOARD_STORAGE_KEY||!posterOpen&&!run)return;const ticket=revision;
   try{const entries=await repository.list();if(ticket!==revision)return;draw(entries);if(currentEntry){const index=entries.findIndex(entry=>entry.id===currentEntry.id);celebrate(index<0?null:index+1,currentEntry.name);}}catch{}
  });
- return {showResult,reset,close,focusResult(){if(form.hidden)return false;input.focus({preventScroll:true});return true;},update,get active(){return dialog.open;},get rank(){return currentRank;}};
+ return {element:posterBoard,open,showResult,reset,close,focusResult(){if(form.hidden)return false;input.focus({preventScroll:true});return true;},get active(){return posterOpen;},get rank(){return currentRank;}};
 }
