@@ -1,5 +1,5 @@
 import {build} from 'esbuild';
-import {readFile,writeFile} from 'node:fs/promises';
+import {readFile,writeFile,cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {stageProductionAssets} from './production-assets.mjs';
 const options={entryPoints:['dist/app.js'],bundle:true,minify:true,format:'esm',target:['es2022'],legalComments:'external',sourcemap:false,logLevel:'info'};
@@ -12,10 +12,10 @@ async function updateEntrypoints(directory,production=false){
  if(production)html=html.replace('<title>Figsaw</title>','<title>Figsaw</title>\n  <meta name="robots" content="noindex,nofollow,nosnippet,noarchive">');
  await writeFile(`${directory}/index.html`,html);
 }
-// Local previews retain the owner's diagnostics. The hosted bundle compiles
-// those entry points and shortcut actions out, regardless of browser hostname.
-await build({...options,outfile:'dist/game.bundle.js',define:{__FIGSAW_PRODUCTION__:'false'}});
+// Preview and deployment use the same production game, without developer controls.
+await build({...options,outfile:'dist/game.bundle.js'});
 await updateEntrypoints('dist');
 await stageProductionAssets('dist','dist/client');
-await build({...options,outfile:'dist/client/game.bundle.js',define:{__FIGSAW_PRODUCTION__:'true'}});
+await cp('dist/game.bundle.js','dist/client/game.bundle.js');
+await cp('dist/game.bundle.js.LEGAL.txt','dist/client/game.bundle.js.LEGAL.txt');
 await updateEntrypoints('dist/client',true);

@@ -1,12 +1,11 @@
 import * as THREE from './vendor/three.module.js';
 import {createLaptopChallenge,KERNING_WORDS} from './laptop-challenge.js';
-import {createKerningDraft,serializeKerningSettings} from './kerning-settings.js';
 
 const WIDTH=800,HEIGHT=510;
 export function measureKerningLayouts(context){
  return KERNING_WORDS.map(spec=>{
   const layout=measureKerningLayout(context,spec,{fit:!spec.positions});
-  // Calibrated rounds share the exact reference used by scoring and diagnostics.
+  // Calibrated rounds share the exact reference used by scoring.
   return spec.positions?{...layout,positions:[...spec.positions]}:layout;
  });
 }
@@ -25,11 +24,12 @@ function completedRow(layout){
  const scale=.6,first=layout.positions[0],width=(layout.positions.at(-1)+layout.widths.at(-1)-first)*scale;
  return {...layout,font:layout.font.replace(/(\d*\.?\d+)px/,`${layout.fontSize*scale}px`),positions:layout.positions.map(x=>(WIDTH-width)/2+(x-first)*scale)};
 }
-function paintProgram(canvas,challenge,view=challenge.view,showCompleted=true){
+function paintProgram(canvas,challenge){
+ const view=challenge.view;
  const c=canvas.getContext('2d');
  c.fillStyle='#252b30';c.fillRect(0,0,WIDTH,HEIGHT);c.fillStyle='#1c2226';c.fillRect(0,0,WIDTH,44);
  c.textBaseline='alphabetic';c.fillStyle='#a9b4b7';c.font='16px Arial';c.fillText('kerning.fig',26,28);
- if(challenge.completed&&showCompleted){
+ if(challenge.completed){
   c.textAlign='center';c.fillStyle='#c9d4c9';c.font='bold 14px Arial';c.fillText('03 / 03 ACCEPTED',400,82);
   c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText('Spacing approved.',400,126);c.textAlign='left';
   challenge.completedWords.forEach((layout,index)=>{const row=completedRow(layout);c.font=row.font;c.fillStyle='#f1f1e9';[...row.word].forEach((letter,i)=>c.fillText(letter,row.positions[i],202+index*76));});
@@ -60,38 +60,24 @@ export function screenHomography(points,width,height){
 }
 export function laptopProgramDistance(aspect,fov=48){return Math.max(.525,.823/aspect)/(2*Math.tan(THREE.MathUtils.degToRad(fov/2)))*1.10;}
 
-export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn=()=>{},getPowerStatus=()=>'',isDiagnostic=()=>false,copyText=text=>navigator.clipboard.writeText(text)}){
+export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn=()=>{},getPowerStatus=()=>''}){
  const root=document.querySelector('#laptop-program'),screenMap=laptop.screen.material.map;
  const layouts=measureKerningLayouts(screenMap.image.getContext('2d')),challenge=createLaptopChallenge(layouts);
  const play=root.querySelector('[data-play]'),result=root.querySelector('[data-result]'),status=root.querySelector('[data-status]'),check=root.querySelector('[data-check]');
  const wordArea=root.querySelector('[data-word]'),roundLabel=root.querySelector('[data-round]'),typeLabel=root.querySelector('[data-typeface]'),progress=[...root.querySelectorAll('[data-progress]')];
  const returnButton=root.querySelector('[data-return]'),power=root.querySelector('[data-power]'),nudgeButtons=[...root.querySelectorAll('[data-nudge]')];
  const completedWords=root.querySelector('[data-completed-words]');
- const answer=root.querySelector('[data-answer]'),answerLabel=root.querySelector('[data-answer-label]'),answerToggle=root.querySelector('[data-kern-outlines]');
- const editor=root.querySelector('[data-kern-editor]'),wordInput=root.querySelector('[data-kern-type]'),copyButton=root.querySelector('[data-kern-copy]'),exportText=root.querySelector('[data-kern-export]'),editorStatus=root.querySelector('[data-kern-status]'),instruction=root.querySelector('[data-instruction]');
  const center=new THREE.Vector3(),normal=new THREE.Vector3(),up=new THREE.Vector3(),rotation=new THREE.Quaternion(),startRotation=new THREE.Quaternion(),targetRotation=new THREE.Quaternion(),startPosition=new THREE.Vector3(),destination=new THREE.Vector3(),lookMatrix=new THREE.Matrix4();
  const corners=[[-.823/2,.525/2],[.823/2,.525/2],[.823/2,-.525/2],[-.823/2,-.525/2]].map(([x,y])=>new THREE.Vector3(x,y,0));
- let phase='closed',elapsed=0,startFov=62,selected=1,drawnRound=-1,drawnDraft=null,letters=[],drag=null,answerLayout=null,answerVisible=false,draft=null,editorWord='',copyRevision=0;
- const currentView=()=>draft?.view??challenge.view;
- function resetCopy(){copyRevision++;copyButton.textContent='Copy settings';exportText.hidden=true;editorStatus.textContent='';}
- function syncAnswer(show=false){
-  const layout=draft?.layout??layouts[challenge.round];
-  if(show&&answerLayout!==layout){
-   answerLayout=layout;answer.replaceChildren();answer.style.font=layout.font;
-   [...layout.word].forEach((letter,i)=>{const node=document.createElement('span');node.className='kern-letter fixed kern-answer-letter';node.textContent=letter;node.style.left=`${layout.positions[i]}px`;node.style.width=`${layout.widths[i]}px`;answer.append(node);});
-  }
-  answerLabel.textContent=draft?'Measured reference · layout preview':'Diagnostic answer · match the teal outlines';
-  answer.hidden=answerLabel.hidden=!show;answerVisible=show;
- }
- answerToggle.onchange=()=>syncAnswer(phase==='playing'&&isDiagnostic()&&answerToggle.checked&&(!challenge.completed||!!draft));
- function paint(){paintProgram(screenMap.image,challenge,currentView(),!draft);screenMap.needsUpdate=true;}
- function selection(){letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&(!!draft||!challenge.accepted)));}
+ let phase='closed',elapsed=0,startFov=62,selected=1,drawnRound=-1,letters=[],drag=null;
+ function paint(){paintProgram(screenMap.image,challenge);screenMap.needsUpdate=true;}
+ function selection(){letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&!challenge.accepted));}
  function sync({texture=true}={}){
-  const view=currentView(),accepted=!draft&&challenge.accepted;
-  if(drawnRound!==challenge.round||drawnDraft!==draft){
-   drawnRound=challenge.round;drawnDraft=draft;selected=draft?0:1;wordArea.replaceChildren();wordArea.style.font=view.font;letters=[];resetCopy();
+  const view=challenge.view,accepted=challenge.accepted;
+  if(drawnRound!==challenge.round){
+   drawnRound=challenge.round;selected=1;wordArea.replaceChildren();wordArea.style.font=view.font;letters=[];
    [...view.word].forEach((letter,i)=>{
-    const fixed=!draft&&(i===0||i===[...view.word].length-1),node=document.createElement(fixed?'span':'button');node.className=`kern-letter${fixed?' fixed':''}`;node.textContent=letter;
+    const fixed=i===0||i===[...view.word].length-1,node=document.createElement(fixed?'span':'button');node.className=`kern-letter${fixed?' fixed':''}`;node.textContent=letter;
     node.style.width=`${view.widths[i]}px`;node.setAttribute('aria-label',fixed?`Fixed letter ${letter}`:`Move letter ${letter}, position ${i+1}`);
     if(!fixed){node.type='button';node.dataset.letter=String(i);}
     letters.push(node);wordArea.append(node);
@@ -100,66 +86,47 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   letters.forEach((letter,i)=>{letter.style.left=`${view.positions[i]}px`;if(letter.tagName==='BUTTON')letter.disabled=accepted;});selection();
   roundLabel.textContent=`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`;typeLabel.textContent=view.label;
   progress.forEach((node,i)=>node.classList.toggle('passed',challenge.passed[i]));
-  play.hidden=challenge.completed&&!draft;result.hidden=!challenge.completed||!!draft;check.hidden=challenge.completed&&!draft;
+  play.hidden=challenge.completed;result.hidden=!challenge.completed;check.hidden=challenge.completed;
   completedWords.replaceChildren();
   if(!result.hidden)challenge.completedWords.forEach(layout=>{
    const row=completedRow(layout),svg=document.createElementNS('http://www.w3.org/2000/svg','svg');
    svg.setAttribute('viewBox','0 0 800 76');svg.setAttribute('role','img');svg.setAttribute('aria-label',row.word);svg.classList.add('kern-completed-word');
    [...row.word].forEach((letter,i)=>{const glyph=document.createElementNS('http://www.w3.org/2000/svg','text');glyph.setAttribute('x',row.positions[i]);glyph.setAttribute('y',64);glyph.setAttribute('aria-hidden','true');glyph.style.font=row.font;glyph.textContent=letter;svg.append(glyph);});completedWords.append(svg);
   });
-  nudgeButtons.forEach(button=>button.disabled=accepted);status.textContent=draft?'Layout preview':challenge.message;status.classList.toggle('accepted',accepted);
-  check.textContent=draft?'Return to game':challenge.accepted?'Next word →':'Submit spacing';
-  instruction.textContent=draft?'Drag any letter. Copy settings when ready.':'Drag the inner letters. First and last stay fixed.';
-  if(editorWord!==view.word){editorWord=view.word;wordInput.value=view.word;}
-  syncAnswer(answerVisible&&answerToggle.checked&&(!challenge.completed||!!draft));
+  nudgeButtons.forEach(button=>button.disabled=accepted);status.textContent=challenge.message;status.classList.toggle('accepted',accepted);
+  check.textContent=challenge.accepted?'Next word →':'Submit spacing';
   if(texture)paint();
  }
  function endDrag(){if(drag&&wordArea.hasPointerCapture?.(drag.id))wordArea.releasePointerCapture(drag.id);drag=null;}
  wordArea.addEventListener('pointerdown',event=>{
-  if(phase!=='playing'||(!draft&&challenge.accepted)||event.button!==0)return;
+  if(phase!=='playing'||challenge.accepted||event.button!==0)return;
   const button=event.target.closest('[data-letter]');if(!button)return;
   selected=Number(button.dataset.letter);button.focus({preventScroll:true});selection();
-  drag={id:event.pointerId,x:event.clientX,origin:currentView().positions[selected],index:selected};wordArea.setPointerCapture(event.pointerId);event.preventDefault();
+  drag={id:event.pointerId,x:event.clientX,origin:challenge.view.positions[selected],index:selected};wordArea.setPointerCapture(event.pointerId);event.preventDefault();
  });
  wordArea.addEventListener('pointermove',event=>{
   if(!drag||drag.id!==event.pointerId)return;
   const width=root.getBoundingClientRect().width;if(!width)return;
-  if((draft??challenge).move(drag.index,drag.origin+(event.clientX-drag.x)*WIDTH/width)){resetCopy();sync({texture:false});}
+  if(challenge.move(drag.index,drag.origin+(event.clientX-drag.x)*WIDTH/width)){sync({texture:false});}
  });
  for(const event of ['pointerup','pointercancel','lostpointercapture'])wordArea.addEventListener(event,endDrag);
  wordArea.addEventListener('focusin',event=>{const button=event.target.closest('[data-letter]');if(button){selected=Number(button.dataset.letter);selection();}});
- function nudge(amount){if(phase==='playing'&&(draft??challenge).move(selected,currentView().positions[selected]+amount)){resetCopy();sync({texture:false});}}
+ function nudge(amount){if(phase==='playing'&&challenge.move(selected,challenge.view.positions[selected]+amount)){sync({texture:false});}}
  nudgeButtons.forEach(button=>button.onclick=()=>nudge(Number(button.dataset.nudge)));
  function submit(){
   if(phase!=='playing')return;endDrag();
-  if(draft){draft=null;sync();letters[1].focus({preventScroll:true});return;}
   if(challenge.accepted){if(challenge.next()){sync();letters[1].focus({preventScroll:true});}return;}
   challenge.check();sync();if(challenge.completed)returnButton.focus({preventScroll:true});else if(challenge.accepted)check.focus({preventScroll:true});
  }
  check.onclick=submit;
  root.addEventListener('keydown',event=>{
-  if(phase!=='playing'||event.target.closest?.('[data-kern-editor]'))return;
+  if(phase!=='playing')return;
   if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();event.stopPropagation();nudge((event.key==='ArrowLeft'?-1:1)*(event.shiftKey?10:1));}
   else if(event.key==='Enter'&&event.target!==returnButton){event.preventDefault();event.stopPropagation();submit();}
  });
- function editType(){
-  if(phase!=='playing'||!isDiagnostic())return false;endDrag();
-  const word=wordInput.value.trim();if([...word].length<2||[...word].length>20){editorStatus.textContent='Enter a word with 2–20 characters.';return false;}
-  const view=currentView(),layout=measureKerningLayout(screenMap.image.getContext('2d'),{...KERNING_WORDS[challenge.round],word});
-  draft=createKerningDraft(layout,word===view.word?view.positions:layout.positions);sync();letters[0].focus({preventScroll:true});return true;
- }
- editor.addEventListener('submit',event=>{event.preventDefault();editType();});
- copyButton.onclick=async()=>{
-  if(phase!=='playing'||!isDiagnostic())return;
-  if(wordInput.value.trim()!==currentView().word&&!editType())return;
-  const view=currentView(),layout=draft?.layout??layouts[challenge.round],text=serializeKerningSettings(layout,view.positions,challenge.round),revision=++copyRevision;
-  exportText.value=text;
-  try{await copyText(text);if(revision!==copyRevision||!isDiagnostic()||phase!=='playing')return;copyButton.textContent='Copied';exportText.hidden=true;editorStatus.textContent='Kerning settings copied. Paste them into the chat.';}
-  catch{if(revision!==copyRevision||!isDiagnostic()||phase!=='playing')return;exportText.hidden=false;exportText.focus();exportText.select();editorStatus.textContent='Copy the settings below.';}
- };
  function cancel(){
   if(phase==='closed')return;endDrag();paint();
-  phase='closed';root.hidden=true;syncAnswer();editor.hidden=true;resetCopy();document.body.classList.remove('entering-laptop');
+  phase='closed';root.hidden=true;document.body.classList.remove('entering-laptop');
   laptop.close(false);
   camera.position.copy(startPosition);camera.quaternion.copy(startRotation);camera.fov=startFov;camera.updateProjectionMatrix();camera.updateMatrixWorld(true);onReturn();canvas.focus({preventScroll:true});
  }
@@ -171,7 +138,6 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  function update(dt,time,reducedMotion=false){
   if(phase==='closed')return;
   if(!laptop.isOpen){cancel();return;}
-  if(draft&&!isDiagnostic()){endDrag();draft=null;sync();}
   const powerText=getPowerStatus();if(power&&power.textContent!==powerText)power.textContent=powerText;
   laptop.screen.updateWorldMatrix(true,false);laptop.screen.getWorldPosition(center);laptop.screen.getWorldQuaternion(rotation);
   normal.set(0,0,1).applyQuaternion(rotation);up.set(0,1,0).applyQuaternion(rotation);
@@ -184,13 +150,10 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   if(phase==='playing'&&!laptop.isPowered){endDrag();phase='unpowered';}
   else if(phase==='unpowered'&&laptop.isPowered){phase='playing';(challenge.completed?returnButton:letters[selected]).focus({preventScroll:true});}
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
-  const diagnostic=phase==='playing'&&isDiagnostic();editor.hidden=!diagnostic;
-  const showAnswer=diagnostic&&answerToggle.checked&&(!challenge.completed||!!draft);
-  if(showAnswer!==answerVisible)syncAnswer(showAnswer);
   if(phase!=='playing'){root.hidden=true;return;}
   const rect=canvas.getBoundingClientRect(),points=corners.map(corner=>{const point=laptop.screen.localToWorld(corner.clone()).project(camera);return{x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2};});
   const matrix=screenHomography(points,WIDTH,HEIGHT);root.hidden=!matrix||!matrix.every(Number.isFinite);
   if(!root.hidden)root.style.transform=`matrix3d(${matrix.join(',')})`;
  }
- sync();return {start,cancel,update,capture:challenge.capture,restore(value){cancel();draft=null;drawnRound=-1;challenge.restore(value);sync();},complete(){cancel();draft=null;challenge.complete();sync();},reset(){cancel();draft=null;drawnRound=-1;challenge.reset();sync();},get active(){return phase!=='closed';},get completed(){return challenge.completed;}};
+ sync();return {start,cancel,update,capture:challenge.capture,restore(value){cancel();drawnRound=-1;challenge.restore(value);sync();},complete(){cancel();challenge.complete();sync();},reset(){cancel();drawnRound=-1;challenge.reset();sync();},get active(){return phase!=='closed';},get completed(){return challenge.completed;}};
 }

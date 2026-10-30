@@ -55,14 +55,3 @@ export function createTestingHighlights({entries,maxTargets=256}){
   return chosen?{object:chosen}:null;
  },get counts(){return counts;}};
 }
-
-export function createTestingModeUI(){
- // Testing belongs to the session-only diagnostics menu. Old URL/storage flags
- // must never turn on highlights during an ordinary game.
- let enabled=false,messageUntil=0;
- const root=document.createElement('div');root.id='testing-tools';root.hidden=true;root.innerHTML='<button type="button" aria-pressed="false"></button><div class="testing-legend"><label><input type="checkbox" data-interactive checked><span>●</span> Interactive wireframes</label><label><input type="checkbox" data-matching checked><b>●</b> Matching target wireframes</label></div><p role="status" aria-live="polite"></p>';
- const button=root.querySelector('button'),legend=root.querySelector('.testing-legend'),status=root.querySelector('p'),interactive=root.querySelector('[data-interactive]'),matching=root.querySelector('[data-matching]');
- function sync(){button.textContent=`Testing: ${enabled?'on':'off'}`;button.setAttribute('aria-pressed',String(enabled));legend.hidden=!enabled;status.hidden=!enabled;}
- button.onclick=()=>{enabled=!enabled;sync();};sync();
- return{element:root,get enabled(){return enabled;},get showInteractive(){return interactive.checked;},get showMatching(){return matching.checked;},setEnabled(value){enabled=!!value;sync();},report(message){if(enabled&&message){status.textContent=message;messageUntil=performance.now()+5000;}},update({hidden=false,itemName='',matches=0}={}){root.hidden=hidden;if(performance.now()>messageUntil){const text=enabled&&itemName?`${itemName} · ${matches} matching target${matches===1?'':'s'}`:'';if(status.textContent!==text)status.textContent=text;}}};
-}

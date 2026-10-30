@@ -2,20 +2,15 @@ import {createVictoryParade} from './victory-parade.js';
 import {createLocalLeaderboard,captureRankedEscape} from './leaderboard.js';
 import {createLeaderboardUI} from './leaderboard-ui.js';
 import {createGamePause} from './game-pause.js';
-import {createDiagnostics,createDiagnosticUI} from './diagnostics.js';
-import {createDiagnosticActions} from './diagnostic-actions.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
 import {createInventoryModelPreviews} from './inventory-models.js';
 import {createEquippedModel} from './equipped-model.js';
-import {createTestingHighlights,createTestingModeUI} from './testing-highlights.js';
-import {createInteractionTargets} from './interaction-targets.js';
 import {createItemHover,resolveHoverItem} from './item-hover.js';
 import {PLAYER_CHAIR} from './rescue-state.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
 import {batchStaticScenery} from './static-batching.js';
 import {createRoomReflections} from './room-reflections.js';
-import {createPerformanceReport} from './performance-report.js';
 import {createFrameRateCounter} from './frame-rate.js';
 import { createOffice } from './office.js?v=fewer-faster';
 import { createFigpalBubbles, createHangingPleas, createFigpalLoweringDialogue } from './figpal-finale.js?v=silent-skeletons';
@@ -82,7 +77,6 @@ renderer.outputColorSpace=THREE.SRGBColorSpace;
 renderer.toneMapping=THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure=.76;
 const scene=new THREE.Scene();scene.background=new THREE.Color(0x161d18);scene.fog=new THREE.Fog(0x232d22,11,26);
-const profiler=createPerformanceReport(renderer,scene);
 const frameRate=createFrameRateCounter(document.querySelector('#frame-rate'));
 const camera=new THREE.PerspectiveCamera(homeCamera.fov,1,.06,35);
 const cameraPosition=homePosition.clone();
@@ -463,13 +457,11 @@ function reactToFigsaw(){
  dialogueAnnouncement.textContent=`Figsaw. ${FIGSAW_CORNER_LINE}`;
  dialogueSpeech=reducedMotion?null:speech;nextDialogueVisibilityCheck=0;
 }
-profiler.mark('characterBuilt');
 await yieldStartup('Building the office…');
 const escapePuzzle=createEscapePuzzle(),inventory=createInventory();
 const leaderboardPause=createGamePause();
 const {group:office,rescueChairs,chairRefuge,documents,laptop,catMug,handsaw,stuffedAnimals,fallenMobile,mobileSupplies,doorKeypad,exitDoor,plushCut,acidLeaks,chargingKit,fireHazard,fireAlarm,fireAxe,ketchupKey,countdown,setDisplayEnvironment,update:updateOffice,figpalHoists,toggleHoist}=await createOffice(renderer,homePosition,yieldStartup,escapePuzzle,leaderboardPause.now);scene.add(office);
 const countdownHUD=createCountdownHUD({timer:countdown,camera,occluders:[office,model],corner:document.querySelector('#timer-hud'),warning:document.querySelector('#countdown-warning'),reducedMotion});
-profiler.mark('officeBuilt');
 await yieldStartup('Preparing the room…');
 const restraint=createPlayerRestraint(camera,{canDetach:()=>inventory.has('key')});scene.add(restraint.group);
 const laptopOpening=createLaptopOpening({laptop,restraint,cameraPosition,state});
@@ -496,7 +488,6 @@ const mugImpactOverlay=createMugImpactOverlay(mugEyeImpact);
 const deathTransition=createGameOverTransition(document.querySelector('#death-transition'));
 const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
 const escapeScreen=document.querySelector('#escaped');
-let diagnosticRunUsed=false;
 const victoryShare=createVictoryShare(document.querySelector('#victory-share'));
 const leaderboardUI=createLeaderboardUI({repository:createLocalLeaderboard(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){
  leaderboardPause.pause(countdown);releaseControls();chainMenu.hide();sawMenu.hide();itemHover.clear();fireAlarm.silence();frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;
@@ -567,7 +558,6 @@ for(const animal of stuffedAnimals){
 batchStaticScenery(chairRefuge.object,{minObjects:2,palette:quality.mobile});
 batchStaticScenery(office,{exclude:[rescueChairs.group,...rescueChairs.objects,...Object.values(rescueChairs.parts),chairRefuge.object,laptop.object,catMug,handsaw,...stuffedAnimals.map(animal=>animal.object),plushCut.group,figpalHoists.group,countdown.group,chargingKit.group,ketchupKey.group,fireHazard.group,fireAlarm.station,fireAlarm.effects,fireAxe.mount,fallenMobile.group,doorKeypad.group,exitDoor.object,exitDoor.scenery,...documents.targets],minObjects:2,palette:quality.mobile});
 const contactShadows=quality.mobile?createContactShadows(scene,[laptop.object,catMug,handsaw,countdown.group,...figpalHoists.group.children.filter(o=>o.name.startsWith('Green bubbling canister'))],model):null;
-profiler.mark('scenePrepared');
 function updateArrivalDialogue(time){
  if(documentViewer.active||laptopProgram.active||mobilePuzzle.active||doorKeypadUI.active||!entranceArrived||(departure.active&&!cornerReaction.visible(time))||figpalRounds.active||fireAlarm.dying){arrivalDialogue.hidden=true;return;}
  // Keep the bubble attached to the crown as the viewer walks or turns around.
@@ -598,10 +588,7 @@ function interactionAt(event){
  // Pick the nearest surface so furniture and walls correctly occlude interactive objects.
  const sceneHits=interactionRay.intersectObjects([office,model,restraint.group,mobileInspection.group],true);
  const sceneHit=firstInteractionHit(sceneHits,{axeHeld:axeInteraction.held,tanks:figpalHoists.tanks});
- // Testing highlights are explicit click targets for the equipped item, even
- // when unrelated clutter is in front of its matching chair or tool socket.
- const matchedHit=testingMode.enabled&&inventory.equipped?testingHighlights.pickMatching(interactionRay)??sceneHit:sceneHit;
- const axeHit=preferAxeTankHit(matchedHit,sceneHits,{axeHeld:axeInteraction.held,tanks:figpalHoists.tanks,chairs:rescueChairs.state.chairs});
+ const axeHit=preferAxeTankHit(sceneHit,sceneHits,{axeHeld:axeInteraction.held,tanks:figpalHoists.tanks,chairs:rescueChairs.state.chairs});
  const chainHit=preferChainChairHit(axeHit,sceneHits,{chainHeld:inventory.equipped==='chain',links:rescueChairs.state.links,canLink:rescueChairs.state.canLink});
  const skullHit=preferSkullInspection(chainHit,sceneHits,figpalHoists.fishInspectionTarget,figpalHoists.fishClueReady);
  const hit=preferMobilePickup(skullHit,sceneHits,!mobilePuzzle.hung);
@@ -638,8 +625,8 @@ function escapeRoom(){
  if(gameEnded||gameWon)return;
  if(rescueChairs.state.towPhase!=='at-door'||!chairSeat.seated||!rescueChairs.state.safe){exitDoor.unlock(state.time);inventoryUI.notify('Door unlocked.');return;}
  laptopProgram.cancel();
- const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs,assisted:diagnosticRunUsed});
- testingMode.update({hidden:true});testingHighlights.group.visible=false;equippedModel.group.visible=false;gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;
+ const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs});
+ equippedModel.group.visible=false;gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;
  putEquipmentAway();inventoryUI.setHidden(true);document.body.classList.add('escape-active');
@@ -686,18 +673,12 @@ function inventoryModelFor(id){
 const inventoryPreviews=createInventoryModelPreviews({renderer,getModel:inventoryModelFor});
 const equippedModel=createEquippedModel({camera,getModel:inventoryModelFor});scene.add(equippedModel.group);
 const inventoryUI=createInventoryUI({inventory,previews:inventoryPreviews,onEquip:equipItem,onPutAway:putEquipmentAway,onOpen(){releaseControls();chainMenu.hide();sawMenu.hide();},canOpen:()=>!laptopProgram.active&&!sawBusy()});
-const testingMode=createTestingModeUI();
 rescueChairs.setHighlightsEnabled(false);
-const testingHighlights=createTestingHighlights({entries:createInteractionTargets({office,model,restraint,laptop,catMug,handsaw,fireAxe,chairRefuge,rescueChairs,mobileInspection,fallenMobile,stuffedAnimals,inventory,chargingKit,ketchupKey,figpalHoists,doorKeypadUI,plushCut})});scene.add(testingHighlights.group);
 const itemHover=createItemHover({renderer,camera,canvas,resolve:hit=>resolveHoverItem(hit,{restraint,laptop,catMug,handsaw,puppet,model,fallenMobile,mobileInspection,figpalHoists,documents,rescueChairs,axeHeld:axeInteraction.held})});
 function canHoverItems(){
  return dragPointer===null&&!inventoryUI.active&&!leaderboardUI.active&&!documentViewer.active&&!documentViewer.returning&&!mobilePuzzle.active&&!mobileCamera.returning&&!chairSeat.moving&&!laptopProgram.active&&!laptopOpening.active&&!figpalRounds.active&&!mugTrap.active&&!sawTrap.active&&!plushCut.active&&!axeInteraction.active&&!chainMenu.active&&!sawMenu.active&&!gameEnded&&!gameWon&&!acidLeaks.dying&&!fireHazard.dying&&!fireAlarm.dying;
 }
-function updateTestingMode(time){
- const context={locked:restraint.locked,hasKey:inventory.has('key'),mobilePhase:mobilePuzzle.phase,mobileHung:mobilePuzzle.hung,chargingPhase:chargingKit.phase,chairs:rescueChairs.state.chairs,chainLinks:rescueChairs.state.links,chainFlooded:rescueChairs.state.flooded,pmIndex:escapePuzzle.pmIndex,brokenTanks:figpalHoists.tanks.map(t=>t.broken),canCut:plushCut.canCut,selectingAnimal};
- const revision=[inventory.revision,mobilePuzzle.phase,mobilePuzzle.hung,mobilePuzzle.action,chargingKit.phase,chargingKit.drawerOpen,ketchupKey.phase,restraint.locked,doorKeypadUI.active,context.brokenTanks.join(),context.chainLinks.join(),context.chainFlooded,context.chairs.map(c=>[c.step,c.installed.join(),c.repaired,c.tank,c.passenger].join(':')).join('|'),figpalHoists.fishClueReady].join(';');
- const counts=testingHighlights.update(time,{enabled:testingMode.enabled&&!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!mobilePuzzle.action&&!sawMenu.active,showInteractive:testingMode.showInteractive,showMatching:testingMode.showMatching,item:inventory.equipped,revision,context});
- testingMode.update({hidden:!diagnostics.enabled||gameEnded||gameWon||inventoryUI.active,itemName:ITEMS[inventory.equipped]?.name??'',matches:counts.matching});
+function updateEquipment(time){
  equippedModel.update(inventory.equipped,time,!laptopProgram.active&&!sawBusy()&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.action);
  axeInteraction.group.visible=!laptopProgram.active&&!laptopOpening.active&&!inventoryUI.active&&!documentViewer.active&&!drawerCamera.active&&!mobilePuzzle.active&&!gameEnded&&!gameWon;
 }
@@ -758,7 +739,7 @@ function useRescueObject(hit){
  if(index===PLAYER_CHAIR){sitOnChair();return true;}
  if(rescueChairs.state.chairs[index].repaired){beginChairMove(index);return true;}
  if(inventory.equipped){
-  const message=rescueChairs.use(index,inventory.equipped,inventory);testingMode.report(message);inventoryUI.notify(message);
+  const message=rescueChairs.use(index,inventory.equipped,inventory);inventoryUI.notify(message);
   if(rescueChairs.state.chairs[index].repaired){drawerCamera.cancel();movePromptChair=index;}
   return true;
  }
@@ -831,7 +812,7 @@ function useCharging(action){
   else if((action==='drawer'&&wasOpen&&!chargingKit.drawerOpen)||(previousPhase==='drawer'&&chargingKit.phase==='carrying')){releaseControls();drawerCamera.restore(state.time);}
  }
 }
-const laptopProgram=createLaptopProgram({camera,canvas,laptop,isDiagnostic:()=>diagnostics.enabled,onLock(){prepareSawAction();inventoryUI.close();arrivalDialogue.hidden=true;},onReturn(){releaseControls();restraintStatus.textContent='You close the laptop.';canvas.classList.remove('over-laptop');canvas.setAttribute('aria-label',initialCanvasDescription);},getPowerStatus(){return chargingKit.phase==='charging'?'⚡ 0% · External power':`${Math.ceil(chargingKit.battery)}% · Connect charger: ${formatCountdown(chargingKit.battery/8*60)}`;}});
+const laptopProgram=createLaptopProgram({camera,canvas,laptop,onLock(){prepareSawAction();inventoryUI.close();arrivalDialogue.hidden=true;},onReturn(){releaseControls();restraintStatus.textContent='You close the laptop.';canvas.classList.remove('over-laptop');canvas.setAttribute('aria-label',initialCanvasDescription);},getPowerStatus(){return chargingKit.phase==='charging'?'⚡ 0% · External power':`${Math.ceil(chargingKit.battery)}% · Connect charger: ${formatCountdown(chargingKit.battery/8*60)}`;}});
 function openLaptop(){
  if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;
  if(restraint.locked){
@@ -928,7 +909,7 @@ function updateFigpalRound(time){
   countdown.start();countdownStartTime=null;
   countdownAnnouncement.textContent='The ten-minute countdown has started.';
  }
- const event=figpalRounds.update(time,chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying,diagnostics.invulnerable);
+ const event=figpalRounds.update(time,chairSeat.moving||!!mobilePuzzle.action||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||acidLeaks.dying||fireHazard.dying||fireAlarm.dying);
  if(event?.type==='lower'){
   leaderboardUI.close();laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;
   figpalCamera.start(event.index,time);loweringDialogue.reset();const line=loweringDialogue.show(event.index,time);
@@ -947,7 +928,6 @@ function updateFigpalRound(time){
 }
 
 function endGame(cause='objective'){
- if(diagnostics.invulnerable){diagnostics.report(`Invulnerability prevented: ${gameOverReason(cause)}`);return;}
  if(gameEnded)return;leaderboardUI.close();laptopProgram.cancel();gameEnded=true;puzzleHints.reset();countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion);
@@ -976,7 +956,7 @@ let resetting=false,dragPointer=null,lastPointer=null,pointerDistance=0;
 const wrapAngle=angle=>THREE.MathUtils.euclideanModulo(angle+Math.PI,Math.PI*2)-Math.PI;
 function resetView({skipIntro=false}={}){
  itemHover.clear();
- diagnostics.clearHistory();diagnosticRunUsed=diagnostics.enabled;leaderboardUI.reset();laptopProgram.reset();
+ leaderboardUI.reset();laptopProgram.reset();
  attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
@@ -1006,28 +986,10 @@ function resetView({skipIntro=false}={}){
  }
 }
 
-const diagnosticView={capture:()=>({position:cameraPosition.toArray(),yaw:state.yaw,pitch:state.pitch,zoom:state.zoom}),restore(value){figpalCamera.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();resetting=false;cameraPosition.fromArray(value.position);state.yaw=value.yaw;state.pitch=value.pitch;state.zoom=value.zoom;}};
-const diagnosticProps={capture:()=>({saw:handsaw.visible,axe:fireAxe.object.visible}),restore(value){handsaw.visible=value.saw;fireAxe.object.visible=value.axe;},hideCollected(){handsaw.visible=false;fireAxe.object.visible=false;}};
-const prepareDiagnosticTimer=()=>{countdownStartTime=null;};prepareDiagnosticTimer.capture=()=>({delay:countdownStartTime===null?null:countdownStartTime-state.time,announcement:countdownAnnouncement.textContent});
-const diagnosticActions=typeof __FIGSAW_PRODUCTION__!=='undefined'&&__FIGSAW_PRODUCTION__?[]:createDiagnosticActions({time:()=>state.time,hazardTime:()=>hazardClock.time,inventory,mobilePuzzle,rescueChairs,hoists:figpalHoists,ketchupKey,restraint,laptop,chargingKit,laptopProgram,acidLeaks,fireHazard,fireAlarm,countdown,rounds:figpalRounds,view:diagnosticView,props:diagnosticProps,onLower:index=>loweringDialogue.show(index,state.time),prepareTimer:prepareDiagnosticTimer,restoreTimer:value=>{countdownStartTime=value.delay===null?null:state.time+value.delay;countdownAnnouncement.textContent=value.announcement;},afterRestore(){loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();puzzleHints.reset();figpalRoundFinished=false;movePromptChair=null;syncSupplies();inventoryUI.sync();}});
-const diagnostics=createDiagnostics({clock:countdown,actions:diagnosticActions,
- onActivate(){diagnosticRunUsed=true;testingMode.setEnabled(true);releaseControls();if(gameEnded||gameWon)resetView({skipIntro:true});},
- onExit(){testingMode.setEnabled(false);testingHighlights.group.visible=false;canvas.focus({preventScroll:true});},
- onInvulnerability(value){
-  acidLeaks.setInvulnerable(value);fireHazard.setInvulnerable(value);fireAlarm.setInvulnerable(value);
-  if(value){deathTransition.reset();gameOver.hidden=true;document.body.classList.remove('death-active');}
- },
- canRun(){
-  if(gameEnded||gameWon||figpalRounds.active||rescueChairs.busy||chairSeat.moving||laptopOpening.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||mobilePuzzle.action)return false;
-  laptopProgram.cancel();inventoryUI.close();rescueChairs.cancelMove();releaseControls();chainMenu.hide();sawMenu.hide();return true;
- }
-});
-const diagnosticUI=createDiagnosticUI({mode:diagnostics,clock:countdown,actions:diagnosticActions,testingMode,focusScene:()=>canvas.focus({preventScroll:true})});
-
 function releaseControls(){state.space=false;dragPointer=null;itemHover.clear();}
 
 document.addEventListener('keydown',event=>{
- if(leaderboardUI.active||event.target.closest('#diagnostic-tools,#victory-leaderboard form'))return;
+ if(leaderboardUI.active||event.target.closest('#victory-leaderboard form'))return;
  // A browser refresh starts its own attempt on load; do not also restart here.
  if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
@@ -1154,39 +1116,6 @@ canvas.addEventListener('pointercancel',event=>{if(event.pointerId===dragPointer
 canvas.addEventListener('lostpointercapture',event=>{if(event.pointerId===dragPointer)dragPointer=null;});
 canvas.addEventListener('wheel',event=>{itemHover.clear();event.preventDefault();if(laptopProgram.active)return;if(documentViewer.active){documentViewer.setZoom(documentViewer.zoom*Math.exp(event.deltaY*.0015));return;}if(mobilePuzzle.active||mobileCamera.returning)return;if(chairSeat.moving||laptopOpening.active||figpalRounds.active||mugTrap.active||sawTrap.active||plushCut.active||axeInteraction.active||gameEnded||gameWon||acidLeaks.dying||fireHazard.dying||fireAlarm.dying)return;arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;state.zoom=THREE.MathUtils.clamp(state.zoom+event.deltaY*.0005,.78,1.0);},{passive:false});
 
-// Export the rendered camera, including responsive framing and zoom, as a paste-ready prompt.
-const copyViewButton=document.querySelector('#copy-view'),copyViewLabel=copyViewButton.querySelector('span');
-const copyStatus=document.querySelector('#copy-status'),copyFallback=document.querySelector('#copy-fallback'),viewText=document.querySelector('#view-text');
-let copyFeedbackTimer;
-function currentViewPrompt(){
- const roundedVector=vector=>vector.toArray().map(value=>Number(value.toFixed(6)));
- const direction=camera.getWorldDirection(new THREE.Vector3());
- const view={position:roundedVector(camera.position),lookAt:roundedVector(camera.position.clone().add(direction)),fov:Number(camera.fov.toFixed(4))};
- return `Set this as the default camera view for Figsaw:\n${JSON.stringify(view,null,2)}`;
-}
-function copySelectedText(text){
- const selection=document.createElement('textarea');selection.value=text;selection.readOnly=true;
- selection.style.cssText='position:fixed;left:-9999px;top:0;font-size:16px';document.body.append(selection);
- selection.focus();selection.select();selection.setSelectionRange(0,text.length);
- let copied=false;
- try{copied=document.execCommand('copy');}catch{}
- selection.remove();copyViewButton.focus({preventScroll:true});return copied;
-}
-copyViewButton.addEventListener('click',async()=>{
- const text=currentViewPrompt();viewText.value=text;clearTimeout(copyFeedbackTimer);
- let copied=false;
- try{if(navigator.clipboard?.writeText){await navigator.clipboard.writeText(text);copied=true;}}catch{}
- if(!copied)copied=copySelectedText(text);
- if(copied){
-  copyFallback.hidden=true;copyViewLabel.textContent='Copied';copyStatus.textContent='View copied. Paste it into the chat to set the default view.';
- }else{
-  copyFallback.hidden=false;viewText.focus();viewText.select();
-  copyStatus.textContent='Select and copy the view below, then paste it into the chat.';
- }
- copyFeedbackTimer=setTimeout(()=>{copyViewLabel.textContent='Copy view';},2200);
-});
-document.querySelector('#close-copy').addEventListener('click',()=>{copyFallback.hidden=true;copyViewButton.focus();});
-
 let requestedPixelRatio=quality.pixelRatio;
 function resize(){
  const {width,height}=canvas.getBoundingClientRect();if(!width||!height)return;
@@ -1270,14 +1199,11 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion),inventory.equipped==='key'&&restraint.locked);
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const failureCause=diagnostics.invulnerable?null:resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0});
+ const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0});
  if(failureCause){deathTransition.start(t,reducedMotion);document.body.classList.add('death-active');}
  const deathFrame=updateGameOver(t);
  if(deathFrame.visible||deathFrame.blackout>0)mugEyeImpact.hidden=true;else mugImpactOverlay.update(mugTrap);
  if(mugFinished){mugTrap.reset();mugImpactOverlay.reset();restraintStatus.textContent='Your vision clears.';}
- if(diagnostics.invulnerable){
-  if(sawFinished){sawTrap.reset();handsaw.visible=!inventory.has('saw');}
- }
  if(alarmFinished)endGame(fireAlarm.outcome==='acid'?'explosion':'laptop');
  else if(figpalRoundFinished)endGame('deadline');
  else if(sawFinished)endGame('saw');
@@ -1286,7 +1212,7 @@ function render(){
  laptop.update(dt,reducedMotion);chargingKit.update(t,reducedMotion);
  laptopProgram.update(dt,t,reducedMotion);
  fluorescent.intensity=fluorescentPower*updateOffice(t,reducedMotion,camera.position);
- inventoryUI.sync();syncRescueControls();diagnosticUI.sync();leaderboardUI.update();
+ inventoryUI.sync();syncRescueControls();leaderboardUI.update();
  model.updateMatrixWorld(true);
  // One shared distant target keeps both eyes coordinated. Their faster motion
  // leads the head, then settles back toward the viewer between glances.
@@ -1302,7 +1228,7 @@ function render(){
  }
  if(renderer.shadowMap.enabled&&t-lastShadowTime>=1/quality.shadowHz){renderer.shadowMap.needsUpdate=true;lastShadowTime=t;}
  if(inventoryUI.active)inventoryPreviews.update();
- updateTestingMode(t);
+ updateEquipment(t);
  renderer.render(scene,camera);
  if(canHoverItems())itemHover.render(t);else itemHover.clear();
  countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active||laptopProgram.active});
@@ -1310,7 +1236,7 @@ function render(){
  updateArrivalDialogue(t);loweringDialogue.update(t);
  const figpalDialogueBlocked=documentViewer.active||laptopProgram.active||mobilePuzzle.active||inventoryUI.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying;
  puzzleHints.update(leaderboardPause.now(),{enabled:departure.active&&!gameEnded&&!gameWon,blocked:figpalDialogueBlocked,dialogueTime:t});
- figpalHints.update(t,figpalDialogueBlocked||puzzleHints.active);hangingPleas.update(t,figpalDialogueBlocked||puzzleHints.active);figpalBubbles.update(camera,t);profiler.frame(cpuStart);
+ figpalHints.update(t,figpalDialogueBlocked||puzzleHints.active);hangingPleas.update(t,figpalDialogueBlocked||puzzleHints.active);figpalBubbles.update(camera,t);
  const frameCost=performance.now()-cpuStart;frameSamples++;if(frameCost>quality.targetFrameMs||frameInterval>quality.targetFrameMs*1.4)slowFrames++;
  if(t-lastQualityCheck>4){
   if(frameSamples>30&&slowFrames/frameSamples>.65&&requestedPixelRatio>quality.minPixelRatio){requestedPixelRatio=Math.max(quality.minPixelRatio,requestedPixelRatio-.2);resize();}
@@ -1322,7 +1248,7 @@ await yieldStartup('Warming up the lights…');
 camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera.lookAt));camera.updateMatrixWorld(true);
 // On phones compile only what the first render actually uses. Precompiling the
 // entire scene also compiles hidden traps/skeletons and duplicates clipping variants.
-(quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{profiler.mark('shadersReady');sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
+(quality.mobile?Promise.resolve():renderer.compileAsync(scene,camera)).then(()=>{sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
 installGraphicsRecovery(canvas,{
  status:loadingStatus,
  pause(){contextLost=true;frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},
