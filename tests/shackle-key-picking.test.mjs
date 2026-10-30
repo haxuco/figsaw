@@ -36,8 +36,14 @@ test('key pickup immediately opens the cuff without equipping or clicking it, ev
   assert.ok(cuff.position.z<-.5,'release starts at the wrist, even if no prior reach initialized its pose');
   assert.ok(restraint.group.getObjectByName('Hinged upper cuff').rotation.z>1.9,'the cuff clips open');
   assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,true);
+  const arm=restraint.group.getObjectByName('Cartoon forearm and right hand'),hand=restraint.group.getObjectByName('Cartoon right hand');
+  assert.equal(arm.visible,true,'the hand is visible while the cuff hinges open');
+  restraint.update(time+.95);const freedHeight=hand.position.y;
+  restraint.update(time+1.5);assert.equal(arm.visible,true);assert.ok(hand.position.y<freedHeight-.4,'the freed arm lowers out of view');
   restraint.update(time+2);
   assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,false);
+  assert.equal(arm.visible,false,'the hand disappears after the release finishes');
+  restraint.requestReach(time+4);restraint.update(time+4.5,false,true);assert.equal(arm.visible,false,'later interactions cannot restore the free hand');
   assert.equal(collectShackleKey(key,restraint,time+3),false,'repeated pickups cannot restart release');
  }
 });

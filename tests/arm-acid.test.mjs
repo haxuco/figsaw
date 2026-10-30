@@ -33,11 +33,12 @@ test('unlocked laptop opens without showing the hand and restores the view',()=>
   const opening=createLaptopOpening({laptop,restraint,cameraPosition,state});
   assert.equal(opening.start(0),false,'locked players cannot open the lid');
   restraint.requestReach(0);restraint.update(.8);restraint.detach(1);
-  assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,false);
+  assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,true,'the hand stays visible for the cuff release');
   assert.equal(opening.start(3),true);
   for(const elapsed of[0,.4,.9,1.5,2.2,2.8,3.5]){
    opening.update(3+elapsed,reducedMotion);restraint.update(3+elapsed,reducedMotion,true,opening.handPose);
    assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,false);
+   assert.equal(restraint.group.getObjectByName('Cartoon forearm and right hand').visible,false);
   }
   assert.equal(progress,1);assert.equal(opening.active,false);
   assert.ok(cameraPosition.distanceTo(home)<1e-6);assert.deepEqual(state,{yaw:.8,pitch:-.1,zoom:.78});

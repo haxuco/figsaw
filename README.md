@@ -76,7 +76,7 @@ Opaque static furniture is merged by material and spatial cell. Interactive/anim
 Append `?profile=1` to a local preview to expose a hidden `#performance-report` output with startup stages, recent frame timing, draw calls and GPU resource counts. Profiling is off by default. In the desktop QA scene geometry allocations fell from 2,777 to 1,462 (47%); draw calls vary with camera position and animation. Mobile viewport checks exercise the reduced budget but do not substitute for testing physical phones on slow networks.
 
 
-Restrained reach attempts use a rounded, curved forearm with a fuller elbow-to-wrist taper and smooth matte shading. A two-segment arm solve bends the elbow below the frame. The hand is hidden after unlocking and stays hidden during all later interactions until the game resets.
+Restrained reach attempts use a rounded, curved forearm with a fuller elbow-to-wrist taper and smooth matte shading. A two-segment arm solve bends the elbow below the frame. The hand stays visible while the cuff clips open, withdraws as the shackle falls, then stays hidden during later interactions until the game resets.
 
 Tank spills use a continuous floor-following wetness surface instead of overlapping flat puddle meshes. A gravity-fed, narrowing jet wavers from the drain into a growing impact pool, with small droplets, expanding rings, fine bubbles, reflective moving surface normals, thin translucent edges and wisps of corrosion smoke. The front meanders gently toward the player and leaves dark damp etching; contact still ends the game and reset clears the complete spill. The floor mask updates at 10 Hz and keeps the reduced mobile texture/mesh budgets.
 

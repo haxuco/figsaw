@@ -131,14 +131,15 @@ export function createPlayerRestraint(camera,options={}){
   // physically attached to the room's pipe. FOV changes preserve the framing.
   space.position.copy(camera.position);space.quaternion.copy(camera.quaternion);
   const framing=Math.tan(THREE.MathUtils.degToRad(camera.fov/2))/Math.tan(THREE.MathUtils.degToRad(62/2));
-  // Equipping the key presents the cuff above the bottom HUD. A narrow view
+  // Releasing the cuff presents it above the bottom HUD. A narrow view
   // shifts the rig inward instead of cropping the lock off the right edge.
   // The pipe anchor stays in world space, so the chain remains attached.
   focusedPose=pose.locked?interactionFocus&&!lidHand:hasReleasePose&&releaseFocus&&pose.releaseElapsed<1.8;
   if(focusedPose){focusOffset.set(-Math.max(0,.31-camera.aspect*.20)*framing,.11*framing,0).applyQuaternion(camera.quaternion);space.position.add(focusOffset);}
   space.scale.set(framing,framing,1);space.updateWorldMatrix(true,false);
   space.visible=pose.visible;
-  arm.visible=pose.locked;
+  const releaseActive=!pose.locked&&pose.releaseElapsed<1.8&&hasReleasePose;
+  arm.visible=pose.visible&&(pose.locked||releaseActive);
   if(!pose.visible)return pose.openLaptop;
   pipeHook.copy(pipeAnchor);space.worldToLocal(pipeHook);
   const reveal=lidHand?lidHand.reveal:reducedMotion?1:pose.reveal,withdraw=(1-reveal)*.55;
@@ -148,13 +149,17 @@ export function createPlayerRestraint(camera,options={}){
   // Two fixed-length limb segments articulate at the elbow instead of stretching
   // one long cylinder from the bottom of the screen to the hand.
   elbow.copy(restElbow).lerp(pose.locked?reachElbow:freeElbow,reach);
-  const releaseActive=!pose.locked&&pose.releaseElapsed<1.8&&hasReleasePose;
   const hingeOpen=reducedMotion&&!pose.locked?1:pose.hingeOpen;
   const cuffDrop=reducedMotion&&!pose.locked?1:pose.cuffDrop;
   if(releaseActive){
    wrist.copy(releasedWrist);elbow.copy(releasedElbow);
    const pull=reducedMotion?1:pose.handFree;
-   wrist.y+=pull*.055;wrist.z+=pull*.025;
+   const retreat=reducedMotion?1:THREE.MathUtils.smoothstep(pose.releaseElapsed,.84,1.0);
+   delta.set(0,pull*.13,retreat*.18).applyQuaternion(releasedRotation);wrist.add(delta);
+   // Keep the hand in the cuff while it opens, then lower the freed arm out of
+   // view as the open shackle falls. Later pickups remain invisible.
+   const lower=reducedMotion?0:THREE.MathUtils.smoothstep(pose.releaseElapsed,1.02,1.62)*.58;
+   wrist.y-=lower;elbow.y-=lower;
   }
   wrist.y-=withdraw;elbow.y-=withdraw;
   delta.copy(elbow).sub(wrist).setLength(.35);elbow.copy(wrist).add(delta);
@@ -163,7 +168,7 @@ export function createPlayerRestraint(camera,options={}){
   delta.copy(wrist).sub(elbow);forearmRotation.setFromUnitVectors(boneAxis,delta.clone().normalize());
   elbowJoint.position.copy(elbow);elbowJoint.quaternion.copy(forearmRotation);
   hand.position.copy(wrist);hand.quaternion.copy(forearmRotation);hand.rotateX(-.12+reach*.08);hand.rotateY(.13-reach*.06);hand.rotateZ(-.04);
-  if(releaseActive)hand.quaternion.slerp(releasedRotation,1-pose.handFree);
+  if(releaseActive)hand.quaternion.copy(releasedRotation);
   fingers.forEach((f,i)=>{f.rotation.x=-.06+(1-reach)*(.11+i*.015);});
   thumb.rotation.x=0;thumb.rotation.y=.88;thumb.rotation.z=-.26;
   fingerCurls.forEach(curl=>curl(0));
@@ -214,7 +219,6 @@ export function createPlayerRestraint(camera,options={}){
   releasedWrist.copy(wrist);releasedElbow.copy(elbow);releasedRotation.copy(hand.quaternion);releasedCuffRotation.copy(cuff.quaternion);releasedCuffPosition.copy(cuff.position);hasReleasePose=true;
   releaseFocus=focusedPose;
   const detached=state.detach(time);
-  if(detached)arm.visible=false;
   return detached;
  }
  function reset(){state.reset();hasReleasePose=focusedPose=releaseFocus=false;gate.rotation.z=0;latch.rotation.z=0;update(0,true);}
