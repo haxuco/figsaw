@@ -155,5 +155,5 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   const matrix=screenHomography(points,WIDTH,HEIGHT);root.hidden=!matrix||!matrix.every(Number.isFinite);
   if(!root.hidden)root.style.transform=`matrix3d(${matrix.join(',')})`;
  }
- sync();return {start,cancel,update,capture:challenge.capture,restore(value){cancel();drawnRound=-1;challenge.restore(value);sync();},complete(){cancel();challenge.complete();sync();},reset(){cancel();drawnRound=-1;challenge.reset();sync();},get active(){return phase!=='closed';},get completed(){return challenge.completed;}};
+ sync();return {start,cancel,update,capture:challenge.capture,restore(value){cancel();drawnRound=-1;challenge.restore(value);sync();},complete(){cancel();challenge.complete();sync();},reset(){cancel();drawnRound=-1;challenge.reset();sync();},get active(){return phase!=='closed';},get completed(){return challenge.completed;},get passedCount(){return challenge.passed.filter(Boolean).length;}};
 }

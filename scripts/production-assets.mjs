@@ -8,7 +8,7 @@ export async function stageProductionAssets(source,output){
  const child=relative(source,output);
  if(!child||child.startsWith('..'))throw new Error('Production output must be a child of the development directory.');
  await rm(output,{recursive:true,force:true});await mkdir(output,{recursive:true});
- for(const file of ['index.html','boot.js','style.css','robots.txt','linkedin-callback.html','linkedin-callback.js'])await cp(join(source,file),join(output,file));
+ for(const file of ['index.html','boot.js','style.css','robots.txt','linkedin-callback.html','linkedin-callback.js','analytics.js','linkedin-config.js','insights.html','insights.js','insights.css'])await cp(join(source,file),join(output,file));
  for(const directory of ['assets','fonts','labels'])await cp(join(source,directory),join(output,directory),{recursive:true,filter:async path=>{
   const entry=await lstat(path);return entry.isDirectory()||entry.isFile()&&/\.(?:png|jpe?g|webp|gif|svg|woff2?|ttf|txt|mp4)$/i.test(path);
  }});

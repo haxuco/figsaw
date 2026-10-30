@@ -111,7 +111,8 @@ test('idle delay uses elapsed real time while existing dialogue retains its own 
 });
 
 class Element{
- constructor(){this.children=[];this.style={};this.dataset={};this.classes=new Set();this.classList={add:k=>this.classes.add(k),toggle:(k,on)=>on?this.classes.add(k):this.classes.delete(k)};}
+ get lastElementChild(){return this.children.at(-1);}
+ constructor(){this.offsetWidth=190;this.offsetHeight=60;this.children=[];this.style={};this.dataset={};this.classes=new Set();this.classList={add:k=>this.classes.add(k),toggle:(k,on)=>on?this.classes.add(k):this.classes.delete(k)};}
  append(...children){this.children.push(...children);}setAttribute(){}
 }
 test('the actual bubble renderer allows a rescued survivor to hint without restoring cries or skeleton speech',()=>{
@@ -120,7 +121,7 @@ test('the actual bubble renderer allows a rescued survivor to hint without resto
  try{
   const anchor=new THREE.Object3D();anchor.position.set(0,1.5,0);let alive=true;
   const camera=new THREE.PerspectiveCamera(50,1,.1,100);camera.position.set(0,1.5,3);camera.lookAt(0,1.5,0);camera.updateMatrixWorld();
-  const bubbles=createFigpalBubbles([anchor],{getBoundingClientRect:()=>({left:0,top:0,width:500,height:500})},()=>false,()=>alive),bubble=container.children[0];
+  const bubbles=createFigpalBubbles([anchor],{getBoundingClientRect:()=>({left:0,top:0,right:500,bottom:500,width:500,height:500})},()=>false,()=>alive),bubble=container.children[0];
   bubbles.show(0,0,'Help!');assert.equal(bubbles.isActive(1),false);
   bubbles.setHint(0,PUZZLE_HINTS.perspective);bubbles.update(camera,30);assert.equal(bubble.hidden,false);assert.equal(bubble.children[0].textContent,PUZZLE_HINTS.perspective);
   bubbles.update(camera,300);assert.equal(bubble.style.opacity,'1');
@@ -134,7 +135,7 @@ test('real speech bubbles persist at full opacity, resume after a scream and nev
  try{
   const anchors=Array.from({length:3},()=>{const a=new THREE.Object3D();a.position.set(0,1.5,0);return a;}),silent=new Set();
   const camera=new THREE.PerspectiveCamera(50,1,.1,100);camera.position.set(0,1.5,3);camera.lookAt(0,1.5,0);camera.updateMatrixWorld();
-  const bubbles=createFigpalBubbles(anchors,{getBoundingClientRect:()=>({left:0,top:0,width:500,height:500})},i=>!silent.has(i));
+  const bubbles=createFigpalBubbles(anchors,{getBoundingClientRect:()=>({left:0,top:0,right:500,bottom:500,width:500,height:500})},i=>!silent.has(i));
   const bubble=container.children[1];bubbles.setHint(1,PUZZLE_HINTS.laptop);bubbles.update(camera,30);
   assert.equal(bubble.children[0].textContent,PUZZLE_HINTS.laptop);assert.equal(bubble.hidden,false);
   bubbles.update(camera,1000);assert.equal(bubble.style.opacity,'1');assert.ok(bubble.classes.has('figpal-hint'));

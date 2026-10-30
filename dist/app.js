@@ -1,3 +1,4 @@
+import {analytics} from './analytics.js';
 import {createVictoryParade} from './victory-parade.js';
 import {captureRankedEscape} from './leaderboard.js';
 import {createLeaderboardRepository} from './leaderboard-remote.js';
@@ -629,15 +630,15 @@ function syncChairButton(){
 }
 function inspectDocument(hit){
  if(sawBusy())return;
- if(hit?.userData.wallDocument){puzzleHints.inspect(hit.userData.wallDocument,leaderboardPause.now());documentViewer.show(hit);}
- else if(hit?.userData.fishClue&&figpalHoists.fishClueReady){puzzleHints.inspect('skull',leaderboardPause.now());documentViewer.show(figpalHoists.fishInspectionTarget);}
+ if(hit?.userData.wallDocument){if(hit.userData.wallDocument==='org-chart')analytics.mark('org_chart_viewed');puzzleHints.inspect(hit.userData.wallDocument,leaderboardPause.now());documentViewer.show(hit);}
+ else if(hit?.userData.fishClue&&figpalHoists.fishClueReady){analytics.mark('skull_viewed');puzzleHints.inspect('skull',leaderboardPause.now());documentViewer.show(figpalHoists.fishInspectionTarget);}
 }
 function escapeRoom(){
  if(gameEnded||gameWon)return;
  if(rescueChairs.state.towPhase!=='at-door'||!chairSeat.seated||!rescueChairs.state.safe){exitDoor.unlock(state.time);inventoryUI.notify('Door unlocked.');return;}
  laptopProgram.cancel();
  const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs});
- equippedModel.group.visible=false;gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;
+ analytics.finish('won');equippedModel.group.visible=false;gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;
  putEquipmentAway();inventoryUI.setHidden(true);document.body.classList.add('escape-active');
@@ -940,7 +941,7 @@ function updateFigpalRound(time){
 }
 
 function endGame(cause='objective'){
- if(gameEnded)return;leaderboardUI.close();laptopProgram.cancel();gameEnded=true;puzzleHints.reset();countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
+ if(gameEnded)return;analytics.finish('lost',cause);leaderboardUI.close();laptopProgram.cancel();gameEnded=true;puzzleHints.reset();countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
  drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
  deathTransition.start(state.time,reducedMotion);
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;loweringDialogue.reset();
@@ -970,7 +971,7 @@ function resetView({skipIntro=false}={}){
  itemHover.clear();
  floodObjectiveFailure.reset();
  leaderboardUI.reset();laptopProgram.reset();
- attempts.next();gameOverShare.reset();victoryShare.reset();
+ analytics.retry();attempts.next();gameOverShare.reset();victoryShare.reset();
  scheduleFrame();
  ketchupKey.reset();hoveredKeyAction=null;chargingKit.reset();hoveredChargingAction=null;
  inventory.reset();movePromptChair=null;inventoryUI.close();inventoryUI.setHidden(false);handsaw.visible=true;fireAxe.object.visible=true;rescueChairs.reset();
@@ -1260,11 +1261,20 @@ function render(){
  }
  scheduleFrame();
 }
+analytics.observe(()=>{
+ const rescue=rescueChairs.state,chairs=rescue.chairs,saved=chairs.filter(c=>c.landed).length;
+ const reached={intro_complete:departure.active,key_collected:ketchupKey.hasKey,shackle_unlocked:!restraint.locked,
+  charger_connected:chargingKit.phase==='charging',laptop_opened:laptop.isOpen,kerning_1:laptopProgram.passedCount>=1,kerning_2:laptopProgram.passedCount>=2,kerning_complete:laptopProgram.completed,
+  pm_revealed:figpalHoists.fishClueReady,mobile_collected:mobilePuzzle.collectedAll,mobile_hung:mobilePuzzle.hung,mobile_repaired:mobilePuzzle.phase==='repaired',
+  chairs_repaired:chairs.every(c=>c.repaired),chairs_positioned:chairs.every(c=>c.repaired&&c.tank!==null&&c.tank!==escapePuzzle.pmIndex),chairs_linked:rescue.links.every(Boolean),
+  tank_broken:acidLeaks.leaks.some(l=>l.breached),fire_extinguished:fireHazard.phase==='extinguished',figpal_saved:saved>=1,two_figpals_saved:saved>=2,door_unlocked:doorKeypadUI.unlocked,chairs_at_door:rescue.towPhase==='at-door'};
+ return {stages:Object.keys(reached).filter(key=>reached[key]),saved};
+},()=>leaderboardPause.active||contextLost);
 await yieldStartup('Warming up the lights…');
 camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera.lookAt));camera.updateMatrixWorld(true);
 // Let the first render compile only programs actually used by that view.
 // Whole-scene prewarming compiled hidden effects and duplicate light variants.
-Promise.resolve().then(()=>{sceneReady=true;clock.getDelta();render();startupProgress.finish();}).catch(error=>{console.error(error);startupProgress.fail();});
+Promise.resolve().then(()=>{sceneReady=true;clock.getDelta();render();startupProgress.finish();analytics.ready();}).catch(error=>{console.error(error);startupProgress.fail();analytics.finish('error','load');});
 installGraphicsRecovery(canvas,{
  status:loadingStatus,
  pause(){contextLost=true;frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},
