@@ -40,6 +40,30 @@ test('names accept normal international names and reject profanity, common disgu
  for(const name of ['fuck','FUCKYOU','f.u.c.k','f.u.c.k.','F U C K','fuuuck','fück','ｆｕｃｋ','f\u200buck','sh1t','S H I T','b1tch','biiitch','bastard123','123bastard','c.u.n.t','asshole','<script>alert(1)</script>','a','a'.repeat(25),'...'])assert.equal(validateDisplayName(name).ok,false,name);
 });
 
+test('display names reject insults, threats and disguised words inside a longer name',()=>{
+ for(const name of ['Idiot','You are stupid','LOSER','Go die','kill yourself','k.y.s.','Maya f.u.c.k.','Alex S H I T','fuuuck you','T R A S H','bastard99','99bastard','hаtе','h4t3','STFU','scammer']){
+  const result=validateDisplayName(name);assert.equal(result.ok,false,name);
+  assert.match(result.message,/name|nickname/);
+ }
+});
+
+test('negative Figma messages are blocked across spacing, leetspeak and lookalikes',()=>{
+ for(const name of ['Figma sucks','FigmaSucks','Figma is bad','Figma is a joke','I hate Figma','FigmaIsSh1t','F1gm4sucks','f.i.g.m.a s.u.c.k.s','Ｆｉｇｍａ ｓｕｃｋｓ','Fіgmа sucks','Figma\u200bsucks','Figmma is baaadd','Figma not good','Dont use Figma','Boycott Figma','Figma is overpriced','Figma is garbage','Figma basurа','NoToFigma','Figma ruined design'])assert.equal(validateDisplayName(name).ok,false,name);
+ for(const name of ['Figma Fan','FigmaFriend','I love Figma','Figma Forever','Figpal Friend','Maya Chen','Anne-Marie','O’Connor','José','Zoë','李 明','Ada_42','Scunthorpe','Hancock','Dickens','Cassandra','Shital','Badawi'])assert.equal(validateDisplayName(name).ok,true,name);
+});
+
+test('name moderation covers repository submission and previously stored scores',async()=>{
+ const s=storage(),repo=createLocalLeaderboard({storage:s,now:()=>10});
+ for(const name of ['Figma sucks','Maya f.u.c.k.','You are stupid']){
+  const result=await repo.submit({run:run('unsafe-'+name),name});
+  assert.equal(result.ok,false);assert.equal(result.code,'name');
+ }
+ assert.deepEqual(await repo.list(),[]);
+ const names=['Figma sucks','FigmaFan','Go die','Scunthorpe'];
+ s.data.set(LEADERBOARD_STORAGE_KEY,JSON.stringify(names.map((name,i)=>({id:`saved-${i}`,name,remainingSeconds:1000-i,attempt:1,createdAt:i}))));
+ assert.deepEqual((await repo.list()).map(e=>e.name),['FigmaFan','Scunthorpe']);
+});
+
 test('the board keeps ten names, descending time, and stable earlier-first ties',async()=>{
  const s=storage();let now=0;const repo=createLocalLeaderboard({storage:s,now:()=>now++});
  for(let i=0;i<13;i++)await repo.submit({run:run(`r${i}`,900+i),name:`Player ${i}`});
