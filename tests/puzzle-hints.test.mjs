@@ -16,9 +16,8 @@ function fixture(){
 test('the full hint sequence waits 30 seconds and clears as each actual task completes',()=>{
  const f=fixture(),update=t=>f.hints.update(t);
  assert.equal(update(0),null);assert.equal(update(29.99),null);assert.equal(update(30).line,PUZZLE_HINTS.key);
- f.progress.keyCollected=true;assert.equal(update(31),null);assert.equal(f.hint,null);
- assert.equal(update(60),null);assert.equal(update(61).line,PUZZLE_HINTS.shackle);
- f.progress.locked=false;assert.equal(update(62),null);assert.equal(update(92).line,PUZZLE_HINTS.laptop);
+ f.progress.keyCollected=true;f.progress.locked=false;assert.equal(update(31),null);assert.equal(f.hint,null);
+ assert.equal(update(60),null);assert.equal(update(61).line,PUZZLE_HINTS.laptop);
  f.progress.laptopComplete=true;assert.equal(update(93),null);assert.equal(update(123).line,PUZZLE_HINTS.pm);
  f.hints.inspect('org-chart',124);assert.equal(update(124),null);assert.equal(update(160),null,'reading the org chart resolves the PM-identification hint');
  f.progress.pmRevealed=true;assert.equal(update(161),null);assert.equal(update(191).line,PUZZLE_HINTS.skull);
@@ -136,11 +135,11 @@ test('real speech bubbles persist at full opacity, resume after a scream and nev
   const anchors=Array.from({length:3},()=>{const a=new THREE.Object3D();a.position.set(0,1.5,0);return a;}),silent=new Set();
   const camera=new THREE.PerspectiveCamera(50,1,.1,100);camera.position.set(0,1.5,3);camera.lookAt(0,1.5,0);camera.updateMatrixWorld();
   const bubbles=createFigpalBubbles(anchors,{getBoundingClientRect:()=>({left:0,top:0,width:500,height:500})},i=>!silent.has(i));
-  const bubble=container.children[1];bubbles.setHint(1,PUZZLE_HINTS.shackle);bubbles.update(camera,30);
-  assert.equal(bubble.children[0].textContent,PUZZLE_HINTS.shackle);assert.equal(bubble.hidden,false);
+  const bubble=container.children[1];bubbles.setHint(1,PUZZLE_HINTS.laptop);bubbles.update(camera,30);
+  assert.equal(bubble.children[0].textContent,PUZZLE_HINTS.laptop);assert.equal(bubble.hidden,false);
   bubbles.update(camera,1000);assert.equal(bubble.style.opacity,'1');assert.ok(bubble.classes.has('figpal-hint'));
   bubbles.show(1,1000,'Help!',6);bubbles.update(camera,1001);assert.equal(bubble.children[0].textContent,'Help!');
-  bubbles.update(camera,1007);assert.equal(bubble.children[0].textContent,PUZZLE_HINTS.shackle);assert.equal(bubble.style.opacity,'1');
+  bubbles.update(camera,1007);assert.equal(bubble.children[0].textContent,PUZZLE_HINTS.laptop);assert.equal(bubble.style.opacity,'1');
   bubbles.hide();bubbles.update(camera,1008);assert.equal(bubble.hidden,false,'a lowering-dialogue reset does not discard puzzle hints');
   camera.lookAt(0,1.5,6);camera.updateMatrixWorld();bubbles.update(camera,1009);assert.equal(bubble.hidden,true);
   camera.lookAt(0,1.5,0);camera.updateMatrixWorld();bubbles.update(camera,1010);assert.equal(bubble.hidden,false,'looking away does not expire the hint');

@@ -62,7 +62,7 @@ Two tiny mice and one slightly larger rat are 44% smaller again and make brief, 
 
 The rear SUPPLIES drawer contains the MacBook charger, scissors, string and ratchet wrench. Collect them into Inventory and equip the item to use it on a matching object. Equip the charger, click the powered floor strip, then the MacBook or its charging port; the installed charger leaves Inventory. Its adapter and cable connect along the floor. The laptop has one 60-second battery window after opening; external power restores operation while the battery stays at 0%. Retry resets the charging interaction.
 
-The glass ketchup bottle beside the cat mug hides the shackle key. Click it to tip and drain it, then click the brass key in the spill. The shackle’s Detach instance menu and ⌥⌘B shortcut remain locked until the key has been collected. Clicking the shackle opens its menu; right-click still works. R restores the full bottle, hidden key, and locked shackle.
+The glass ketchup bottle beside the cat mug hides the shackle key. Click it to tip and drain it, then click the brass key in the spill. Collecting the key immediately unlocks the shackle and plays its clip-open animation, even if the key is caught while falling. The key is used automatically and never needs to be equipped or clicked on the cuff. Retry restores the full bottle, hidden key, and locked shackle.
 
 
 ## Build and performance

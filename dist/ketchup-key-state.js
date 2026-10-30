@@ -1,5 +1,12 @@
 // Reveal and pickup share one boundary, including a catch while it is falling.
 export const KEY_REVEAL_DELAY=2.5;
+// Pickup and release happen in the same action, including catches mid-pour.
+// The key is used immediately and never becomes an equippable inventory item.
+export function collectShackleKey(key,restraint,time){
+ if(!key.collect(time))return false;
+ restraint.detach(time,{reveal:true});
+ return true;
+}
 export function createKetchupKeyState(){
  let phase='sealed',startedAt=-Infinity;
  const update=time=>{if(phase==='pouring'&&time-startedAt>=KEY_REVEAL_DELAY)phase='revealed';};

@@ -206,8 +206,11 @@ export function createPlayerRestraint(camera,options={}){
   chainLength=start.distanceTo(pipeHook)+(pose.locked?.24*(1-reach)+.018:.42);updateChain();
   return pose.openLaptop;
  }
- function detach(time){
+ function detach(time,{reveal=false}={}){
   if(!state.locked)return false;
+  // Automatic key pickup may happen before the wrist has ever been shown.
+  // Establish a real cuff pose before capturing the clip-open animation.
+  if(reveal){state.requestReach(time);update(time,true,false,null,0,true);}
   releasedWrist.copy(wrist);releasedElbow.copy(elbow);releasedRotation.copy(hand.quaternion);releasedCuffRotation.copy(cuff.quaternion);releasedCuffPosition.copy(cuff.position);hasReleasePose=true;
   releaseFocus=focusedPose;
   const detached=state.detach(time);

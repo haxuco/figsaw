@@ -1,7 +1,6 @@
 export const PUZZLE_HINT_DELAY=30;
 export const PUZZLE_HINTS=Object.freeze({
  key:'The ketchup bottle is amazing UX',
- shackle:'Equip the key from your inventory to use it, then click on the shackle',
  battery:'If only you had a charger for the laptop.',
  laptop:'Maybe the laptop has a clue on what you should do next.',
  pm:'I wonder who the PM is?',
@@ -14,7 +13,7 @@ export const PUZZLE_HINTS=Object.freeze({
 // A charged laptop reads 0%, so power availability (not the displayed percent)
 // determines whether the charger hint is useful.
 export function nextPuzzleHint(progress,seen){
- if(progress.locked)return progress.keyCollected?'shackle':'key';
+ if(progress.locked)return 'key';
  if(!progress.laptopComplete&&!progress.pmRevealed){
   if(!progress.laptopPowered)return progress.chargerDamaged?null:'battery';
   return 'laptop';

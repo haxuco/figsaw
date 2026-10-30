@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createPlayerRestraint} from '../dist/player-restraint.js';
 import {createSceneRaycaster,firstInteractionHit} from '../dist/scene-picking.js';
-import {createKetchupKeyState} from '../dist/ketchup-key-state.js';
+import {createKetchupKeyState,collectShackleKey} from '../dist/ketchup-key-state.js';
 import {createInventory} from '../dist/inventory.js';
 
 test('the equipped key keeps the cuff visible and directly clickable throughout reach and rest on phones and desktops',()=>{
@@ -21,24 +21,31 @@ test('the equipped key keeps the cuff visible and directly clickable throughout 
  }
 });
 
-test('retrieving the real bottle key permits release, and retry clears that permission',()=>{
- const key=createKetchupKeyState(),bag=createInventory(),camera=new THREE.PerspectiveCamera(48.36,.48,.06,35),restraint=createPlayerRestraint(camera,{canDetach:()=>bag.has('key')});
- assert.equal(restraint.detach(0),false);key.pour(0);key.update(3.5);assert.equal(key.collect(),true);bag.add('key');bag.equip('key');
- restraint.requestReach(3.5);restraint.update(4.2,false,true,null,0,bag.equipped==='key');restraint.group.updateMatrixWorld(true);
- const cuff=restraint.group.getObjectByName('Close-fitting oval wrist cuff'),before=cuff.getWorldPosition(new THREE.Vector3());
- assert.equal(restraint.detach(4.2),true);bag.remove('key');assert.equal(bag.equipped,null);restraint.update(4.2,false,true);restraint.group.updateMatrixWorld(true);assert.ok(cuff.getWorldPosition(new THREE.Vector3()).distanceTo(before)<1e-7,'unlocking must not jump the cuff out of the focused wrist pose');
- restraint.update(6,false,false);assert.equal(restraint.locked,false);assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,false);
- key.reset();bag.reset();restraint.reset();assert.equal(restraint.detach(10),false);assert.equal(restraint.locked,true);
+test('key pickup immediately opens the cuff without equipping or clicking it, even at the first reveal frame',()=>{
+ for(const time of [2.5,3.5,40])for(const reaching of [false,true])for(const aspect of [.48,1.78]){
+  const key=createKetchupKeyState(),bag=createInventory(),camera=new THREE.PerspectiveCamera(62,aspect,.06,35);
+  const restraint=createPlayerRestraint(camera,{canDetach:()=>key.hasKey});
+  key.pour(0);
+  assert.equal(collectShackleKey(key,restraint,2.49),false);assert.equal(restraint.locked,true);
+  if(reaching){restraint.requestReach(time-.3);restraint.update(time-.1);}
+  assert.equal(collectShackleKey(key,restraint,time),true);
+  assert.equal(restraint.locked,false);assert.equal(key.hasKey,true);
+  assert.equal(bag.has('key'),false);assert.equal(bag.equipped,null);
+  restraint.update(time+.6);
+  const cuff=restraint.group.getObjectByName('Close-fitting oval wrist cuff');
+  assert.ok(cuff.position.z<-.5,'release starts at the wrist, even if no prior reach initialized its pose');
+  assert.ok(restraint.group.getObjectByName('Hinged upper cuff').rotation.z>1.9,'the cuff clips open');
+  assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,true);
+  restraint.update(time+2);
+  assert.equal(restraint.group.getObjectByName('Camera-relative reaching hand').visible,false);
+  assert.equal(collectShackleKey(key,restraint,time+3),false,'repeated pickups cannot restart release');
+ }
 });
 
-test('an early key pickup still unlocks after waiting, putting it away and re-equipping it',()=>{
- const key=createKetchupKeyState(),bag=createInventory(),camera=new THREE.PerspectiveCamera(62,.48,.06,35),restraint=createPlayerRestraint(camera,{canDetach:()=>bag.has('key')});
- key.pour(0);assert.equal(key.collect(2.5),true);bag.add('key');bag.equip('key');
- restraint.requestReach(2.5);restraint.update(3,false,true,null,0,true);
- bag.putAway();key.update(40);restraint.update(40,false,false);
- bag.equip('key');restraint.requestReach(40);restraint.update(41,false,true,null,0,true);
- assert.equal(restraint.detach(41),true);bag.remove('key');
- assert.equal(restraint.locked,false);assert.equal(bag.has('key'),false);assert.equal(bag.equipped,null);
- key.update(80);assert.equal(key.hasKey,true,'empty bottle keeps its collected state');
- restraint.reset();assert.equal(restraint.detach(80),false,'the consumed key cannot unlock another cuff');
+test('retry requires collecting the key again before the shackle unlocks',()=>{
+ const key=createKetchupKeyState(),camera=new THREE.PerspectiveCamera(62,.48,.06,35),restraint=createPlayerRestraint(camera,{canDetach:()=>key.hasKey});
+ key.pour(0);assert.equal(collectShackleKey(key,restraint,2.5),true);
+ key.reset();restraint.reset();assert.equal(restraint.locked,true);
+ assert.equal(restraint.detach(10),false);assert.equal(collectShackleKey(key,restraint,10),false);
+ key.pour(10);assert.equal(collectShackleKey(key,restraint,12.5),true);assert.equal(restraint.locked,false);
 });

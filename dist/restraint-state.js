@@ -1,6 +1,6 @@
 const smooth=x=>{x=Math.max(0,Math.min(1,x));return x*x*(3-2*x);};
 
-// Reaching and releasing are separate transitions: a click can never unlock the cuff.
+// Reaching never unlocks the cuff; key pickup authorizes the release transition.
 export function createRestraintState({canDetach=()=>true}={}){
  let locked=true,reachStart=-Infinity,releasedAt=-Infinity,openPending=false,visibleUntil=-Infinity;
  return {
