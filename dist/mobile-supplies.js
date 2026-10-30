@@ -15,13 +15,15 @@ export function createScissors(){
   const arm=new THREE.Group();arm.name=side<0?'Thumb blade and grip':'Finger blade and grip';group.add(arm);arms.push(arm);
   // The complete half pivots at the screw. Offset blade planes allow the two
   // bevelled cutting edges to pass each other without coplanar faces.
-  const z=side*.0022,p=mirroredShape(side);
-  p.move(.007,-.033);p.curve(.018,-.025,.015,-.011,.014,.002);
+  // Each blade sits opposite its handle so the cutting edges face inward
+  // when opening, rather than crossing past their closed position.
+  const z=side*.0022,p=mirroredShape(-side);
+  p.move(-.007,-.033);p.curve(-.018,-.025,-.015,-.011,.014,.002);
   p.curve(.015,.031,.013,.083,.003,.137);p.curve(.002,.143,.0008,.147,-.0005,.146);
   p.curve(-.0016,.145,-.002,.141,-.002,.137);p.line(-.002,.024);
-  p.curve(-.002,.013,-.010,.010,-.009,-.002);p.curve(-.008,-.016,.001,-.026,.007,-.033);
+  p.curve(-.002,.013,-.010,.010,-.009,-.002);p.curve(-.008,-.016,-.001,-.026,-.007,-.033);
   const blade=add(arm,extrude(p.shape,.0026,.0005),steel,'Forged tapered blade and curved tang');blade.position.z=z;
-  const b=mirroredShape(side);b.move(-.002,.025);b.line(-.002,.137);b.curve(-.0016,.143,-.0003,.148,.001,.143);b.line(.0023,.109);b.line(.0018,.025);b.shape.closePath();
+  const b=mirroredShape(-side);b.move(-.002,.025);b.line(-.002,.137);b.curve(-.0016,.143,-.0003,.148,.001,.143);b.line(.0023,.109);b.line(.0018,.025);b.shape.closePath();
   const bevelGeometry=new THREE.ShapeGeometry(b.shape,12);
   for(const face of[-1,1]){const bevel=add(arm,bevelGeometry,edge,'Ground cutting edge');bevel.position.z=z+(face>0?.00315:-.00055);if(face<0){bevel.rotation.y=Math.PI;bevel.scale.x=-1;}}
   // One continuous moulded handle, with a small thumb loop and a longer
@@ -44,7 +46,8 @@ export function createScissors(){
  const screw=add(hardware,new THREE.SphereGeometry(.0067,20,10,0,Math.PI*2,0,Math.PI/2),edge,'Domed pivot screw');screw.rotation.x=Math.PI/2;screw.scale.y=.35;screw.position.z=.0068;
  const slot=add(hardware,new THREE.BoxGeometry(.0075,.00085,.0002),dark,'Recessed screw slot');slot.position.z=.00935;slot.rotation.z=-.45;
  const back=add(hardware,new THREE.CylinderGeometry(.0064,.0064,.0016,16),steel,'Rear pivot rivet');back.rotation.x=Math.PI/2;back.position.z=-.0037;
- function setOpen(value){const angle=.012+THREE.MathUtils.clamp(value,0,1)*.38;arms.forEach((arm,i)=>arm.rotation.z=(i?1:-1)*angle);}
+ const closedAngle=Math.atan2(.0005,.146); // Align the two blade tips at the stop.
+ function setOpen(value){const angle=closedAngle+THREE.MathUtils.clamp(value,0,1)*.38;arms.forEach((arm,i)=>arm.rotation.z=(i?1:-1)*angle);}
  setOpen(.23);
  return {group,setOpen};
 }
