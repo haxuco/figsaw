@@ -40,10 +40,11 @@ function paintDesktop(c){
  if(typeof Path2D!=='undefined')drawFigmaMark(c,350,57,13);
  c.fillStyle='#333';c.font='600 12px Arial';c.fillText('kerning.fig',372,72);c.fillStyle='#838383';c.font='10px Arial';c.textAlign='right';c.fillText('Design challenge',767,72);c.textAlign='left';
  roundedPanel(c,303,460,194,42,12,'#d6e4f499');
- ['#68b8ff','#248fd5','#fffced','#26292e','#b9c7d4'].forEach((color,i)=>roundedPanel(c,311+i*37,466,29,29,7,color));
+ ['#68b8ff','#248fd5','#fffced','#f8f8f8','#b9c7d4'].forEach((color,i)=>roundedPanel(c,311+i*37,466,29,29,7,color));
  c.fillStyle='#1b4980';c.font='21px Arial';c.fillText('⌣',315,488);c.fillStyle='#f6cb4d';c.fillRect(385,466,29,7);
  c.strokeStyle='#ec6656';c.lineWidth=3;c.beginPath();c.moveTo(357,488);c.lineTo(369,473);c.stroke();
- if(typeof Path2D!=='undefined')drawFigmaMark(c,430,470,12);
+ if(typeof Path2D!=='undefined')drawFigmaMark(c,429.5,470,14);
+ c.fillStyle='#283b51';c.beginPath();c.arc(436.5,498.5,1.5,0,Math.PI*2);c.fill();
 }
 function paintProgram(canvas,challenge){
  const view=challenge.view,c=canvas.getContext('2d');c.textAlign='left';c.textBaseline='alphabetic';paintDesktop(c);
