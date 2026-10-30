@@ -9,8 +9,8 @@
   <link rel="icon" href="data:,">
   <link rel="preload" href="./assets/loading-environment.webp" as="image" fetchpriority="high">
   <link rel="preload" href="./fonts/grenze-gotisch-latin.woff" as="font" type="font/woff" crossorigin>
-  <link rel="stylesheet" href="./style.css?v=fc857ff04f51">
-  <link rel="modulepreload" href="./game.bundle.js?v=266a56ae533e">
+  <link rel="stylesheet" href="./style.css?v=9a7fc9928969">
+  <link rel="modulepreload" href="./game.bundle.js?v=d8836d498b25">
 </head>
 <body>
   <div id="loading-status" role="status" aria-live="polite" aria-busy="true">
@@ -96,6 +96,7 @@
       <div class="escaped-results">
       <div id="victory-share">
         <p class="game-over-attempt" data-attempt></p>
+        <p class="victory-words" data-words-completed aria-live="polite"></p>
         <canvas class="game-over-graphic victory-graphic" role="img" aria-label="Your Figsaw victory" width="1080" height="1080"></canvas>
         <div class="game-over-share-actions">
           <button type="button" data-save-graphic disabled>Save graphic</button>
@@ -138,6 +139,6 @@
     <button id="top10-button" type="button" aria-haspopup="dialog">Top 10</button>
     <button id="about-button" type="button" aria-haspopup="dialog">About</button>
   </div>
-  <script type="module" src="./boot.js?v=266a56ae533e"></script>
+  <script type="module" src="./boot.js?v=d8836d498b25"></script>
 </body>
 </html>

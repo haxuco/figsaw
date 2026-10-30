@@ -71,6 +71,8 @@ The video is loaded only when opening the share preview. The backend uploads its
 
 ## LinkedIn names in the Top 10
 
+Both the Top 10 dialog and qualifying result now show a LinkedIn sign-in control. While setup is incomplete, the control stays visible but disabled with an explanation; it no longer silently disappears. The dialog can connect an account once the provider is enabled, but publishing a verified name still requires the worldwide adapter and the separate consent step below. On October 30, the Supabase provider was confirmed disabled with its secret still empty; it has not been enabled on the owner’s behalf.
+
 Qualified players may choose **Use my LinkedIn name**. Sign-in displays a private preview of the exact name, an unchecked approval checkbox, **Publish my name and score**, **Use a nickname instead**, and **Keep my name private**. Neither signing in nor checking the box submits a score: the separate publish button is required. Approval resets for every new result. Declining makes no leaderboard write and does not attach the name to the result graphic.
 
 The server retrieves `/v2/userinfo` directly from LinkedIn and matches its subject to the Supabase user's LinkedIn identity. Only that returned name bypasses nickname moderation. A client-supplied name, profile metadata, or `nameSource` flag cannot approve it. The approved preview must match the current provider name and `nameConsent` must be boolean `true`. Profile names are rendered as text, never HTML. This verifies account ownership, not the legal identity of the person.

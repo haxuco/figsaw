@@ -2,6 +2,7 @@ import {formatCountdown} from './countdown-clock.js';
 import {prospectiveRank,LEADERBOARD_STORAGE_KEY} from './leaderboard.js';
 import {validateDisplayName,DISPLAY_NAME_GUIDANCE} from './display-name.js';
 import {linkedInDisplayName} from './linkedin-name.js';
+import {createLeaderboardSignIn} from './leaderboard-sign-in.js';
 
 function boardMarkup(){return '<header class="leaderboard-header"><div><p class="leaderboard-eyebrow">THE ONES WHO MADE IT</p><h2>Top 10 escapes</h2></div><span data-scope>On this device</span></header><p class="leaderboard-caption">Both Figpals saved. Ranked by time remaining.</p><table><thead><tr><th scope="col">Rank</th><th scope="col">Name</th><th scope="col">Time left</th></tr></thead><tbody data-scores></tbody></table><p data-empty>No perfect escapes recorded here yet.</p>';}
 function renderBoard(root,entries,highlight,scopeLabel){
@@ -18,24 +19,26 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
  const board=root.querySelector('[data-victory-board]'),form=root.querySelector('form'),input=root.querySelector('input'),submit=form.querySelector('button'),error=form.querySelector('[role="alert"]'),feedback=root.querySelector('[data-feedback]'),celebration=root.querySelector('[data-celebration]');
  board.insertBefore(form,board.querySelector('table'));
  const identityChoice=document.createElement('section');identityChoice.className='leaderboard-identity';identityChoice.hidden=true;
- identityChoice.innerHTML='<button type="button" data-linkedin-name>Use my LinkedIn name</button><div data-name-approval hidden><p>Your name will appear publicly in the Top 10 as <strong data-real-name></strong>.</p><label><input type="checkbox" data-name-consent> I approve displaying this name publicly with my score.</label><div><button type="button" data-confirm-name disabled>Publish my name and score</button><button type="button" data-use-nickname>Use a nickname instead</button></div></div><button type="button" data-private>Keep my name private</button>';
+ identityChoice.innerHTML='<button type="button" data-linkedin-name>Sign in with LinkedIn</button><small data-linkedin-unavailable hidden>LinkedIn names are not available yet. You can use a nickname.</small><div data-name-approval hidden><p>Your name will appear publicly in the Top 10 as <strong data-real-name></strong>.</p><label><input type="checkbox" data-name-consent> I approve displaying this name publicly with my score.</label><div><button type="button" data-confirm-name disabled>Publish my name and score</button><button type="button" data-use-nickname>Use a nickname instead</button></div></div><button type="button" data-private>Keep my name private</button>';
  board.insertBefore(identityChoice,form);
  const connectName=identityChoice.querySelector('[data-linkedin-name]'),approval=identityChoice.querySelector('[data-name-approval]'),consent=identityChoice.querySelector('[data-name-consent]'),confirmName=identityChoice.querySelector('[data-confirm-name]');
  let approvedName='';
- function clearConsent(){approvedName='';consent.checked=false;confirmName.disabled=true;approval.hidden=true;connectName.hidden=!repository.supportsLinkedIn;}
+ function clearConsent(){approvedName='';consent.checked=false;confirmName.disabled=true;approval.hidden=true;connectName.hidden=false;connectName.disabled=!repository.supportsLinkedIn;identityChoice.querySelector('[data-linkedin-unavailable]').hidden=Boolean(repository.supportsLinkedIn);}
  consent.onchange=()=>{confirmName.disabled=!consent.checked||busy;};
  connectName.onclick=async()=>{
-  if(busy||!run?.eligible)return;const ticket=revision;busy=true;connectName.disabled=true;error.textContent='';
+  if(busy||!run?.eligible||!repository.supportsLinkedIn)return;const ticket=revision;busy=true;connectName.disabled=true;error.textContent='';
   try{const identity=await repository.connectLinkedIn();if(ticket!==revision)return;approvedName=linkedInDisplayName(identity.name)||'';if(!approvedName)throw Error('Your LinkedIn name could not be loaded. You can use a nickname instead.');
    identityChoice.querySelector('[data-real-name]').textContent=approvedName;consent.checked=false;confirmName.disabled=true;approval.hidden=false;connectName.hidden=true;form.hidden=true;
   }catch(e){if(ticket===revision)feedback.textContent=e.message;}
-  finally{if(ticket===revision){busy=false;connectName.disabled=false;}}
+  finally{if(ticket===revision){busy=false;connectName.disabled=!repository.supportsLinkedIn;}}
  };
  identityChoice.querySelector('[data-use-nickname]').onclick=()=>{if(busy)return;clearConsent();form.hidden=false;input.focus();};
  identityChoice.querySelector('[data-private]').onclick=()=>{if(busy)return;clearConsent();identityChoice.hidden=form.hidden=true;feedback.textContent='Your name and score have not been published.';};
  confirmName.onclick=()=>{if(consent.checked&&approvedName)saveName(approvedName,'linkedin');};
  const dialog=document.createElement('dialog');dialog.id='leaderboard-dialog';dialog.setAttribute('aria-label','Top 10 escapes');dialog.innerHTML='<button type="button" class="leaderboard-close" aria-label="Back to room">← Back</button><output class="leaderboard-view-timer" data-live-countdown aria-label="Game countdown"></output><div class="leaderboard-card">'+boardMarkup()+'</div>';document.body.append(dialog);
  const dialogBoard=dialog.querySelector('.leaderboard-card');
+ const signInRoot=document.createElement('section');signInRoot.className='leaderboard-identity leaderboard-sign-in';dialogBoard.insertBefore(signInRoot,dialogBoard.querySelector('table'));
+ const signIn=createLeaderboardSignIn(signInRoot);
  let run=null,revision=0,currentEntry=null,currentRank=null,busy=false,lastFocus=null;
  function celebrate(rank,name=null){
   currentRank=rank;celebration.hidden=!rank;if(!rank)return;
@@ -49,7 +52,7 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
  dialog.querySelector('button').onclick=close;
  dialog.addEventListener('close',()=>{onClose();if(lastFocus?.isConnected)lastFocus.focus({preventScroll:true});});
  button.onclick=async()=>{
-  if(dialog.open||!canOpen())return;lastFocus=document.activeElement;dialog.showModal();onOpen();update();dialog.querySelector('button').focus({preventScroll:true});
+  if(dialog.open||!canOpen())return;lastFocus=document.activeElement;signIn.sync();dialog.showModal();onOpen();update();dialog.querySelector('button').focus({preventScroll:true});
   try{draw(await repository.list());}catch{dialogBoard.querySelector('[data-empty]').textContent='The top 10 could not load. Try opening it again.';}
  };
  input.addEventListener('input',()=>{error.textContent='';input.removeAttribute('aria-invalid');});
@@ -71,10 +74,10 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
    feedback.textContent=result.improved?`Your escape is #${result.rank}. ${repository.savedMessage}`:`Your best escape is already #${result.rank}.`;
    onRank({...completedRun,name:result.entry.name,rank:result.entry.id===completedRun.id?result.rank:null});
   }catch{if(ticket===revision)feedback.textContent=error.textContent='Your name could not be saved. Please try again.';}
-  finally{if(ticket===revision){busy=false;submit.disabled=input.disabled=connectName.disabled=consent.disabled=false;confirmName.disabled=!consent.checked;}}
+  finally{if(ticket===revision){busy=false;submit.disabled=input.disabled=consent.disabled=false;connectName.disabled=!repository.supportsLinkedIn;confirmName.disabled=!consent.checked;}}
  }
  async function showResult(value){
-  const ticket=++revision;run=value;busy=false;clearConsent();identityChoice.hidden=true;connectName.disabled=consent.disabled=false;currentEntry=null;currentRank=null;celebration.hidden=true;form.hidden=true;input.disabled=submit.disabled=false;input.value='';error.textContent=feedback.textContent='';input.removeAttribute('aria-invalid');
+  const ticket=++revision;run=value;busy=false;clearConsent();identityChoice.hidden=true;consent.disabled=false;currentEntry=null;currentRank=null;celebration.hidden=true;form.hidden=true;input.disabled=submit.disabled=false;input.value='';error.textContent=feedback.textContent='';input.removeAttribute('aria-invalid');
   try{
    const entries=await repository.list();if(ticket!==revision)return;draw(entries);
    if(!run.eligible){feedback.textContent=run.reason==='diagnostic'?'Diagnostic runs aren’t ranked.':'Top 10 escapes bring both Figpals out alive.';return;}
@@ -83,7 +86,7 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
    celebrate(rank);form.hidden=false;identityChoice.hidden=false;
   }catch{if(ticket===revision)feedback.textContent='The top 10 could not load.';}
  }
- function reset(){revision++;clearConsent();identityChoice.hidden=true;connectName.disabled=consent.disabled=false;run=currentEntry=null;currentRank=null;busy=false;celebration.hidden=form.hidden=true;feedback.textContent=error.textContent='';input.disabled=submit.disabled=false;close();}
+ function reset(){revision++;clearConsent();identityChoice.hidden=true;consent.disabled=false;run=currentEntry=null;currentRank=null;busy=false;celebration.hidden=form.hidden=true;feedback.textContent=error.textContent='';input.disabled=submit.disabled=false;close();}
  window.addEventListener('storage',async event=>{
   if(event.key!==null&&event.key!==LEADERBOARD_STORAGE_KEY||!dialog.open&&!run)return;const ticket=revision;
   try{const entries=await repository.list();if(ticket!==revision)return;draw(entries);if(currentEntry){const index=entries.findIndex(entry=>entry.id===currentEntry.id);celebrate(index<0?null:index+1,currentEntry.name);}}catch{}

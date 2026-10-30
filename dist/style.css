@@ -19,6 +19,8 @@ html,body{width:100%;height:100%;margin:0;overflow:hidden;background:#161d18}
 .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
 @media(pointer:coarse){#top10-button,#about-button{height:34px}}
 
+.leaderboard-sign-in p{margin:0;color:var(--ui-muted,#9baa94);font-size:12px;line-height:1.5}
+
 /* The laptop is a compact design editor; puzzle coordinates remain 800 × 510. */
 #laptop-program{--editor-blue:#0d66d0;position:fixed;left:0;top:0;width:800px;height:510px;box-sizing:border-box;transform-origin:0 0;z-index:6;overflow:hidden;backface-visibility:hidden;color:#242424;background:#eaeaea;font:14px/1.4 Arial,sans-serif;touch-action:none;user-select:none}
 #laptop-program[hidden],#laptop-program [hidden]{display:none}
@@ -200,7 +202,7 @@ body:has(#loading-status:not([hidden])) #mission-hud,body.game-over #mission-hud
 .escaped-results{display:grid;grid-template-columns:minmax(250px,1fr) minmax(330px,1.1fr);gap:32px;align-items:start}
 #escaped h1{font:500 clamp(48px,10vw,80px)/1.1 'Grenze Gotisch',Georgia,serif;margin:0 0 12px;color:#bfd6aa}
 #victory-share{width:min(100%,440px);margin:0 auto}
-.victory-graphic{width:min(100%,calc(100dvh - 245px))}
+.victory-words{margin:0 0 14px;color:var(--ui-text,#d4dcc9);font:500 15px/1.4 var(--ui-font,Arial,sans-serif);font-variant-numeric:tabular-nums}.victory-graphic{width:min(100%,calc(100dvh - 280px))}
 #escaped .game-over-attempt,#escaped .game-over-share-status{color:#9cae91}
 #escaped .game-over-share-actions button{background:#121b13;color:#d4dcc9;border-color:#56694b}
 #escaped .game-over-share-actions button:hover:not(:disabled),#escaped .game-over-share-actions button:focus-visible{border-color:#bfd6aa;outline-color:#bfd6aa55}

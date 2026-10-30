@@ -637,7 +637,7 @@ function escapeRoom(){
  if(gameEnded||gameWon)return;
  if(rescueChairs.state.towPhase!=='at-door'||!chairSeat.seated||!rescueChairs.state.safe){exitDoor.unlock(state.time);inventoryUI.notify('Door unlocked.');return;}
  laptopProgram.cancel();
- const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs});
+ const result=captureRankedEscape({attempt:attempts.count,intervalSeconds:countdown.update(),scheduledDrops:figpalRounds.scheduledDrops,rescue:rescueChairs.state,pmIndex:escapePuzzle.pmIndex,rigs:figpalHoists.rigs,wordsCompleted:laptopProgram.passedCount});
  analytics.finish('won');equippedModel.group.visible=false;gameWon=true;countdownHUD.hide();fireWarning.hidden=true;leaveChairButton.hidden=true;
  countdownStartTime=null;fireAlarm.silence();releaseControls();documentViewer.hide();closeMobileInspection(true);chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;canvas.inert=true;
  arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;

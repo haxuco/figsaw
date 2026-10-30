@@ -98,3 +98,15 @@ test('stored ordering never mutates source records and malformed scores are disc
  const ranked=rankedEntries(values);assert.deepEqual(ranked.map(e=>e.id),['b','a']);assert.deepEqual(values.map(e=>e.id),['a','b','c']);
  ranked[0].name='Edited';assert.equal(values[1].name,'Kai');
 });
+
+test('kerning completion is vanity only and cannot change qualification or time ranking',async()=>{
+ for(const wordsCompleted of [0,1,2,3]){
+  const result=captureRankedEscape({...fixture(),wordsCompleted});
+  assert.equal(result.wordsCompleted,wordsCompleted);assert.equal(result.eligible,true);assert.equal(result.reason,'qualified');assert.equal(result.remainingSeconds,940);
+  assert.equal(captureRankedEscape({...fixture(),wordsCompleted,rescue:{safe:false,chairs:[]}}).eligible,false);
+ }
+ const repo=createLocalLeaderboard({storage:storage(),now:()=>1});
+ await repo.submit({run:captureRankedEscape({...fixture(),id:'fast',intervalSeconds:500,wordsCompleted:0}),name:'Alex'});
+ await repo.submit({run:captureRankedEscape({...fixture(),id:'slow',intervalSeconds:300,wordsCompleted:3}),name:'Robin'});
+ assert.deepEqual((await repo.list()).map(entry=>entry.id),['fast','slow']);
+});

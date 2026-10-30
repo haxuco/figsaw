@@ -14,8 +14,9 @@ export const createEscapeRunId=()=>globalThis.crypto?.randomUUID?.()??`escape-${
 
 // Take eligibility from the actual rescued identities and living models, not
 // just the count printed on the share card. The randomized PM is the exception.
-export function captureRankedEscape({attempt,intervalSeconds,scheduledDrops=0,rescue,pmIndex,rigs,assisted=false,id=createEscapeRunId()}){
- const result=captureVictoryResult({attempt,remainingSeconds:remainingEscapeTime(intervalSeconds,scheduledDrops),rescue});
+export function captureRankedEscape({attempt,intervalSeconds,scheduledDrops=0,rescue,pmIndex,rigs,wordsCompleted=0,assisted=false,id=createEscapeRunId()}){
+ // Words are a keepsake statistic; eligibility and ordering depend only on rescue and time.
+ const result=captureVictoryResult({attempt,remainingSeconds:remainingEscapeTime(intervalSeconds,scheduledDrops),rescue,wordsCompleted});
  const survivors=[0,1,2].filter(i=>i!==pmIndex),passengers=new Set(rescue?.chairs?.filter(c=>c.landed).map(c=>c.passenger));
  const intact=Number.isInteger(pmIndex)&&pmIndex>=0&&pmIndex<3&&rescue?.safe&&survivors.every(i=>passengers.has(i)&&rigs?.[i]?.transformation?.transformed===false&&rigs[i].transformation.damaged!==true)&&!passengers.has(pmIndex)&&result.figpalsSaved===2;
  const timed=Number.isFinite(intervalSeconds)&&intervalSeconds>=0&&Number.isInteger(scheduledDrops)&&scheduledDrops>=0&&scheduledDrops<2;
