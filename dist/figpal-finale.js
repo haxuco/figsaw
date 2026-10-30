@@ -99,10 +99,11 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true,canHint=can
   wrapper.dataset.figpal=String(index+1);
   const text=document.createElement('span');text.className='figpal-speech-text';text.textContent=FIGPAL_PLEAS[index%FIGPAL_PLEAS.length];
   const tail=document.createElementNS('http://www.w3.org/2000/svg','svg');tail.classList.add('figpal-speech-tail');tail.setAttribute('aria-hidden','true');
-  const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M 0 0 L 12 0 L 6 15 Z');tail.append(path);
+  const path=document.createElementNS('http://www.w3.org/2000/svg','path');path.setAttribute('d','M 0 0 L 9 15 L 18 0');tail.append(path);
   wrapper.append(text,tail);container.append(wrapper);return wrapper;
  });
  const point=new THREE.Vector3(),startedAt=bubbles.map(()=>null),durations=bubbles.map(()=>15),lines=bubbles.map(()=>null);
+ const sizes=bubbles.map(()=>({width:0,height:0,line:null,viewport:0}));
  let hint=null;
  function setHint(index,line){if(canHint(index))hint={index,line};}
  function clearHint(){hint=null;}
@@ -139,7 +140,13 @@ export function createFigpalBubbles(anchors,canvas,canSpeak=()=>true,canHint=can
    if(point.z<-1||point.z>1||Math.abs(point.x)>1.04||Math.abs(point.y)>1.1){bubble.hidden=true;continue;}
    bubble.hidden=false;
    const anchorX=rect.left+(point.x*.5+.5)*rect.width,anchorY=rect.top+(-point.y*.5+.5)*rect.height;
-   bubble.style.transform=`translate3d(${anchorX}px,${anchorY-14}px,0) translate(-50%,-100%)`;
+   // Measure only when text or viewport changes, not on every animation frame.
+   const size=sizes[i];
+   if(size.line!==line||size.viewport!==rect.width){size.width=bubble.offsetWidth;size.height=bubble.offsetHeight;size.line=line;size.viewport=rect.width;}
+   const x=THREE.MathUtils.clamp(anchorX,rect.left+size.width/2+8,rect.right-size.width/2-8);
+   const y=THREE.MathUtils.clamp(anchorY-14,rect.top+size.height+8,rect.bottom-24);
+   bubble.lastElementChild.style.left=`${THREE.MathUtils.clamp(anchorX-x+size.width/2,18,size.width-18)}px`;
+   bubble.style.transform=`translate3d(${x}px,${y}px,0) translate(-50%,-100%)`;
    visible++;
   }
   container.hidden=visible===0;
