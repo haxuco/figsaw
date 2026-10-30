@@ -34,7 +34,7 @@ export function createLeaderboardUI({repository,root,button,canOpen=()=>true,onO
  identityChoice.querySelector('[data-use-nickname]').onclick=()=>{if(busy)return;clearConsent();form.hidden=false;input.focus();};
  identityChoice.querySelector('[data-private]').onclick=()=>{if(busy)return;clearConsent();identityChoice.hidden=form.hidden=true;feedback.textContent='Your name and score have not been published.';};
  confirmName.onclick=()=>{if(consent.checked&&approvedName)saveName(approvedName,'linkedin');};
- const dialog=document.createElement('dialog');dialog.id='leaderboard-dialog';dialog.setAttribute('aria-label','Top 10 escapes');dialog.innerHTML='<button type="button" class="leaderboard-close" aria-label="Back to room">‹ BACK</button><output class="leaderboard-view-timer" data-live-countdown aria-label="Game countdown"></output><div class="leaderboard-card">'+boardMarkup()+'</div>';document.body.append(dialog);
+ const dialog=document.createElement('dialog');dialog.id='leaderboard-dialog';dialog.setAttribute('aria-label','Top 10 escapes');dialog.innerHTML='<button type="button" class="leaderboard-close" aria-label="Back to room">← Back</button><output class="leaderboard-view-timer" data-live-countdown aria-label="Game countdown"></output><div class="leaderboard-card">'+boardMarkup()+'</div>';document.body.append(dialog);
  const dialogBoard=dialog.querySelector('.leaderboard-card');
  let run=null,revision=0,currentEntry=null,currentRank=null,busy=false,lastFocus=null;
  function celebrate(rank,name=null){

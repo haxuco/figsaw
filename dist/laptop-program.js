@@ -1,5 +1,6 @@
 import * as THREE from './vendor/three.module.js';
 import {createLaptopChallenge,KERNING_WORDS} from './laptop-challenge.js';
+import {drawFigmaMark} from './figma-mark.js';
 
 const WIDTH=800,HEIGHT=510;
 export function measureKerningLayouts(context){
@@ -25,23 +26,31 @@ function completedRow(layout){
  return {...layout,font:layout.font.replace(/(\d*\.?\d+)px/,`${layout.fontSize*scale}px`),positions:layout.positions.map(x=>(WIDTH-width)/2+(x-first)*scale)};
 }
 function paintProgram(canvas,challenge){
- const view=challenge.view;
- const c=canvas.getContext('2d');
- c.fillStyle='#252b30';c.fillRect(0,0,WIDTH,HEIGHT);c.fillStyle='#1c2226';c.fillRect(0,0,WIDTH,44);
- c.textBaseline='alphabetic';c.fillStyle='#a9b4b7';c.font='16px Arial';c.fillText('kerning.fig',26,28);
+ const view=challenge.view,c=canvas.getContext('2d');
+ c.textAlign='left';c.textBaseline='alphabetic';c.fillStyle='#eaeaea';c.fillRect(0,0,WIDTH,HEIGHT);c.fillStyle='#fff';c.fillRect(0,0,WIDTH,54);
+ if(typeof Path2D!=='undefined')drawFigmaMark(c,22,14,17);
+ c.fillStyle='#242424';c.font='600 15px Arial';c.fillText('kerning.fig',54,25);c.fillStyle='#737373';c.font='11px Arial';c.fillText('Design challenge',54,42);
  if(challenge.completed){
-  c.textAlign='center';c.fillStyle='#c9d4c9';c.font='bold 14px Arial';c.fillText('03 / 03 ACCEPTED',400,82);
-  c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText('Spacing approved.',400,126);c.textAlign='left';
-  challenge.completedWords.forEach((layout,index)=>{const row=completedRow(layout);c.font=row.font;c.fillStyle='#f1f1e9';[...row.word].forEach((letter,i)=>c.fillText(letter,row.positions[i],202+index*76));});
-  c.fillStyle='#c1d0b3';c.fillRect(268,378,264,56);c.fillStyle='#202b23';c.font='bold 20px Arial';c.textAlign='center';c.fillText('Return to room',400,412);c.textAlign='left';return;
+  c.fillStyle='#f5f5f5';c.fillRect(0,54,WIDTH,HEIGHT-54);c.textAlign='center';c.fillStyle='#606060';c.font='600 11px Arial';c.fillText('03 / 03 COMPLETE',400,92);
+  c.fillStyle='#242424';c.font='600 30px Arial';c.fillText('Kerning approved',400,129);c.fillStyle='#666';c.font='14px Arial';c.fillText('Your finished work',400,154);c.textAlign='left';
+  c.fillStyle='#fff';c.fillRect(48,170,704,214);
+  challenge.completedWords.forEach((layout,index)=>{const row=completedRow(layout);c.font=row.font;c.fillStyle='#242424';[...row.word].forEach((letter,i)=>c.fillText(letter,row.positions[i],231+index*68));});
+  c.fillStyle='#0d66d0';c.fillRect(295,402,210,50);c.fillStyle='#fff';c.font='600 15px Arial';c.textAlign='center';c.fillText('Return to room',400,432);c.textAlign='left';return;
  }
- c.fillStyle='#c9d4c9';c.font='bold 14px Arial';c.fillText(`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`,48,86);
- c.fillStyle='#eef0e9';c.font='34px Georgia';c.fillText(challenge.completed?'Spacing approved.':'Fix the kerning.',48,132);
- c.fillStyle='#a1adb0';c.font='19px Arial';c.fillText('Drag the inner letters. First and last stay fixed.',48,163);
- c.strokeStyle='#ffffff16';c.beginPath();c.moveTo(48,331);c.lineTo(752,331);c.stroke();
- c.font=view.font;[...view.word].forEach((letter,i)=>{c.fillStyle=i===0||i===view.word.length-1?'#7d9296':'#f1f1e9';c.fillText(letter,view.positions[i],318);});
- c.fillStyle='#96a6aa';c.font='15px Arial';c.fillText(view.label,48,376);
- c.fillStyle='#d7dfce';c.font='19px Arial';c.fillText(challenge.completed?'3 words accepted. Return to the room.':'90 points to pass each word. Click to play.',48,463);
+ c.fillStyle='#fff';c.fillRect(16,68,166,135);c.fillRect(618,68,166,135);
+ c.fillStyle='#333';c.font='600 12px Arial';c.fillText('Pages',28,90);c.fillText('Design',630,90);
+ for(let i=0;i<3;i++){
+  if(i===challenge.round){c.fillStyle='#e5f0ff';c.fillRect(21,104+i*28,156,28);}
+  c.fillStyle=i===challenge.round?'#075dc1':'#727272';c.font='12px Arial';c.fillText(`${String(i+1).padStart(2,'0')}    Word ${i+1}${challenge.passed[i]?'  ✓':''}`,29,122+i*28);
+ }
+ c.fillStyle='#606060';c.font='12px Arial';c.fillText(view.label,630,117);c.fillText(`Size   ${view.fontSize} px`,630,146);c.fillText('Text layer',630,175);
+ c.textAlign='center';c.fillStyle='#606060';c.font='600 11px Arial';c.fillText(`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`,400,91);
+ c.fillStyle='#242424';c.font='600 27px Arial';c.fillText('Fix the kerning',400,124);c.fillStyle='#666';c.font='14px Arial';c.fillText('Drag the inner letters',400,151);c.fillText('First and last stay fixed',400,171);c.textAlign='left';
+ c.font='11px Arial';c.fillText(`Typography / ${view.word}`,32,209);c.fillStyle='#fff';c.fillRect(32,219,736,141);
+ c.font=view.font;[...view.word].forEach((letter,i)=>{c.fillStyle=i===0||i===view.word.length-1?'#777':'#242424';c.fillText(letter,view.positions[i],318);});
+ c.fillStyle='#606060';c.font='11px Arial';c.fillText('90 points to pass',32,386);c.fillText('Tab to select · ← → to nudge · Shift for 10px',496,386);
+ c.fillStyle='#fff';c.fillRect(24,414,752,80);c.fillStyle='#333';c.font='24px Arial';c.fillText('T    ←    →',44,463);
+ c.fillStyle='#0d66d0';c.fillRect(610,426,154,56);c.fillStyle='#fff';c.font='600 15px Arial';c.fillText('Check kerning',633,460);
 }
 export function createLaptopProgramTexture(){
  const canvas=document.createElement('canvas');canvas.width=WIDTH;canvas.height=HEIGHT;
@@ -67,11 +76,16 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
  const wordArea=root.querySelector('[data-word]'),roundLabel=root.querySelector('[data-round]'),typeLabel=root.querySelector('[data-typeface]'),progress=[...root.querySelectorAll('[data-progress]')];
  const returnButton=root.querySelector('[data-return]'),power=root.querySelector('[data-power]'),nudgeButtons=[...root.querySelectorAll('[data-nudge]')];
  const completedWords=root.querySelector('[data-completed-words]');
+ const positionInput=root.querySelector('[data-position]'),selectionLabel=root.querySelector('[data-selection]'),fontSizeLabel=root.querySelector('[data-font-size]'),artboardName=root.querySelector('[data-artboard-name]');
  const center=new THREE.Vector3(),normal=new THREE.Vector3(),up=new THREE.Vector3(),rotation=new THREE.Quaternion(),startRotation=new THREE.Quaternion(),targetRotation=new THREE.Quaternion(),startPosition=new THREE.Vector3(),destination=new THREE.Vector3(),lookMatrix=new THREE.Matrix4();
  const corners=[[-.823/2,.525/2],[.823/2,.525/2],[.823/2,-.525/2],[-.823/2,-.525/2]].map(([x,y])=>new THREE.Vector3(x,y,0));
  let phase='closed',elapsed=0,startFov=62,selected=1,drawnRound=-1,letters=[],drag=null;
  function paint(){paintProgram(screenMap.image,challenge);screenMap.needsUpdate=true;}
- function selection(){letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&!challenge.accepted));}
+ function selection(){
+  letters.forEach((letter,i)=>letter.classList.toggle('selected',i===selected&&!challenge.accepted));
+  if(selectionLabel)selectionLabel.textContent=`T ${challenge.view.word[selected]}`;
+  if(positionInput){positionInput.value=String(Math.round(challenge.view.positions[selected]*10)/10);positionInput.disabled=challenge.accepted;}
+ }
  function sync({texture=true}={}){
   const view=challenge.view,accepted=challenge.accepted;
   if(drawnRound!==challenge.round){
@@ -85,7 +99,8 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   }
   letters.forEach((letter,i)=>{letter.style.left=`${view.positions[i]}px`;if(letter.tagName==='BUTTON')letter.disabled=accepted;});selection();
   roundLabel.textContent=`WORD ${String(challenge.round+1).padStart(2,'0')} / 03`;typeLabel.textContent=view.label;
-  progress.forEach((node,i)=>node.classList.toggle('passed',challenge.passed[i]));
+  if(fontSizeLabel)fontSizeLabel.textContent=view.fontSize;if(artboardName)artboardName.textContent=view.word;
+  progress.forEach((node,i)=>{node.classList.toggle('passed',challenge.passed[i]);node.classList.toggle('current',i===challenge.round);node.setAttribute('aria-label',`Word ${i+1}: ${challenge.passed[i]?'complete':i===challenge.round?'in progress':'locked'}`);});
   play.hidden=challenge.completed;result.hidden=!challenge.completed;check.hidden=challenge.completed;
   completedWords.replaceChildren();
   if(!result.hidden)challenge.completedWords.forEach(layout=>{
@@ -94,7 +109,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
    [...row.word].forEach((letter,i)=>{const glyph=document.createElementNS('http://www.w3.org/2000/svg','text');glyph.setAttribute('x',row.positions[i]);glyph.setAttribute('y',64);glyph.setAttribute('aria-hidden','true');glyph.style.font=row.font;glyph.textContent=letter;svg.append(glyph);});completedWords.append(svg);
   });
   nudgeButtons.forEach(button=>button.disabled=accepted);status.textContent=challenge.message;status.classList.toggle('accepted',accepted);
-  check.textContent=challenge.accepted?'Next word →':'Submit spacing';
+  check.textContent=challenge.accepted?'Next word →':'Check kerning';
   if(texture)paint();
  }
  function endDrag(){if(drag&&wordArea.hasPointerCapture?.(drag.id))wordArea.releasePointerCapture(drag.id);drag=null;}
@@ -119,8 +134,12 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   challenge.check();sync();if(challenge.completed)returnButton.focus({preventScroll:true});else if(challenge.accepted)check.focus({preventScroll:true});
  }
  check.onclick=submit;
- root.addEventListener('keydown',event=>{
+ if(positionInput)positionInput.addEventListener('change',()=>{
   if(phase!=='playing')return;
+  const value=positionInput.value.trim();if(value!=='')challenge.move(selected,Number(value));sync({texture:false});
+ });
+ root.addEventListener('keydown',event=>{
+  if(phase!=='playing'||event.target===positionInput)return;
   if(event.key==='ArrowLeft'||event.key==='ArrowRight'){event.preventDefault();event.stopPropagation();nudge((event.key==='ArrowLeft'?-1:1)*(event.shiftKey?10:1));}
   else if(event.key==='Enter'&&event.target!==returnButton){event.preventDefault();event.stopPropagation();submit();}
  });
@@ -152,6 +171,7 @@ export function createLaptopProgram({camera,canvas,laptop,onLock=()=>{},onReturn
   camera.updateProjectionMatrix();camera.updateMatrixWorld(true);
   if(phase!=='playing'){root.hidden=true;return;}
   const rect=canvas.getBoundingClientRect(),points=corners.map(corner=>{const point=laptop.screen.localToWorld(corner.clone()).project(camera);return{x:rect.left+(point.x+1)*rect.width/2,y:rect.top+(1-point.y)*rect.height/2};});
+  root.classList.toggle('compact',Math.abs(points[1].x-points[0].x)<620);
   const matrix=screenHomography(points,WIDTH,HEIGHT);root.hidden=!matrix||!matrix.every(Number.isFinite);
   if(!root.hidden)root.style.transform=`matrix3d(${matrix.join(',')})`;
  }

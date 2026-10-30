@@ -17,7 +17,7 @@ export function createInventoryUI({inventory,previews,onEquip,onPutAway,onOpen=(
  const tools=document.createElement('div');tools.id='inventory-tools';document.body.append(tools);
  const button=document.createElement('button');button.id='inventory-button';button.type='button';button.textContent='Inventory';button.setAttribute('aria-haspopup','dialog');tools.append(button);
  const panel=document.createElement('section');panel.id='inventory-panel';panel.hidden=true;panel.setAttribute('role','dialog');panel.setAttribute('aria-modal','true');panel.setAttribute('aria-label','Inventory');
- panel.innerHTML='<header><button type="button" data-back>← Back</button><h2>Inventory</h2></header><div class="inventory-grid"></div><p data-empty>You haven’t collected anything yet.</p>';document.body.append(panel);
+ panel.innerHTML='<header><button type="button" data-back>← Back</button><h2>Inventory</h2><p class="inventory-caption">Select an item to equip it</p></header><div class="inventory-grid"></div><p data-empty>You haven’t collected anything yet.</p>';document.body.append(panel);
  const equipped=document.createElement('div');equipped.id='equipped-item';equipped.hidden=true;equipped.innerHTML='<span></span><button type="button">Put away</button>';tools.append(equipped);
  const pickupNotice=document.createElement('p');pickupNotice.id='inventory-pickup-notice';pickupNotice.hidden=true;pickupNotice.setAttribute('role','status');pickupNotice.setAttribute('aria-live','polite');pickupNotice.setAttribute('aria-atomic','true');document.body.append(pickupNotice);
  let last=-1,active=false,lastFocus=null,lastPickup=null,pickupTimeout=null;

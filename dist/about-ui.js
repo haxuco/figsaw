@@ -1,6 +1,6 @@
 export function createAboutUI({button,canOpen=()=>true,onOpen=()=>{},onClose=()=>{}}){
  const dialog=document.createElement('dialog');dialog.id='about-dialog';dialog.setAttribute('aria-labelledby','about-title');
- dialog.innerHTML=`<button type="button" class="leaderboard-close" aria-label="Back to game">‹ BACK</button>
+ dialog.innerHTML=`<button type="button" class="leaderboard-close" aria-label="Back to game">← Back</button>
   <h2 id="about-title">About Figsaw</h2>
   <dl class="about-credits">
    <div><dt>Made by</dt><dd><a href="https://www.linkedin.com/in/haxuco/" target="_blank" rel="noopener noreferrer">Hang Xu</a></dd></div>
