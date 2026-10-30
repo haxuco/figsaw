@@ -529,6 +529,12 @@ const chainMenu=createRestraintMenu(()=>{
 const sawMenu=createSawMenu({onShackle:sawShackle,onAnimal:chooseStuffedAnimal,canSawShackle:()=>restraint.locked&&!ketchupKey.hasKey,canSawAnimal:()=>!restraint.locked&&stuffedAnimals.some(animal=>plushCut.canCut(animal.object))});
 const figpalRounds=createFigpalRounds(figpalHoists,countdown,escapePuzzle);
 const figpalCamera=createFigpalCamera({position:cameraPosition,state,getView:figpalHoists.getFocusView,baseFov:homeCamera.fov});
+const deadlineTarget=new THREE.Vector3();
+const deadlineCamera=createFigpalCamera({position:cameraPosition,state,baseFov:homeCamera.fov,focusFov:64,getView(_index,eye,target){
+ eye.copy(cameraPosition);target.set(0,0,0);
+ for(const rig of figpalHoists.rigs){rig.vat.getWorldPosition(deadlineTarget);target.add(deadlineTarget);}
+ target.multiplyScalar(1/figpalHoists.rigs.length);target.y=1.35;
+}});
 const figpalBubbles=createFigpalBubbles(figpalHoists.speechAnchors,canvas,figpalHoists.canSpeak,figpalHoists.canHint);
 const loweringDialogue=createFigpalLoweringDialogue(figpalHoists,figpalBubbles,figpalHoists.safeDescent);
 const hangingPleas=createHangingPleas(figpalHoists,figpalBubbles);
@@ -933,8 +939,11 @@ function updateFigpalRound(time){
  }else if(event?.type==='restart'){
   countdownAnnouncement.textContent=event.remaining===1?'The final ten-minute countdown has started.':'The timer resets to ten minutes.';
  }else if(event?.type==='ending'){
-  releaseControls();chainMenu.hide();loweringDialogue.reset();arrivalDialogue.hidden=true;
-  countdownAnnouncement.textContent='The second deadline has passed. Your time is up.';
+  leaderboardUI.close();inventoryUI.close();laptopProgram.cancel();releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();
+  arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();resetting=false;
+  deadlineCamera.start(0,time);puzzleHints.reset();loweringDialogue.reset();arrivalDialogue.hidden=true;equippedModel.group.visible=false;
+  countdownAnnouncement.textContent='Time is up. Acid is being released throughout the room.';
+  restraintStatus.textContent='Time is up. Acid is raining down on everyone.';
  }else if(event?.type==='gameover')figpalRoundFinished=true;
  const seconds=countdown.update();
  if(seconds!==lastCountdownSeconds){countdownReadout.textContent=formatCountdown(seconds);lastCountdownSeconds=seconds;}
@@ -942,7 +951,7 @@ function updateFigpalRound(time){
 
 function endGame(cause='objective'){
  if(gameEnded)return;analytics.finish('lost',cause);leaderboardUI.close();laptopProgram.cancel();gameEnded=true;puzzleHints.reset();countdownHUD.hide();fireWarning.hidden=true;inventoryUI.setHidden(true);leaveChairButton.hidden=true;fireAlarm.silence();
- drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();
+ drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();figpalCamera.cancel();deadlineCamera.cancel();
  deathTransition.start(state.time,reducedMotion);
  releaseControls();chainMenu.hide();sawMenu.hide();clearSawSelection();putAxeBack();documentViewer.hide();closeMobileInspection(true);doorKeypadUI.hide();arrivalDialogue.hidden=true;loweringDialogue.reset();
  document.body.classList.add('game-over');canvas.inert=true;
@@ -980,7 +989,7 @@ function resetView({skipIntro=false}={}){
  document.body.classList.remove('game-over','death-active');canvas.inert=false;
  laptopOpening.cancel();arrivalCameraMove.cancel();drawerCamera.cancel();acidCamera.cancel();alarmCamera.cancel();restraint.reset();laptop.close();chainMenu.hide();
  restraintStatus.textContent='';canvas.setAttribute('aria-label',initialCanvasDescription);
- figpalRounds.reset();figpalCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();puzzleHints.reset();releaseControls();
+ figpalRounds.reset();figpalCamera.cancel();deadlineCamera.cancel();figpalRoundFinished=false;loweringDialogue.reset();hangingPleas.reset(state.time);figpalHints.reset();puzzleHints.reset();releaseControls();
  resetting=!skipIntro;departure.reset();cornerReaction.reset();canvas.classList.remove('over-figsaw');
  entranceStartedAt=state.time-(skipIntro?entranceDelay+entranceDuration:0);
  entranceArrived=skipIntro;entranceArrivedAt=state.time;
@@ -1182,7 +1191,7 @@ function render(){
   if(doorKeypadUI.unlocked){escapeRoom();if(gameWon){scheduleFrame();return;}}
  }
  if(laptopOpening.update(t,reducedMotion))finishOpeningLaptop(true);
- updateFigpalRound(t);figpalCamera.update(t,reducedMotion);mobileCamera.update(t,reducedMotion);documentViewer.update(t,reducedMotion);
+ updateFigpalRound(t);figpalCamera.update(t,reducedMotion);deadlineCamera.update(t,reducedMotion);mobileCamera.update(t,reducedMotion);documentViewer.update(t,reducedMotion);
  const hazardFrame=hazardClock.update(t,figpalRounds.active);
  const viewYaw=state.yaw;
  // Manual controls rotate the view only; scripted interactions own camera position.
@@ -1204,6 +1213,7 @@ function render(){
  const physicalPosition=chairSeat.occupied?chairSeat.hazardPosition:documentViewer.origin;
  const acidFinished=!hazardFrame.paused&&!fireAlarm.dying&&acidLeaks.update(hazardFrame.time,hazardFrame.dt,physicalPosition,camera,reducedMotion,{protectedFromAcid:chairSeat.protectedFromAcid});
  const fireFinished=!hazardFrame.paused&&fireHazard.update(hazardFrame.time,hazardFrame.dt,physicalPosition,camera,reducedMotion,fireAlarm.dying);
+ if(figpalRounds.ending)fireHazard.updateDeadlineAcid(figpalRounds.endingElapsed(t),reducedMotion);
  const fireMessage=fireHazard.takeMessage();
  if(fireMessage&&fireHazard.phase==='extinguished')inventoryUI.notify('The fire is out. The acid is still dangerous.');
  const fireWarningOpacity=fireHazard.warningOpacity(hazardFrame.time,reducedMotion);fireWarning.hidden=fireWarningOpacity<=0;fireWarning.style.opacity=String(fireWarningOpacity);

@@ -70,3 +70,19 @@ test('the fire alarm extinguishes flames and stops spraying while floor acid sta
   leaks.reset();fire.reset();assert.equal(leaks.neutralized,false);assert.equal(pool.material.color.getHex(),0x637c23);assert.equal(fire.group.getObjectByName('Standing sprinkler water across the office floor').visible,false);
  }finally{globalThis.document=previous;}
 });
+
+
+test('deadline acid reuses every ceiling head and reaches seated height even after water was shut off',()=>{
+ const fire=createOfficeFire({chargingKit:{energized:false},acidLeaks:{leaks:[]},floorSupport:()=>0,pipeMaterial:new THREE.MeshStandardMaterial()});
+ const drops=fire.group.getObjectByName('Sprinkler droplets falling from ceiling deflectors'),water=fire.group.getObjectByName('Standing sprinkler water across the office floor');
+ const geometry=drops.geometry,originalColor=drops.material.color.getHex();
+ fire.releaseSprinklers(100);fire.update(101,.1,{x:0,z:0},new THREE.PerspectiveCamera());fire.update(111,.1,{x:0,z:0},new THREE.PerspectiveCamera());assert.equal(drops.visible,false);
+ fire.updateDeadlineAcid(0);fire.updateDeadlineAcid(3.5);
+ assert.equal(drops.visible,true);assert.equal(drops.geometry,geometry,'reuse the mobile-bounded particle geometry');
+ assert.notEqual(drops.material.color.getHex(),originalColor);assert.equal(water.material.color.getHex(),0x718d20);assert.ok(water.material.opacity>.8);assert.ok(water.position.y>.17);
+ const positions=drops.geometry.attributes.position;
+ assert.ok([...positions.array].every(Number.isFinite));
+ assert.ok([...positions.array].some((v,i)=>i%3===1&&v>2.5),'acid falls from above both chairs and hanging Figpals');
+ fire.updateDeadlineAcid(4,true);const still=[...positions.array];fire.updateDeadlineAcid(5,true);assert.deepEqual([...positions.array],still);
+ fire.reset();assert.equal(drops.visible,false);assert.equal(water.visible,false);assert.equal(water.position.y,0);assert.equal(drops.material.color.getHex(),originalColor);
+});

@@ -95,7 +95,11 @@ export function createOfficeFire({chargingKit,acidLeaks,floorSupport,pipeMateria
   }sparkGeometry.attributes.position.needsUpdate=true;}
   return finished;
  }
- return {group,update,flowTarget,setInvulnerable:state.setInvulnerable,ignite:state.ignite,
+ return {group,update,updateDeadlineAcid(elapsed,reducedMotion=false){
+  // The deadline uses the cinematic clock, not the paused fire/acid clock.
+  // Reuse the existing ceiling spray and floor mesh: no extra particle system.
+  sprinklers.setAcid(true);sprinklers.update(elapsed,Math.min(1,(elapsed+.05)/.4),reducedMotion);
+ },flowTarget,setInvulnerable:state.setInvulnerable,ignite:state.ignite,
   capture:state.capture,restore(value,time){state.restore(value,time);sprinklers.reset();lastPhase='';message='';flames.count=smoke.count=ash.count=0;sparks.visible=false;light.intensity=frontLight.intensity=0;power.value=0;},setEnvironment:sprinklers.setEnvironment,activateSprinklers:state.activateSprinklers,releaseSprinklers:state.releaseSprinklers,
   get origin(){return state.origin;},
   get phase(){return state.phase;},get dying(){return state.dying;},get sprinklersArmed(){return state.armed;},blackout:state.blackout,warningOpacity:state.warningOpacity,

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createCountdownClock} from '../dist/countdown-clock.js';
-import {createFigpalRounds} from '../dist/figpal-rounds.js';
+import {createFigpalRounds,DEADLINE_ACID_SECONDS} from '../dist/figpal-rounds.js';
 import {createFigpalCamera} from '../dist/figpal-camera.js';
 
 function fixture(puzzle){
@@ -22,14 +22,14 @@ test('seated survivors skip their scheduled descents, but the second full clock 
  assert.equal(f.rounds.scheduledDrops,1);assert.equal(f.clock.remainingSeconds,600);assert.equal(f.rounds.active,false);assert.equal(f.rounds.index,null);assert.deepEqual(f.calls,[],'do not lower a seated Figpal or substitute the PM');
  f.setNow(1199);assert.equal(f.rounds.update(1199),null);assert.equal(f.clock.remainingSeconds,1);
  f.setNow(1200);assert.deepEqual(f.rounds.update(1200),{type:'ending'});assert.equal(f.rounds.scheduledDrops,2);assert.deepEqual(f.calls,[]);
- assert.ok(f.rounds.blackout(1200.6)>.5);assert.deepEqual(f.rounds.update(1201.2),{type:'gameover'});assert.equal(f.rounds.update(1300),null);
+ assert.equal(f.rounds.blackout(1203.9),0);assert.equal(f.rounds.update(1203.9),null);assert.ok(f.rounds.blackout(1204.6)>.5);assert.deepEqual(f.rounds.update(1205.2),{type:'gameover'});assert.equal(f.rounds.update(1300),null);
 });
 
-test('skipping a seated Figpal leaves an unrescued scheduled Figpal and the randomized order unchanged',()=>{
+test('the second deadline releases acid instead of waiting for an unrescued Figpal to descend',()=>{
  const f=fixture({dropOrder:[1,2,0]});f.rescued.add(1);f.clock.start();
  f.setNow(600);assert.equal(f.rounds.update(600).type,'restart');
- f.setNow(1200);assert.deepEqual(f.rounds.update(1200),{type:'lower',index:2});assert.deepEqual(f.calls,[2]);
- f.submerge(2);f.rounds.update(1201);assert.deepEqual(f.rounds.update(1203),{type:'ending'});
+ f.hoists.movingIndex=2;f.setNow(1200);assert.deepEqual(f.rounds.update(1200),{type:'ending'});assert.deepEqual(f.calls,[]);
+ assert.equal(f.rounds.ending,true);assert.equal(f.rounds.scheduledDrops,2);assert.equal(f.rounds.index,null);
 });
 
 test('a seated second survivor is not lowered after a normal first deadline',()=>{
@@ -45,32 +45,25 @@ test('diagnostic invulnerability and checkpoint restore preserve expired clocks 
  assert.deepEqual(f.rounds.update(6201,false,false),{type:'ending'});
 });
 
-test('two complete ten-minute deadlines give twenty minutes before game over',()=>{
- const f=fixture();f.clock.start();
- for(let i=0;i<2;i++){
-  const start=i*620;assert.equal(f.clock.remainingSeconds,600);
-  f.setNow(start+300);assert.equal(f.rounds.update(start+300),null,'the old five-minute deadline no longer lowers a Figpal');
-  f.setNow(start+599);
-  assert.equal(f.rounds.update(start+599),null);assert.equal(f.clock.remainingSeconds,1);
-  f.setNow(start+600);
-  assert.deepEqual(f.rounds.update(start+600),{type:'lower',index:i});
-  assert.equal(f.rounds.active,true);assert.deepEqual(f.calls,Array.from({length:i+1},(_,j)=>j));
-  assert.equal(f.rounds.update(start+605),null,'zero must not trigger another hoist');
-  f.dead.add(i);assert.equal(f.rounds.update(start+606),null,'wait for the full descent, not just transformation');
-  f.submerge(i);assert.equal(f.rounds.update(start+610),null);
-  const event=f.rounds.update(start+612);
-  if(i<1){
-   assert.deepEqual(event,{type:'return',index:i});assert.equal(f.clock.remainingSeconds,0);
-   assert.equal(f.rounds.update(start+612.5),null,'timer waits for camera return');
-   f.setNow(start+620);assert.deepEqual(f.rounds.update(start+620),{type:'restart',remaining:1-i});
-   assert.equal(f.clock.remainingSeconds,600);assert.equal(f.rounds.active,false);
-  }else{
-   assert.deepEqual(event,{type:'ending'});assert.equal(f.clock.remainingSeconds,0);
-   assert.ok(f.rounds.blackout(start+612.55)>.49);
-   assert.deepEqual(f.rounds.update(start+614),{type:'gameover'});
-   assert.equal(f.rounds.update(start+620),null);assert.equal(f.rounds.blackout(start+620),1);
-  }
+test('the first ten-minute clock lowers one Figpal and the second releases acid before game over',()=>{
+ const f=fixture({dropOrder:[2,0,1]});f.clock.start();
+ f.setNow(599);assert.equal(f.rounds.update(599),null);
+ f.setNow(600);assert.deepEqual(f.rounds.update(600),{type:'lower',index:2});
+ assert.equal(f.rounds.update(605),null);f.submerge(2);f.rounds.update(610);
+ assert.deepEqual(f.rounds.update(612),{type:'return',index:2});
+ f.setNow(620);assert.deepEqual(f.rounds.update(620),{type:'restart',remaining:1});assert.equal(f.clock.remainingSeconds,600);
+ f.setNow(1219);assert.equal(f.rounds.update(1219),null);
+ f.setNow(1220);assert.deepEqual(f.rounds.update(1220),{type:'ending'});
+ assert.deepEqual(f.calls,[2],'there is no second cinematic delay before the room-wide release');
+ assert.equal(f.clock.remainingSeconds,0);assert.equal(f.rounds.active,true);
+ for(const elapsed of [0,1,DEADLINE_ACID_SECONDS-.01]){
+  assert.equal(f.rounds.update(1220+elapsed),null);assert.equal(f.rounds.blackout(1220+elapsed),0);
+  assert.ok(Math.abs(f.rounds.endingElapsed(1220+elapsed)-elapsed)<1e-8);
  }
+ assert.ok(f.rounds.blackout(1220+DEADLINE_ACID_SECONDS+.55)>.49);
+ assert.deepEqual(f.rounds.update(1220+DEADLINE_ACID_SECONDS+1.2),{type:'gameover'});
+ assert.equal(f.rounds.update(1300),null);
+ f.rounds.reset();f.clock.reset();assert.equal(f.rounds.ending,false);assert.equal(f.rounds.endingElapsed(1400),0);assert.equal(f.rounds.blackout(1400),0);
 });
 
 test('a hidden-tab deadline still selects just one survivor and never catches up with multiple drops',()=>{
@@ -109,7 +102,7 @@ test('PM remains last and a safely lowered living captive still completes its sc
  const clock={get status(){return finished?'finished':'running';},reset(){finished=false;},start(){}};
  const rounds=createFigpalRounds(hoists,clock,{dropOrder:[2,0,1]});
  assert.deepEqual(rounds.update(300),{type:'lower',index:2});moving=null;rounds.update(305);assert.equal(rounds.update(307).type,'return');rounds.update(309);finished=true;
- assert.deepEqual(rounds.update(609),{type:'lower',index:0});moving=null;rounds.update(614);assert.equal(rounds.update(616).type,'ending');assert.deepEqual(lowered,[2,0]);
+ assert.deepEqual(rounds.update(609),{type:'ending'});assert.deepEqual(lowered,[2]);
 });
 
 test('tank camera follows the descent, holds focus, and restores the exact previous player view',()=>{
@@ -123,4 +116,13 @@ test('tank camera follows the descent, holds focus, and restores the exact previ
  assert.ok(position.distanceTo(saved.position)<1e-9);assert.ok(Math.abs(state.yaw-saved.yaw)<1e-9);assert.equal(state.pitch,saved.pitch);assert.equal(state.zoom,saved.zoom);
  camera.start(2,22);camera.update(22,true);assert.equal(selected,2);assert.deepEqual(position.toArray(),[-1,1.65,1]);
  camera.cancel();position.set(0,1,2);camera.update(24);assert.deepEqual(position.toArray(),[0,1,2]);
+});
+
+
+test('deadline framing can show the whole tank bay without moving the seated player',()=>{
+ const position=new THREE.Vector3(1.2,1.6,2.8),home=position.clone(),state={yaw:0,pitch:-1,zoom:.7};
+ const camera=createFigpalCamera({position,state,baseFov:62,focusFov:64,getView(_,eye,target){eye.copy(home);target.set(-3,1.35,.55);}});
+ camera.start(0,10);camera.update(12);
+ assert.deepEqual(position.toArray(),home.toArray());assert.equal(state.zoom,64/62);assert.ok(state.pitch>-.1);assert.ok(state.yaw>0);
+ camera.cancel();assert.equal(camera.active,false);
 });

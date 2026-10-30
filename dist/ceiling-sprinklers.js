@@ -21,7 +21,7 @@ export function createCeilingSprinklers({floorSupport,pipeMaterial}){
    normal=normalize(normal+mat3(viewMatrix)*vec3(rippleX,0.0,rippleZ));`);
  };
  const standingWater=new THREE.Mesh(waterGeometry,waterMaterial);standingWater.name='Standing sprinkler water across the office floor';standingWater.visible=false;standingWater.renderOrder=2;standingWater.raycast=()=>{};standingWater.receiveShadow=true;group.add(standingWater);
- let wetAt=null,wetness=0;
+ let wetAt=null,wetness=0,acid=false;
  const hardware=new THREE.Group();group.add(hardware);
  const iron=pipeMaterial.clone();iron.color.setHex(0x897767);iron.roughness=.87;iron.emissive.setHex(0x17130f);iron.emissiveIntensity=.18;
  const brass=new THREE.MeshStandardMaterial({color:0x927653,metalness:.72,roughness:.58,emissive:0x33251a,emissiveIntensity:.16});
@@ -53,9 +53,19 @@ export function createCeilingSprinklers({floorSupport,pipeMaterial}){
  const mistGeometry=new THREE.RingGeometry(.8,1,20);mistGeometry.rotateX(-Math.PI/2);
  const splashes=new THREE.InstancedMesh(mistGeometry,new THREE.MeshBasicMaterial({color:0x9db7bb,transparent:true,opacity:.38,side:THREE.DoubleSide,depthWrite:false}),renderQuality.mobile?80:144);splashes.name='Sprinkler splashes on the floor';splashes.visible=false;splashes.frustumCulled=false;splashes.raycast=()=>{};group.add(splashes);
  const dummy=new THREE.Object3D(),splashCount=splashes.instanceMatrix.count;
+ function setAcid(value){
+  if(acid===value)return;
+  acid=value;wetAt=null;wetness=0;
+  waterMaterial.color.setHex(acid?0x718d20:0x829297);
+  waterMaterial.emissive.setHex(acid?0x344c06:0x000000);waterMaterial.emissiveIntensity=acid?.5:1;
+  material.color.setHex(acid?0xb5d957:0xc0d4dc);
+  splashes.material.color.setHex(acid?0xadd34f:0x9db7bb);
+  standingWater.renderOrder=acid?7:2;
+  if(!acid)standingWater.position.y=0;
+ }
  function update(time,strength,reducedMotion=false){
-  if(strength>0){if(wetAt===null)wetAt=time;wetness=Math.max(wetness,Math.min(1,(time-wetAt+.25)/7));}
-  standingWater.visible=wetness>0;waterMaterial.opacity=.30*wetness;waterTime.value=reducedMotion?0:time;
+  if(strength>0){if(wetAt===null)wetAt=time;wetness=Math.max(wetness,Math.min(1,(time-wetAt+.25)/(acid?3:7)));}
+  standingWater.visible=wetness>0;waterMaterial.opacity=(acid?.85:.30)*wetness;standingWater.position.y=acid?.18*wetness:0;waterTime.value=reducedMotion?0:time;
   spray.visible=splashes.visible=strength>0;if(!strength)return;
   material.opacity=strength*(reducedMotion?.32:.68);
   const flowTime=reducedMotion?0:time;
@@ -73,5 +83,5 @@ export function createCeilingSprinklers({floorSupport,pipeMaterial}){
   }
   splashes.instanceMatrix.needsUpdate=true;
  }
- return {group,update,setEnvironment(map){for(const material of[iron,brass,waterMaterial]){material.envMap=map;material.envMapIntensity=material===waterMaterial?1.2:.7;material.needsUpdate=true;}},reset(){spray.visible=splashes.visible=standingWater.visible=false;wetAt=null;wetness=0;waterMaterial.opacity=0;}};
+ return {group,update,setAcid,setEnvironment(map){for(const material of[iron,brass,waterMaterial]){material.envMap=map;material.envMapIntensity=material===waterMaterial?1.2:.7;material.needsUpdate=true;}},reset(){setAcid(false);spray.visible=splashes.visible=standingWater.visible=false;wetAt=null;wetness=0;waterMaterial.opacity=0;}};
 }

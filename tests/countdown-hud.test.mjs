@@ -53,7 +53,7 @@ test('seated survivors suppress both center warnings while the corner clock and 
    }
    assert.equal(rounds.update(now).type,start===0?'restart':'ending');
   }
-  now=1201.2;assert.deepEqual(rounds.update(now),{type:'gameover'});
+  now=1205.2;assert.deepEqual(rounds.update(now),{type:'gameover'});
  }
 });
 

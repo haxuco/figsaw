@@ -7,7 +7,7 @@ export function gameOverReason(cause){
   case 'fire':return 'You were consumed by the fire.';
   case 'explosion':return 'You were caught in the explosion.';
   case 'laptop':return 'Water destroyed the laptop.';
-  case 'deadline':return 'You ran out of time.';
+  case 'deadline':return 'Time ran out. Acid flooded the room.';
   case 'flood':return 'The acid flood made escape impossible.';
   default:return 'The challenge ended in failure.';
  }
