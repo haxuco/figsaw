@@ -29,12 +29,26 @@ function fixture({pmIndex=2,skip=null,reverse=false}={}){
  };
 }
 
-test('an unfinished objective causes failure even when a chair prevents acid injury',()=>{
- for(const skip of ['laptop',...Object.keys(MOBILE_PIECES),'hanging','repair','caster','seat','base','placement','link0','link1','link2']){
+test('unfinished floor preparations cause failure even when a chair prevents acid injury',()=>{
+ for(const skip of [...Object.keys(MOBILE_PIECES),'hanging','repair','caster','seat','base','placement','link0','link1','link2']){
   const f=fixture({skip});assert.equal(f.check(),false,`${skip}: no failure on a dry floor`);
   f.spill();f.tick(.5);
   assert.equal(f.acid.dying,false,`${skip}: player remains physically safe`);
   assert.equal(f.check(),true,`${skip}: incomplete preparation is fatal`);
+ }
+});
+
+test('an unfinished laptop game does not cause flood failure after the physical preparations are done',()=>{
+ for(let pmIndex=0;pmIndex<3;pmIndex++)for(const kind of ['open','breach']){
+  const f=fixture({pmIndex,skip:'laptop'}),failure=createFloodObjectiveFailure();
+  assert.equal(f.laptopComplete,false);f.spill(kind);
+  for(const time of [.6,2,10,26,40]){
+   f.tick(time);assert.equal(f.check(),false);assert.equal(failure.update(f),false);
+  }
+  assert.equal(f.acid.outflowFinished(0),true);assert.equal(f.acid.dying,false);
+  // Breaking the remaining tanks must not queue a failure either.
+  for(const index of [1,2])f.acid.breach(index,origin,40);
+  f.tick(43);assert.equal(failure.update(f),false);
  }
 });
 

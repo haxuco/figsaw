@@ -1203,7 +1203,7 @@ function render(){
  restraint.update(t,reducedMotion,chainMenu.active||mugTrap.active||sawTrap.active||inventory.equipped==='key'&&restraint.locked,mugTrap.handPose||laptopOpening.handPose,sawTrap.armLift(t,reducedMotion),inventory.equipped==='key'&&restraint.locked);
  if(plushCut.update(t,reducedMotion)){handsaw.visible=false;}
  const sawFinished=sawTrap.update(t,reducedMotion);
- const floodFailure=floodObjectiveFailure.update({acid:acidLeaks,rescue:rescueChairs.state,mobile:mobilePuzzle,laptopComplete:laptopProgram.completed,pmIndex:escapePuzzle.pmIndex,paused:hazardFrame.paused});
+ const floodFailure=floodObjectiveFailure.update({acid:acidLeaks,rescue:rescueChairs.state,mobile:mobilePuzzle,pmIndex:escapePuzzle.pmIndex,paused:hazardFrame.paused});
  const failureCause=resolveGameOverCause({alarm:fireAlarm.blackout(hazardFrame.time)>0?fireAlarm.outcome:null,deadline:figpalRounds.blackout(t)>0,saw:sawTrap.blackout>0,fire:fireHazard.blackout(hazardFrame.time)>0,acid:acidLeaks.blackout(hazardFrame.time)>0,flood:floodFailure});
  if(failureCause){deathTransition.start(t,reducedMotion);document.body.classList.add('death-active');}
  const deathFrame=updateGameOver(t);
