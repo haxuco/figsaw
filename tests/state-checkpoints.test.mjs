@@ -44,7 +44,7 @@ test('environment checkpoints restore effect ages and detach copied arrays from 
 
 test('charger and shackle checkpoints preserve game state without requiring a key to test unlocking',()=>{
  const charger=createChargingState();charger.update(10,{opened:true});charger.use('drawer');charger.use('charger');charger.update(30,{opened:true});const saved=charger.capture();
- charger.use('strip');charger.use('laptop');assert.equal(charger.battery,0);charger.restore(saved,100);assert.equal(charger.phase,'carrying');assert.equal(charger.remaining,40);assert.equal(charger.battery,saved.battery);
+ charger.use('strip');charger.use('laptop');assert.equal(charger.battery,saved.battery);charger.restore(saved,100);assert.equal(charger.phase,'carrying');assert.equal(charger.remaining,40);assert.equal(charger.battery,saved.battery);
  const cuff=createRestraintState({canDetach:()=>false});assert.equal(cuff.detach(0),false);cuff.setLocked(false,1);assert.equal(cuff.locked,false);cuff.setLocked(true,2);assert.equal(cuff.locked,true);
 });
 

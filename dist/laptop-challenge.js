@@ -59,6 +59,7 @@ export function createLaptopChallenge(sourceLayouts,{random=Math.random}={}){
   complete(){round=2;positions=[...layouts[2].positions];accepted=checked=true;passed=[true,true,true];solutions=layouts.map(layout=>[...layout.positions]);},
   get round(){return round;},get accepted(){return accepted;},get completed(){return passed.every(Boolean);},
   get positions(){return [...positions];},get passed(){return [...passed];},
+  get pageNames(){return layouts.map((layout,i)=>i<=round?layout.word:'Locked');},
   get completedWords(){return passed.every(Boolean)?layouts.map((layout,i)=>({...layout,widths:[...layout.widths],positions:[...solutions[i]]})):[];},
   get view(){const {word,font,fontSize,label,widths}=layouts[round];return {word,font,fontSize,label,widths:[...widths],positions:[...positions]};},
   get message(){return accepted?(passed.every(Boolean)?'All three words accepted.':'Word accepted.'):(checked?'Not quite. Try again.':'');}

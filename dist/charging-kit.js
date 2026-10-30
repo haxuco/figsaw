@@ -63,11 +63,11 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
  const sleeve=mesh(new THREE.CylinderGeometry(.0048,.008,.032,12),ivory,connector);sleeve.rotation.z=Math.PI/2;sleeve.position.x=-.041;
  const connectorExit=new THREE.Object3D();connectorExit.name='Laptop cable exit';connectorExit.position.x=-.057;connector.add(connectorExit);
  const led=box([.010,.003,.007],[.005,.011,0],amber,connector);led.castShadow=false;
- const batteryCanvas=document.createElement('canvas');batteryCanvas.width=512;batteryCanvas.height=96;const batteryPaint=batteryCanvas.getContext('2d'),batteryMap=new THREE.CanvasTexture(batteryCanvas);batteryMap.colorSpace=THREE.SRGBColorSpace;
- const batteryOverlay=mesh(new THREE.PlaneGeometry(.245,.046),new THREE.MeshBasicMaterial({map:batteryMap}),laptop.screen);batteryOverlay.name='MacBook battery charge readout';batteryOverlay.position.set(.282,.235,.001);batteryOverlay.visible=false;batteryOverlay.castShadow=false;
+ const batteryCanvas=document.createElement('canvas');batteryCanvas.width=256;batteryCanvas.height=64;const batteryPaint=batteryCanvas.getContext('2d'),batteryMap=new THREE.CanvasTexture(batteryCanvas);batteryMap.colorSpace=THREE.SRGBColorSpace;
+ const batteryOverlay=mesh(new THREE.PlaneGeometry(.105,.025),new THREE.MeshBasicMaterial({map:batteryMap,transparent:true,toneMapped:false}),laptop.screen);batteryOverlay.name='MacBook battery charge readout';batteryOverlay.position.set(.252,.249,.001);batteryOverlay.visible=false;batteryOverlay.castShadow=false;
  const warningCanvas=document.createElement('canvas');warningCanvas.width=1024;warningCanvas.height=80;
  const warningPaint=warningCanvas.getContext('2d'),warningMap=new THREE.CanvasTexture(warningCanvas);warningMap.colorSpace=THREE.SRGBColorSpace;
- const warningOverlay=mesh(new THREE.PlaneGeometry(.73,.057),new THREE.MeshBasicMaterial({map:warningMap,toneMapped:false}),laptop.screen);warningOverlay.name='Sixty-second battery warning';warningOverlay.position.set(0,-.217,.002);warningOverlay.visible=false;warningOverlay.castShadow=false;
+ const warningOverlay=mesh(new THREE.PlaneGeometry(.25,.028),new THREE.MeshBasicMaterial({map:warningMap,toneMapped:false}),laptop.screen);warningOverlay.name='Sixty-second battery warning';warningOverlay.position.set(.268,-.227,.002);warningOverlay.visible=false;warningOverlay.castShadow=false;
  let lastWarningLabel='',powerMessage='';
  function syncPower(time=powerClock()){
   const event=state.update(time,{opened:laptop.isReady});
@@ -110,12 +110,12 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
   }
   batteryOverlay.visible=laptop.openProgress>.35&&laptop.isPowered;
   warningOverlay.visible=batteryOverlay.visible&&state.started&&state.phase!=='charging';
-  const seconds=Math.ceil(state.remaining),warning=`Connect charger in ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')} · Battery critical`;
-  if(warningOverlay.visible&&warning!==lastWarningLabel){lastWarningLabel=warning;warningPaint.fillStyle='#261c12';warningPaint.fillRect(0,0,1024,80);warningPaint.fillStyle='#ffd08b';warningPaint.font='500 38px Arial';warningPaint.textAlign='center';warningPaint.fillText(warning,512,53,980);warningMap.needsUpdate=true;}
-  const level=Math.ceil(state.battery),charging=state.phase==='charging',text=`${charging?'⚡ ':''}${level}%`;
+  const seconds=Math.ceil(state.remaining),warning=`Connect charger in ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`;
+  if(warningOverlay.visible&&warning!==lastWarningLabel){lastWarningLabel=warning;warningPaint.fillStyle='#13243c';warningPaint.fillRect(0,0,1024,80);warningPaint.fillStyle='#ffd99d';warningPaint.font='500 38px Arial';warningPaint.textAlign='center';warningPaint.fillText(warning,512,53,980);warningMap.needsUpdate=true;}
+  const level=state.batteryLevel,charging=state.phase==='charging',text=`${charging?'⚡ ':''}${level}%`;
   if(text!==lastBatteryLabel){
-   lastBatteryLabel=text;batteryPaint.fillStyle='#222e36';batteryPaint.fillRect(0,0,512,96);batteryPaint.fillStyle=charging?'#93dba3':'#e3b36d';batteryPaint.font='500 44px Arial';batteryPaint.textAlign='right';batteryPaint.fillText(text,385,63);
-   batteryPaint.strokeStyle=charging?'#93dba3':'#e3b36d';batteryPaint.lineWidth=5;batteryPaint.strokeRect(405,25,72,44);batteryPaint.fillRect(480,37,7,19);batteryPaint.fillRect(413,33,56*level/100,28);batteryMap.needsUpdate=true;
+   lastBatteryLabel=text;batteryPaint.clearRect(0,0,256,64);batteryPaint.fillStyle='#f5f7fb';batteryPaint.font='500 36px Arial';batteryPaint.textAlign='right';batteryPaint.fillText(text,142,44);
+   batteryPaint.strokeStyle='#f5f7fb99';batteryPaint.lineWidth=3;batteryPaint.strokeRect(163,20,62,27);batteryPaint.fillRect(229,28,4,11);batteryPaint.fillStyle=charging?'#7fd3a0':'#f5f7fb';batteryPaint.fillRect(169,26,Math.max(2,50*level/100),15);batteryMap.needsUpdate=true;
   }
  }
  function reset(){state.reset();laptop.setPower(true);batteryOverlay.visible=warningOverlay.visible=false;lastWarningLabel='';powerMessage='';cablePoints.length=0;burnAmount.value=0;led.visible=true;drawerProgress=0;drawer.position.z=0;drawer.add(brick,coil);brick.visible=coil.visible=true;brick.position.copy(drawerBrickPosition);brick.rotation.set(Math.PI/2,0,0);coil.position.copy(drawerCoilPosition);coil.rotation.set(0,0,0);connector.visible=false;adapterPlug.visible=false;if(wire){group.remove(wire);wire.geometry.dispose();wire=null;}lastWireProgress=-1;lastBatteryLabel='';lastTime=null;}
@@ -124,9 +124,9 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
   if(action==='drawer')return state.drawerOpen?'Close Supplies drawer':'Open Supplies drawer';
   if(action==='charger')return 'Take MacBook charger + cable';
   if(action==='strip')return state.phase==='carrying'?'Plug charger into power strip':'Powered power strip';
-  if(action==='laptop')return state.phase==='powered'?'Connect charger to MacBook':!state.canUse?'Battery empty · Connect the charger':`MacBook battery · ${Math.ceil(state.battery)}%`;
+  if(action==='laptop')return state.phase==='powered'?'Connect charger to MacBook':!state.canUse?'Battery empty · Connect the charger':`MacBook battery · ${state.batteryLevel}%`;
   if(!action&&state.started&&state.phase!=='charging'){const seconds=Math.ceil(state.remaining);return state.canUse?`Battery critical · Plug in the charger in ${Math.floor(seconds/60)}:${String(seconds%60).padStart(2,'0')}`:'Laptop off · Battery 0% · Connect the charger';}
-  return state.phase==='carrying'?'Charger collected · Plug into the power strip [F]':state.phase==='powered'?'Charger powered · Connect the MacBook [F]':state.phase==='charging'?'External power · Battery 0%':'';
+  return state.phase==='carrying'?'Charger collected · Plug into the power strip [F]':state.phase==='powered'?'Charger powered · Connect the MacBook [F]':state.phase==='charging'?`Charging · Battery ${state.batteryLevel}%`:'';
  }
  function getDrawerView(position,lookAt){
   filing.updateWorldMatrix(true,false);
@@ -150,5 +150,5 @@ export function createChargingKit({filing,laptop,floorSupport,drawerMaterial,pow
   state.restore(value.state,powerClock());drawerProgress=value.drawerProgress;drawer.position.z=drawerProgress*.43;
   burnAmount.value=value.burn;burnPoint.value.fromArray(value.burnPoint);led.visible=phase!=='damaged';update(time,true);
  }
- update(0);return {group,drawer,inventoryModel,use,update,reset,capture,restore,hint,syncPower,takePowerMessage(){const message=powerMessage;powerMessage='';return message;},get canUse(){return state.canUse;},getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;}};
+ update(0);return {group,drawer,inventoryModel,use,update,reset,capture,restore,hint,syncPower,takePowerMessage(){const message=powerMessage;powerMessage='';return message;},get canUse(){return state.canUse;},getDrawerView,meltCable,get cablePoints(){return cablePoints;},get energized(){return state.phase==='powered'||state.phase==='charging';},get drawerOpen(){return state.drawerOpen;},get phase(){return state.phase;},get nextAction(){return state.nextAction;},get drawerReady(){return drawerProgress>.85;},get battery(){return state.battery;},get batteryLevel(){return state.batteryLevel;},get remaining(){return state.remaining;}};
 }

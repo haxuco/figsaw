@@ -30,8 +30,8 @@ test('armed sprinklers stay dry until fire, then suppress it before it reaches t
 
 test('a burned charging cable stops charging and cannot be reconnected until retry',()=>{
  const charging=createChargingState();charging.use('drawer');charging.use('charger');charging.use('strip');charging.use('laptop');charging.update(10);
- const before=charging.battery;charging.damageCable();charging.update(10);
- assert.equal(charging.phase,'damaged');assert.equal(charging.battery,before);assert.equal(charging.nextAction,null);assert.match(charging.use('laptop'),/burned through/);
+ const before=charging.battery;charging.damageCable();charging.update(20);
+ assert.equal(charging.phase,'damaged');assert.ok(charging.battery<before,'the damaged cable stops charging and stored power drains');assert.equal(charging.nextAction,null);assert.match(charging.use('laptop'),/burned through/);
  charging.reset();assert.equal(charging.phase,'drawer');assert.equal(charging.battery,8);
 });
 
