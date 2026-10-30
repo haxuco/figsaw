@@ -23,7 +23,7 @@ const noop=Object.freeze({ready(){},mark(){},finish(){},retry(){},observe(){},fl
 export function startAnalytics({window:win=globalThis.window,document:doc=globalThis.document,fetch:send=globalThis.fetch,config=linkedinConfig}={}){
  const environment=win?.location.hostname==='figsaw.figma.site'?'official':win?.location.hostname==='figsaw.haxuco.chatgpt.site'?'staging':null;
  // Development, browser privacy signals, and the owner dashboard are excluded.
- if(win?.location.pathname.endsWith('/insights.html')||!environment||!win.crypto?.randomUUID||win.navigator.globalPrivacyControl||win.navigator.doNotTrack==='1'||!config.projectUrl)return noop;
+ if(/(?:^|\/)insights(?:\.html)?\/?$/.test(win?.location.pathname||'')||!environment||!win.crypto?.randomUUID||win.navigator.globalPrivacyControl||win.navigator.doNotTrack==='1'||!config.projectUrl)return noop;
  const secret=Array.from(win.crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');
  const state=createAnalyticsState({uuid:()=>win.crypto.randomUUID(),secret,environment,device:win.matchMedia('(pointer: coarse)').matches?'mobile':'desktop'});
  const now=()=>win.performance.now();let last=now(),lastInput=last,read=null,pause=()=>false,lastSent=0,inFlight=false,disabled=false;
