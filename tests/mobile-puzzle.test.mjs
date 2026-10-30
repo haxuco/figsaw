@@ -9,6 +9,7 @@ import {createMobileSupplies} from '../dist/mobile-supplies.js';
 import {createMobileCamera} from '../dist/mobile-camera.js';
 import {createFireAxe} from '../dist/fire-axe.js';
 import {batchStaticScenery} from '../dist/static-batching.js';
+import {createDocumentViewer} from '../dist/wall-documents.js';
 
 test('decorative axe grain does not intercept a ray aimed at the neighboring door keypad',()=>{
  const axe=createFireAxe();axe.mount.position.set(-.4,2.06,4.43);axe.mount.rotation.y=Math.PI;axe.mount.updateMatrixWorld(true);
@@ -19,6 +20,16 @@ test('decorative axe grain does not intercept a ray aimed at the neighboring doo
 function gather(state,bag=createInventory()){for(const id of Object.keys(MOBILE_PIECES))assert.equal(state.collectPiece(id,bag),true);return bag;}
 function hang(state){const bag=gather(state);assert.equal(state.hung,false);bag.equip('mobile');assert.equal(state.hang(bag),true);return bag;}
 function collect(state){assert.equal(state.collect('mobileKit',{drawerReady:true}),true);}
+test('mobile and poster inspections share a stable light count and restore its settings',()=>withCanvas(()=>{
+ const scene=new THREE.Scene(),light=new THREE.PointLight(0xffffff,0),mobile=createFallenMobile(new THREE.Vector3(1.85,.82,3.11)),state=createMobilePuzzleState();
+ scene.add(light);const view=createMobileInspection({mobile,state,light});scene.add(view.group);
+ const viewer=createDocumentViewer({documents:{entries:new Map()},position:new THREE.Vector3(0,1,2),state:{time:0,yaw:0,pitch:0,zoom:1},scene,light});
+ viewer.update(0);view.update(0);assert.equal(light.intensity,0);
+ hang(state);state.inspect();viewer.update(1);view.update(1);assert.equal(light.intensity,2);assert.equal(light.distance,2.5);assert.equal(light.parent,scene);
+ assert.ok(light.position.distanceTo(view.group.position.clone().add(new THREE.Vector3(0,-.8,0)))<1e-6);
+ state.close();viewer.update(2);view.update(2);assert.equal(light.intensity,0);assert.equal(light.distance,8);
+ const lights=[];scene.traverseVisible(o=>{if(o.isLight)lights.push(o);});assert.deepEqual(lights,[light]);
+}));
 test('four animals and one attached frame combine in inventory and require equipping before hanging',()=>{
  const s=createMobilePuzzleState(),bag=createInventory(),ids=Object.keys(MOBILE_PIECES);bag.add('axe');
  assert.equal(s.inspect(),false);assert.equal(s.hung,false);assert.equal(s.collectPiece(ids[0],bag,{locked:true}),false);

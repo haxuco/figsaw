@@ -2,8 +2,7 @@ import * as THREE from './vendor/three.module.js';
 
 // Borrow geometry/textures, but isolate transforms and materials from the world.
 // Collected objects are hidden in the room; invisible pick volumes are not models.
-export function cloneInventoryModel(source){
- const materials=new Map();
+export function cloneInventoryModel(source,materials=new Map()){
  function copy(object,root=false){
   if(!root&&!object.visible)return null;
   const sourceMaterials=object.material?(Array.isArray(object.material)?object.material:[object.material]):[];
@@ -37,7 +36,7 @@ export function frameInventoryModel(model,rotation=[0,0,0]){
 }
 
 export function createInventoryModelPreviews({renderer,getModel}){
- const cache=new Map(),pending=new Map();let target=null;
+ const cache=new Map(),pending=new Map(),materials=new Map();let target=null,busy=false,generation=0;
  const width=256,height=192,pixels=new Uint8Array(width*height*4);
  const scene=new THREE.Scene(),camera=new THREE.OrthographicCamera(-1.35,1.35,1,-1,.1,20);
  camera.position.z=6;camera.lookAt(0,0,0);
@@ -49,33 +48,59 @@ export function createInventoryModelPreviews({renderer,getModel}){
   const ready=cache.get(id);if(ready){host.replaceChildren(ready);return;}
   pending.set(id,host);
  }
- function update(){
-  // Only one small render/readback per frame, and only for visible inventory cards.
-  const entry=[...pending].find(([,host])=>host.isConnected&&host.closest('#inventory-panel')?.hidden===false);
-  if(!entry)return;
-  const [id,host]=entry;pending.delete(id);
-  const definition=getModel(id);if(!definition?.object)return;
-  const model=frameInventoryModel(cloneInventoryModel(definition.object),definition.rotation);
-  scene.add(model);
-  target??=new THREE.WebGLRenderTarget(width,height,{depthBuffer:true,stencilBuffer:false});
-  target.texture.colorSpace=THREE.SRGBColorSpace;
+ const visible=host=>host.isConnected&&host.closest('#inventory-panel')?.hidden===false;
+ function withPreviewState(work){
   const previous={target:renderer.getRenderTarget(),color:renderer.getClearColor(new THREE.Color()),alpha:renderer.getClearAlpha(),exposure:renderer.toneMappingExposure,shadows:renderer.shadowMap.enabled,autoClear:renderer.autoClear};
   try{
    renderer.shadowMap.enabled=false;renderer.toneMappingExposure=1.05;renderer.autoClear=true;
-   renderer.setRenderTarget(target);renderer.setClearColor(0x000000,0);renderer.render(scene,camera);
-   renderer.readRenderTargetPixels(target,0,0,width,height,pixels);
+   renderer.setRenderTarget(target);renderer.setClearColor(0x000000,0);
+   return work();
+  }finally{
+   // Restore immediately, before any async compilation/readback yields to the
+   // main scene. Its camera, shadows and render target must never inherit ours.
+   renderer.setRenderTarget(previous.target);renderer.setClearColor(previous.color,previous.alpha);
+   renderer.toneMappingExposure=previous.exposure;renderer.shadowMap.enabled=previous.shadows;renderer.autoClear=previous.autoClear;
+  }
+ }
+ async function draw(id,host,request){
+  let model;
+  try{
+   const definition=getModel(id);if(!definition?.object)return;
+   model=frameInventoryModel(cloneInventoryModel(definition.object,materials),definition.rotation);
+   scene.add(model);
+   target??=new THREE.WebGLRenderTarget(width,height,{depthBuffer:true,stencilBuffer:false});
+   target.texture.colorSpace=THREE.SRGBColorSpace;
+   if(renderer.compileAsync)await withPreviewState(()=>renderer.compileAsync(scene,camera));
+   if(request!==generation)return;
+   if(!visible(host)){if(host.isConnected&&!pending.has(id))pending.set(id,host);return;}
+   await withPreviewState(()=>{
+    renderer.render(scene,camera);
+    // WebGL2 fences let the browser keep drawing while the thumbnail finishes.
+    return renderer.readRenderTargetPixelsAsync(target,0,0,width,height,pixels);
+   });
+   if(request!==generation)return;
    const canvas=document.createElement('canvas');canvas.width=width;canvas.height=height;canvas.setAttribute('aria-hidden','true');
    const context=canvas.getContext('2d'),image=context.createImageData(width,height),row=width*4;
    for(let y=0;y<height;y++)image.data.set(pixels.subarray((height-y-1)*row,(height-y)*row),y*row);
-   context.putImageData(image,0,0);cache.set(id,canvas);host.replaceChildren(canvas);
+   context.putImageData(image,0,0);cache.set(id,canvas);
+   const destination=pending.get(id)??host;pending.delete(id);
+   if(destination.isConnected)destination.replaceChildren(canvas);
+  }catch(error){
+   // A lost graphics context must not turn an optional thumbnail into a game
+   // error. Reopening the inventory can retry it after context recovery.
+   if(!renderer.getContext?.().isContextLost())console.warn('Inventory preview unavailable:',id,error);
   }finally{
-   renderer.setRenderTarget(previous.target);renderer.setClearColor(previous.color,previous.alpha);
-   renderer.toneMappingExposure=previous.exposure;renderer.shadowMap.enabled=previous.shadows;renderer.autoClear=previous.autoClear;
-   scene.remove(model);
-   const materials=new Set();model.traverse(o=>{for(const m of o.material?(Array.isArray(o.material)?o.material:[o.material]):[])materials.add(m);});materials.forEach(m=>m.dispose());
-   // Instancing owns a GPU instance buffer; shared model geometry/textures stay alive.
-   model.traverse(o=>{if(o.isInstancedMesh)o.dispose();});
+   if(model){scene.remove(model);model.traverse(o=>{if(o.isInstancedMesh)o.dispose();});}
+   busy=false;
   }
  }
- return {attach,update,clearPending(){pending.clear();}};
+ function update(){
+  // One in-flight job; cached materials keep their GPU programs between cards.
+  if(busy)return;
+  const entry=[...pending].find(([,host])=>host.isConnected&&host.closest('#inventory-panel')?.hidden===false);
+  if(!entry)return;
+  const [id,host]=entry;pending.delete(id);
+  busy=true;return draw(id,host,generation);
+ }
+ return {attach,update,clearPending(){pending.clear();generation++;}};
 }

@@ -4,7 +4,10 @@ import {renderQuality as quality} from './render-quality.js';
 const specs=[['org-chart','Figpal Labs — people & practice',1600,1100],['onboarding','Onboarding wireframes',1600,1000],['workspace','Workspace design review',1600,1000],['planning','Sprint planning whiteboard',1600,1020],...Array.from({length:8},(_,i)=>[`note-${i}`,['Research note','Product planning note','Design note','Engineering note','Review note','Sprint checklist','Retrospective note','Content note'][i],480,500])];
 export async function createWallDocuments(puzzle){
  const entries=new Map(),targets=[];
- const orgTemplate=await (await fetch('./assets/documents/org-chart.svg?v=haunted-wear-2')).text();
+ // Start the randomized chart and static artwork together, rather than making
+ // every poster wait for the chart's SVG request and parse.
+ const templateRequest=fetch('./assets/documents/org-chart.svg?v=haunted-wear-2').then(r=>r.text());
+ let orgTemplate;
  let orgUrl=null,orgRevision=0;
  function orgSource(){
   const xml=new DOMParser().parseFromString(orgTemplate,'image/svg+xml'),names=['Pudding','Maki','Puff'];
@@ -15,11 +18,12 @@ export async function createWallDocuments(puzzle){
  }
 
  await Promise.all(specs.map(async([id,title,width,height])=>{
-  const src=id==='org-chart'?orgSource():`./assets/documents/${id}.svg?v=haunted-wear-2`,image=new Image();image.decoding='async';image.src=src;
+  if(id==='org-chart')orgTemplate=await templateRequest;
+  const src=id==='org-chart'?orgSource():`./assets/documents/previews/${id}-${quality.mobile?256:1024}.webp`,image=new Image();image.decoding='async';image.src=src;
   await image.decode();const scale=Math.min(1,(quality.mobile?256:1024)/Math.max(width,height));
   const c=document.createElement('canvas');c.width=Math.round(width*scale);c.height=Math.round(height*scale);c.getContext('2d').drawImage(image,0,0,c.width,c.height);
   const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=quality.mobile?2:4;
-  entries.set(id,{id,title,src,width,height,map,description:title});
+  entries.set(id,{id,title,src,detailSrc:id==='org-chart'?null:`./assets/documents/previews/${id}-1600.webp`,width,height,map,description:title});
  }));
  function tag(object,id){object.userData.wallDocument=id;object.name=entries.get(id).title;targets.push(object);return object;}
  async function refreshRoles(){
@@ -29,21 +33,27 @@ export async function createWallDocuments(puzzle){
  return {entries,targets,tag,refreshRoles,map:id=>entries.get(id).map};
 }
 
-// Only the inspected physical poster gets a high-resolution texture. Restore
-// and dispose it on exit rather than keeping every wall-sized map in GPU memory.
-export function createDocumentViewer({documents,position,state,aspect,baseFov,scene,onOpen=()=>{},onClose=()=>{}}){
+// Keep a small, bounded detail cache so reopening a poster doesn't decode and
+// upload it again. Mobile retains one large map; desktop retains two.
+export function createDocumentViewer({documents,position,state,aspect,baseFov,scene,light=null,onOpen=()=>{},onClose=()=>{}}){
  const camera=createObjectInspectionCamera({position,state,aspect,baseFov});
- const light=new THREE.PointLight(0xd3d5b8,0,8,2);light.userData.mobileEssential=true;scene.add(light);
+ if(!light){light=new THREE.PointLight(0xd3d5b8,0,8,2);light.userData.mobileEssential=true;scene.add(light);}
+ const maps=new Map(),capacity=quality.mobile?1:2;
  let detail=null,revision=0;
- function releaseDetail(){revision++;if(detail){detail.target.material=detail.original;detail.material.dispose();detail.map.dispose();detail=null;}}
+ function releaseDetail(){revision++;if(detail){detail.target.material=detail.original;detail.material.dispose();detail=null;}}
  async function sharpen(target){
   const entry=documents.entries.get(target.userData.wallDocument);if(!entry)return;
-  const request=revision,image=new Image();image.src=entry.src;await image.decode();if(request!==revision)return;
-  const c=document.createElement('canvas'),scale=Math.min(1,(quality.mobile?1600:2048)/Math.max(entry.width,entry.height));c.width=Math.round(entry.width*scale);c.height=Math.round(entry.height*scale);c.getContext('2d').drawImage(image,0,0,c.width,c.height);
-  const map=new THREE.CanvasTexture(c);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=quality.mobile?2:4;
+  const request=revision,src=entry.detailSrc??entry.src;let map=maps.get(src);
+  if(map){maps.delete(src);maps.set(src,map);}
+  else{
+   const image=new Image();image.decoding='async';image.src=src;await image.decode();if(request!==revision)return;
+   map=new THREE.Texture(image);map.colorSpace=THREE.SRGBColorSpace;map.anisotropy=quality.mobile?2:4;map.needsUpdate=true;
+   maps.set(src,map);
+   while(maps.size>capacity){const oldest=maps.keys().next().value;maps.get(oldest).dispose();maps.delete(oldest);}
+  }
   const original=target.material,material=original.clone();material.map=map;if(material.emissiveMap)material.emissiveMap=map;target.material=material;detail={target,original,material,map};
  }
  function show(target){if(!target)return;onOpen();releaseDetail();camera.show(target,state.time);sharpen(target).catch(()=>{});}
  function hide(immediate=true){if(!camera.active)return;releaseDetail();camera.restore(state.time,immediate);onClose();}
- return {show,hide,drag:camera.drag,setZoom:camera.setZoom,update(time,reducedMotion){camera.update(time,reducedMotion);light.position.copy(position);light.intensity=camera.active?.65:0;},get zoom(){return camera.zoom;},get active(){return camera.active;},get returning(){return camera.returning;},get origin(){return camera.origin;},get target(){return camera.target;}};
+ return {show,hide,drag:camera.drag,setZoom:camera.setZoom,update(time,reducedMotion){camera.update(time,reducedMotion);light.position.copy(position);light.color.setHex(0xd3d5b8);light.distance=8;light.intensity=camera.active?.65:0;},get zoom(){return camera.zoom;},get active(){return camera.active;},get returning(){return camera.returning;},get origin(){return camera.origin;},get target(){return camera.target;}};
 }

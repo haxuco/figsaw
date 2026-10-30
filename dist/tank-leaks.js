@@ -53,6 +53,9 @@ export function createTankLeaks({valves,floorSupport}){
  const surface=createAcidSurface(floorSupport,burnMap,timeUniform);group.add(surface.scorch,surface.pool);
  const bubbles=new THREE.InstancedMesh(new THREE.SphereGeometry(1,10,7),new THREE.MeshPhysicalMaterial({color:0xa0ae64,roughness:.13,clearcoat:1,transparent:true,opacity:.72,depthWrite:false}),54);bubbles.instanceMatrix.setUsage(THREE.DynamicDrawUsage);bubbles.frustumCulled=false;bubbles.count=0;group.add(bubbles);
  const droplets=new THREE.InstancedMesh(new THREE.SphereGeometry(1,8,6),surface.jetMaterial,42);droplets.instanceMatrix.setUsage(THREE.DynamicDrawUsage);droplets.frustumCulled=false;droplets.count=0;droplets.name='Small falling splash droplets';group.add(droplets);
+ // Keep the non-instanced jet variant in the material budget/preparation pass.
+ // Later valve/breach streams borrow it, including the lighter mobile material.
+ const jetPrototype=new THREE.Mesh(droplets.geometry,surface.jetMaterial);jetPrototype.name='Acid jet material preparation';jetPrototype.visible=false;group.add(jetPrototype);
  const rippleGeometry=new THREE.RingGeometry(.90,1,32);rippleGeometry.rotateX(-Math.PI/2);
  const rippleAlpha=new THREE.InstancedBufferAttribute(new Float32Array(12),1);rippleGeometry.setAttribute('rippleAlpha',rippleAlpha);
  const rippleMaterial=new THREE.MeshBasicMaterial({color:0xb6c58b,transparent:true,opacity:.32,depthWrite:false,side:THREE.DoubleSide});
@@ -84,14 +87,14 @@ export function createTankLeaks({valves,floorSupport}){
  function open(index,time,locked=false){
   const valve=valves[index];if(!valve||locked)return false;
   if(flow.dying||flow.leaks.some(leak=>leak.index===index))return false;
-  const stream=createDrainJet(valve.outlet,floorSupport,surface.jetMaterial);stream.source=valve.outlet;
+  const stream=createDrainJet(valve.outlet,floorSupport,jetPrototype.material);stream.source=valve.outlet;
   if(!flow.open(index,stream.origin,time,locked)){stream.mesh.geometry.dispose();return false;}
   stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);openedValves.add(index);
   group.visible=true;onSpill();return true;
  }
  function breach(index,time,outlet,locked=false){
   if(locked||!valves[index]||!outlet||flow.dying||streams.get(index)?.breached)return false;
-  const stream=createDrainJet(outlet,floorSupport,surface.jetMaterial,{breach:true});stream.breached=true;stream.source=outlet;
+  const stream=createDrainJet(outlet,floorSupport,jetPrototype.material,{breach:true});stream.breached=true;stream.source=outlet;
   if(!flow.breach(index,stream.origin,time)){stream.mesh.geometry.dispose();return false;}
   const previous=streams.get(index);if(previous){group.remove(previous.mesh);previous.mesh.geometry.dispose();}
   stream.mesh.name='Acid pouring through shattered tank glass';stream.mesh.visible=false;group.add(stream.mesh);streams.set(index,stream);group.visible=true;onSpill();return true;

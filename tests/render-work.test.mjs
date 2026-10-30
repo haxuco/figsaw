@@ -1,11 +1,28 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
-import {separatePickVolumes,createShadowScheduler} from '../dist/render-work.js';
+import {separatePickVolumes,createShadowScheduler,prepareSceneMaterials} from '../dist/render-work.js';
 import {createSceneRaycaster} from '../dist/scene-picking.js';
 import {createTankFoam} from '../dist/tank-foam.js';
 
 const box=material=>new THREE.Mesh(new THREE.BoxGeometry(1,1,1),material??new THREE.MeshBasicMaterial());
+test('startup prepares visible surfaces without reparenting objects or compiling hidden effects',async()=>{
+ const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(),visible=box(),offscreen=box(),hidden=new THREE.Group(),hiddenChild=box(),pick=box(),lamp=new THREE.PointLight(),texture=new THREE.Texture();
+ visible.material.map=offscreen.material.map=texture;offscreen.position.set(200,0,0);hidden.visible=false;hidden.add(hiddenChild);pick.layers.set(1);scene.add(visible,offscreen,hidden,pick,lamp);
+ const uploaded=[],prepared=[];
+ await prepareSceneMaterials({initTexture:t=>uploaded.push(t),async compileAsync(view,cam,lighting){
+  assert.equal(cam,camera);assert.equal(lighting,scene);view.traverse(o=>prepared.push(o));
+  assert.equal(visible.parent,scene);assert.equal(offscreen.parent,scene);assert.equal(hiddenChild.parent,hidden);
+  const lights=[];lighting.traverseVisible(o=>{if(o.isLight)lights.push(o);});assert.deepEqual(lights,[lamp]);
+ }},scene,camera);
+ assert.deepEqual(prepared,[visible,offscreen]);assert.deepEqual(uploaded,[texture]);
+});
+test('background preparation is limited to selected effect roots and small batches',async()=>{
+ const scene=new THREE.Scene(),effect=new THREE.Group(),unrelated=box(),meshes=[box(),box(),box()],camera=new THREE.PerspectiveCamera(),batches=[];
+ effect.visible=false;effect.add(...meshes);scene.add(effect,unrelated);
+ await prepareSceneMaterials({async compileAsync(view){const batch=[];view.traverse(o=>batch.push(o));batches.push(batch);}},scene,camera,{roots:[effect],includeHidden:true,batchSize:2});
+ assert.deepEqual(batches,[meshes.slice(0,2),meshes.slice(2)]);assert.equal(effect.visible,false);assert.ok(meshes.every(o=>o.parent===effect));
+});
 test('invisible click volumes remain clickable without color or shadow submissions',()=>{
  const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(),target=box(new THREE.MeshBasicMaterial({colorWrite:false,depthWrite:false,transparent:true,opacity:0})),surface=box();
  target.position.z=-2;target.castShadow=true;surface.position.z=-4;scene.add(target,surface);scene.updateMatrixWorld(true);

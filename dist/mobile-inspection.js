@@ -1,7 +1,7 @@
 import * as THREE from './vendor/three.module.js';
 import {createScissors} from './mobile-supplies.js';
 
-export function createMobileInspection({mobile,state}){
+export function createMobileInspection({mobile,state,light=null}){
  const group=new THREE.Group();group.name='Mobile hanging from the ceiling';group.userData.ignoreAcid=true;
  // Keep the suspended toys to the right, clear of the tanks and rear objects.
  group.position.set(1.25,1.90,.55);
@@ -49,13 +49,16 @@ export function createMobileInspection({mobile,state}){
  for(const x of[-.07,.07]){const bolt=new THREE.Mesh(new THREE.CylinderGeometry(.013,.013,.012,6),metal);bolt.position.set(x,ceilingY-.041,0);hookTarget.add(bolt);}
  const hookPick=new THREE.Mesh(new THREE.BoxGeometry(.34,.48,.34),new THREE.MeshBasicMaterial({transparent:true,opacity:0,colorWrite:false,depthWrite:false}));hookPick.name='Animal mobile hanging target';hookPick.position.set(0,ceilingY-.23,0);hookTarget.add(hookPick);
  for(const c of mountedAnimals)c.patch.visible=false;
- const lamp=new THREE.PointLight(0xe3d4ad,2,2.5,2);lamp.position.set(0,-.80,0);lamp.userData.mobileEssential=true;group.add(lamp);
+ const lamp=light??new THREE.PointLight(0xe3d4ad,0,2.5,2);
+ if(!light){lamp.position.set(0,-.80,0);lamp.userData.mobileEssential=true;group.add(lamp);}
  function getTarget(out){return out.copy(group.position).add(new THREE.Vector3(0,-.18,0));}
  function update(time,reducedMotion=false){
   const done=state.update(time,reducedMotion);
   if(!state.hung&&hung)reset();
   if(state.hung&&!hung){hung=true;for(const c of mountedAnimals){assembly.add(c.object);c.object.scale.setScalar(1.08);c.object.visible=true;}}
-  group.visible=true;assembly.visible=hung;hookTarget.visible=true;hookTarget.userData.mobileMount=hookPick.visible=!hung;hanger.visible=hung;mobile.group.visible=!hung&&!state.collectedAll;lamp.visible=state.active;
+  group.visible=true;assembly.visible=hung;hookTarget.visible=true;hookTarget.userData.mobileMount=hookPick.visible=!hung;hanger.visible=hung;mobile.group.visible=!hung&&!state.collectedAll;
+  if(state.active){lamp.intensity=2;lamp.color.setHex(0xe3d4ad);lamp.distance=2.5;if(light){lamp.position.set(0,-.8,0);group.localToWorld(lamp.position);}}
+  else if(!light)lamp.intensity=0;
   if(!hung){
    for(const [id,object]of Object.entries(mobile.pieces))object.visible=!state.hasPiece(id);
    for(const animal of mobile.animals){animal.shadow.visible=animal.string.visible=!state.hasPiece('mobile'+animal.kind);animal.patch.visible=false;}

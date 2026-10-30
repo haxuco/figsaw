@@ -12,7 +12,7 @@ import {createItemHover,resolveHoverItem} from './item-hover.js';
 import {PLAYER_CHAIR} from './rescue-state.js';
 import * as THREE from './vendor/three.module.js';
 import {renderQuality as quality,drawingPixelRatio} from './render-quality.js';
-import {separatePickVolumes,createShadowScheduler} from './render-work.js';
+import {separatePickVolumes,createShadowScheduler,prepareSceneMaterials} from './render-work.js';
 import {batchStaticScenery} from './static-batching.js';
 import {createRoomReflections} from './room-reflections.js';
 import {createFrameRateCounter} from './frame-rate.js';
@@ -514,11 +514,14 @@ let gameEnded=false,gameWon=false;
 document.querySelector('#new-game').addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 restartGame.addEventListener('click',()=>{resetView({skipIntro:true});canvas.focus({preventScroll:true});});
 const restraintStatus=document.querySelector('#restraint-status');
-const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle});scene.add(mobileInspection.group);
+// Posters and the mobile never inspect together: share one always-present light
+// to avoid shader-light-count changes without adding a light to every draw.
+const inspectionLight=new THREE.PointLight(0xd3d5b8,0,8,2);inspectionLight.userData.mobileEssential=true;scene.add(inspectionLight);
+const mobilePuzzle=createMobilePuzzleState(),mobileInspection=createMobileInspection({mobile:fallenMobile,state:mobilePuzzle,light:inspectionLight});scene.add(mobileInspection.group);
 const mobileCamera=createMobileCamera({position:cameraPosition,state,getTarget:mobileInspection.getTarget,aspect:()=>camera.aspect,baseFov:homeCamera.fov});
 const mobileUI=createMobileInspectionUI({state:mobilePuzzle,time:()=>state.time,equipped:()=>inventory.equipped});
 const doorKeypadUI=createDoorKeypadUI({keypad:doorKeypad,locked:()=>restraint.locked,onUnlock:escapeRoom,puzzle:escapePuzzle,onOpen:target=>documentViewer.show(target),onClose:immediate=>documentViewer.hide(immediate)});
-const documentViewer=createDocumentViewer({documents,position:cameraPosition,state,aspect:()=>camera.aspect,baseFov:homeCamera.fov,scene,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;chainMenu.hide();sawMenu.hide();canvas.focus({preventScroll:true});},onClose(){canvas.focus({preventScroll:true});}});
+const documentViewer=createDocumentViewer({documents,position:cameraPosition,state,aspect:()=>camera.aspect,baseFov:homeCamera.fov,scene,light:inspectionLight,onOpen(){releaseControls();arrivalCameraMove.cancel();drawerCamera.pause();acidCamera.cancel();alarmCamera.cancel();resetting=false;chainMenu.hide();sawMenu.hide();canvas.focus({preventScroll:true});},onClose(){canvas.focus({preventScroll:true});}});
 let selectingAnimal=false;
 const cancelSawSelection=document.querySelector('#cancel-saw-selection');
 cancelSawSelection.addEventListener('click',()=>{clearSawSelection();canvas.focus({preventScroll:true});});
@@ -1282,9 +1285,13 @@ analytics.observe(()=>{
 },()=>leaderboardPause.active||contextLost);
 await yieldStartup('Warming up the lights…');
 camera.position.copy(homePosition);camera.lookAt(new THREE.Vector3(...homeCamera.lookAt));camera.updateMatrixWorld(true);
-// Let the first render compile only programs actually used by that view.
-// Whole-scene prewarming compiled hidden effects and duplicate light variants.
-Promise.resolve().then(()=>{sceneReady=true;clock.getDelta();render();startupProgress.finish();analytics.ready();}).catch(error=>{console.error(error);startupProgress.fail();analytics.finish('error','load');});
+// Parallel preparation keeps shader linking out of the first frame and pans.
+// Hidden effects and pick volumes are excluded from this startup work.
+Promise.resolve().then(async()=>{await prepareSceneMaterials(renderer,scene,camera);sceneReady=true;clock.getDelta();render();startupProgress.finish();analytics.ready();
+ // Common effects prepare after first paint in small batches, without making
+ // players wait for every hidden trap before entering the room.
+ setTimeout(()=>prepareSceneMaterials(renderer,scene,camera,{roots:[acidLeaks.group,fireHazard.group,mobileInspection.assembly,laptop.screen],includeHidden:true,batchSize:8}).catch(error=>console.warn('Effect preparation deferred:',error)),250);
+}).catch(error=>{console.error(error);startupProgress.fail();analytics.finish('error','load');});
 installGraphicsRecovery(canvas,{
  status:loadingStatus,
  pause(){contextLost=true;frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;releaseControls();},

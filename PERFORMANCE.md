@@ -2,6 +2,33 @@
 
 The scene automatically selects a lighter renderer for touch devices, phones, iPads, small viewports, and low-memory/low-core devices. `?quality=mobile` forces this path for repeatable local QA. Production has no profiling or diagnostic controls.
 
+## Startup and transition work, 2026-10-30
+
+- Wall posters and notes use committed WebP previews, with separate detail images for inspection. Initial static-wall artwork is 76,682 bytes on mobile and 253,566 bytes on desktop, down from 1,148,392 bytes of SVG source (93% and 78% smaller respectively, before HTTP compression). The randomized org chart retains its editable SVG and correct per-game roles. Its fetch now overlaps the other artwork requests.
+- Visible room materials compile asynchronously during loading. Texture uploads run in small batches while those programs link, instead of all landing in the first rendered frame. Hidden branches and raycast-only volumes are excluded; offscreen room surfaces are prepared for panning.
+- Common acid, fire, sprinkler, mobile and laptop materials prepare in small background batches after first paint, keeping their first-use compilation out of the action. Dynamic stream geometry still initializes when a valve opens, but it borrows a prepared material. Newly created valve and breach jets now retain the mobile material simplification rather than silently reverting to the original physical material.
+- Inventory thumbnails use async GPU readback with one job in flight. Preview materials and completed thumbnails are reused. Renderer state is restored before every async wait, and stale jobs cannot replace new inventory cards.
+- Detail textures use a bounded cache: one poster on mobile, two on desktop. Reopening a cached poster avoids decoding and uploading it again; leaving inspection restores its ordinary material. Role changes invalidate the org chart by source URL.
+- Poster and mobile inspection share one light. Its intensity/position changes without adding or removing a light from the shader configuration.
+
+Compared with `b405d69` in the local in-app browser, using the same viewport and explicit desktop/mobile graphics settings. The transition samples below cover five seconds per view. Scene startup begins at module initialization and excludes network transfer. CPU measurements cover the animation loop; async work can run between frames. Driver caches, thermals, randomized roles and animation timing affect individual runs, so these are observations, not device-wide FPS guarantees.
+
+| Metric | Before | After |
+| --- | ---: | ---: |
+| Desktop scene startup | 1.82 s | 1.52 s |
+| Mobile scene startup | 1.02 s | 0.83 s |
+| Desktop first-frame CPU stall | 776 ms | 205 ms |
+| Mobile first-frame CPU stall | 277 ms | 72 ms |
+| Desktop first inventory view, worst animation-loop CPU work | 44.6 ms | 3.9 ms |
+| Mobile first inventory view, worst animation-loop CPU work | 28.7 ms | 3.3 ms |
+| Desktop room, worst frame interval | 61.2 ms | 24.1 ms |
+
+The desktop room stayed near 59 FPS and mobile near its 30 FPS cap in this check. Cached inventory views and returning to the room were checked as well. A separate 853 × 480 smoke run covered laptop opening, mobile inspection/repair, fire, sprinklers, acid and reset. The final mobile run stayed at 29–30 FPS through those phases with no runtime errors; its shader-program count stayed constant across all of them. An extended desktop browser session showed intermittent GPU stalls; a fresh-tab repeat recovered, so these tests do not establish lag-free behavior on every device or session. These are desktop-browser mobile settings, not a physical iOS/Android device benchmark. Physical device and throttled-network testing remain separate validation work.
+
+Regressions cover asynchronous preview cancellation, rapid close/reopen, GPU readback failure, renderer-state restoration, limited poster caching, stale image decodes, randomized chart refresh, stable inspection lighting, warmup visibility and bounded background batches and mobile materials on dynamic streams. Profiling harnesses are temporary and excluded from production.
+
+To regenerate wall previews after changing authored SVG artwork, install the existing Payload dependencies and run `node scripts/rasterize-wall-previews.mjs` from the repository root. Commit the generated assets; ordinary builds do not require image processing.
+
 ## Rendering refactor, 2026-10-29
 
 - Desktop now batches compatible scenery colours as well as identical materials, preserving separately moving and interactive parts.

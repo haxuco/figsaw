@@ -4,8 +4,23 @@ import * as THREE from '../dist/vendor/three.module.js';
 import {createAcidFlow,BREACHED_TANK_RESIDUAL} from '../dist/acid-flow.js';
 import {createDrainJet} from '../dist/acid-surface.js';
 import {createFigpalVats} from '../dist/figpal-vats.js';
+import {createTankLeaks} from '../dist/tank-leaks.js';
+import {applySceneBudget,useMobileMaterials} from '../dist/scene-budget.js';
 
 const far={x:20,z:20},source={x:0,y:.01,z:0};
+test('new valve and breach streams reuse the prepared mobile material after startup',()=>{
+ const previous=globalThis.document,gradient={addColorStop(){}},ctx=new Proxy({createRadialGradient:()=>gradient,createLinearGradient:()=>gradient},{get:(t,k)=>k in t?t[k]:()=>{}});
+ globalThis.document={createElement:()=>({width:0,height:0,getContext:()=>ctx})};
+ try{
+  const outlet=new THREE.Object3D();outlet.position.y=.4;
+  const leaks=createTankLeaks({valves:[{outlet,setOpen(){}}],floorSupport:()=>0}),scene=new THREE.Scene();scene.add(leaks.group);
+  const prototype=leaks.group.getObjectByName('Acid jet material preparation');assert.equal(prototype.visible,false);
+  applySceneBudget(scene,{mobile:true});useMobileMaterials(scene,{mobile:true});assert.equal(prototype.material.isMeshLambertMaterial,true);
+  assert.equal(leaks.open(0,0),true);const stream=leaks.group.getObjectByName('Gravity-fed wavering drain stream');assert.equal(stream.material,prototype.material);
+  assert.equal(leaks.breach(0,1,outlet),true);const flood=leaks.group.getObjectByName('Acid pouring through shattered tank glass');assert.equal(flood.material,prototype.material);
+  leaks.reset();assert.equal(prototype.parent,leaks.group);assert.equal(prototype.visible,false);
+ }finally{globalThis.document=previous;}
+});
 test('the real liquid surface and meniscus fall with the initial gush, reaching the heel in under two seconds',()=>{
  const previous=globalThis.document,previousPath=globalThis.Path2D,gradient={addColorStop(){}};
  const ctx=new Proxy({createRadialGradient:()=>gradient,createLinearGradient:()=>gradient,measureText:()=>({width:50})},{get:(t,k)=>k in t?t[k]:()=>{}});
