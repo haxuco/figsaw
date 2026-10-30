@@ -168,7 +168,8 @@ body.inspecting-mobile #scene{cursor:grab}body.inspecting-mobile #scene:active{c
 #frame-rate{position:fixed;left:max(10px,env(safe-area-inset-left));bottom:max(8px,env(safe-area-inset-bottom));z-index:10;color:#b7c2b5;font:10px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums;text-shadow:0 1px 3px #000;pointer-events:none;user-select:none;}
 #mission-hud{position:fixed;left:max(16px,env(safe-area-inset-left));top:max(16px,env(safe-area-inset-top));z-index:60;display:grid;grid-template-rows:17px auto;row-gap:9px;max-width:calc(100vw - 32px);text-shadow:0 1px 4px #000,0 0 8px #000;pointer-events:none;user-select:none}
 #timer-hud{grid-row:1;color:#ff6b5c;font:13px/1.3 ui-monospace,SFMono-Regular,Consolas,monospace;font-variant-numeric:tabular-nums}
-#objectives-hud{grid-row:2;margin:0;padding-left:14px;color:#d5d9cf;font:12px/1.7 system-ui,sans-serif}
+#objectives-hud{position:fixed;left:max(16px,env(safe-area-inset-left));bottom:max(88px,calc(env(safe-area-inset-bottom) + 84px));max-width:calc(100vw - 46px);margin:0;padding-left:14px;color:#d5d9cf;font:12px/1.7 system-ui,sans-serif}
+@media(max-width:600px){#objectives-hud{left:max(12px,env(safe-area-inset-left))}}
 body:has(#inventory-panel:not([hidden])) #objectives-hud{display:none}
 #inspection-back:not([hidden])~#mission-hud,#leave-chair:not([hidden])~#mission-hud,body:has(#inventory-panel:not([hidden])) #mission-hud{top:max(74px,calc(env(safe-area-inset-top) + 58px))}
 body:has(#loading-status:not([hidden])) #mission-hud,body.game-over #mission-hud,body:has(#escaped:not([hidden])) #mission-hud{display:none}
