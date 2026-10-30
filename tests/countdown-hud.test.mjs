@@ -2,6 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import * as THREE from '../dist/vendor/three.module.js';
 import {createCountdownHUD} from '../dist/countdown-hud.js';
+import {createCountdownClock} from '../dist/countdown-clock.js';
+import {createFigpalRounds} from '../dist/figpal-rounds.js';
 
 function setup(reducedMotion=false){
  const group=new THREE.Group(),display=new THREE.Mesh(new THREE.PlaneGeometry(.46,.136),new THREE.MeshBasicMaterial());group.add(display);
@@ -35,4 +37,35 @@ test('inspection overlays retain a corner timer; retry and reduced motion have p
  hud.update(1.9,5);assert.equal(warning.hidden,false,'reduced motion leaves the warning steady');
  hud.hide();assert.equal(corner.hidden,true);assert.equal(warning.hidden,true);
  hud.update(2,600);assert.equal(warning.hidden,true);assert.equal(corner.textContent,'10:00');
+});
+
+test('seated survivors suppress both center warnings while the corner clock and twenty-minute loss still work',()=>{
+ for(const reducedMotion of[false,true]){
+  const {hud,timer,corner,warning}=setup(reducedMotion);let now=0;
+  const clock=createCountdownClock(undefined,()=>now),rescued=new Set([2,0]);
+  const rounds=createFigpalRounds({movingIndex:null,isRescued:i=>rescued.has(i),lower(){assert.fail('a seated Figpal must not be lowered');}},clock,{dropOrder:[2,0,1]});
+  Object.defineProperty(timer,'status',{get:()=>clock.status});clock.start();
+  for(const start of[0,600]){
+   for(now=start+595;now<start+600;now++){
+    assert.equal(rounds.update(now),null);
+    hud.update(now,clock.remainingSeconds,{forceCorner:true,warningEnabled:rounds.willLowerNext});
+    assert.equal(warning.hidden,true);assert.equal(corner.hidden,false);assert.equal(corner.textContent,`00:0${start+600-now}`);
+   }
+   assert.equal(rounds.update(now).type,start===0?'restart':'ending');
+  }
+  now=1201.2;assert.deepEqual(rounds.update(now),{type:'gameover'});
+ }
+});
+
+test('a last-second rescue clears the active pulse, other unrescued Figpals still warn, and retry restores warnings',()=>{
+ const {hud,warning}=setup();let now=0;const rescued=new Set();
+ const clock=createCountdownClock(undefined,()=>now),rounds=createFigpalRounds({movingIndex:null,isRescued:i=>rescued.has(i),reset(){rescued.clear();}},clock,{dropOrder:[1,2,0]});
+ clock.start();now=595;hud.update(now,5,{warningEnabled:rounds.willLowerNext});assert.equal(warning.hidden,false);
+ rescued.add(1);hud.update(now+.1,5,{warningEnabled:rounds.willLowerNext});assert.equal(warning.hidden,true);
+ now=600;assert.equal(rounds.update(now).type,'restart');
+ now=1195;hud.update(now,5,{warningEnabled:rounds.willLowerNext});
+ now=1196;hud.update(now,4,{warningEnabled:rounds.willLowerNext});assert.equal(warning.hidden,false);
+ rescued.add(2);hud.update(now+.1,4,{warningEnabled:rounds.willLowerNext});assert.equal(warning.hidden,true);
+ rounds.reset();clock.reset();clock.start();hud.hide();
+ now+=595;hud.update(now,5,{warningEnabled:rounds.willLowerNext});assert.equal(warning.hidden,false);
 });

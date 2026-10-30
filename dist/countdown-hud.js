@@ -26,13 +26,13 @@ export function createCountdownHUD({timer,camera,occluders,corner,warning,reduce
   });
  }
  function hide(){corner.hidden=warning.hidden=true;nextVisibilityCheck=0;lastSecond=null;}
- function update(time,seconds,{enabled=true,forceCorner=false}={}){
+ function update(time,seconds,{enabled=true,forceCorner=false,warningEnabled=true}={}){
   if(!enabled||timer.status==='waiting'){hide();return;}
   if(seconds!==lastSecond){lastSecond=seconds;secondChangedAt=time;corner.textContent=warning.textContent=formatCountdown(seconds);}
   // Raycast only four times a second, and only while the readout is in frame.
   if(time>=nextVisibilityCheck){displayVisible=inView();nextVisibilityCheck=time+.25;}
   corner.hidden=!forceCorner&&displayVisible;
-  warning.hidden=!(seconds>0&&seconds<=5&&timer.status==='running')||(!reducedMotion&&time-secondChangedAt>=.55);
+  warning.hidden=!warningEnabled||!(seconds>0&&seconds<=5&&timer.status==='running')||(!reducedMotion&&time-secondChangedAt>=.55);
  }
  hide();return {update,hide};
 }

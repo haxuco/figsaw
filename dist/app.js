@@ -1237,7 +1237,7 @@ function render(){
  updateEquipment(t);
  renderer.render(scene,camera);
  if(canHoverItems())itemHover.render(t);else itemHover.clear();
- countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active||laptopProgram.active});
+ countdownHUD.update(performance.now()/1000,lastCountdownSeconds,{enabled:!gameEnded&&!gameWon&&!figpalRounds.active,forceCorner:inventoryUI.active||laptopProgram.active,warningEnabled:figpalRounds.willLowerNext});
  frameRate.frame(performance.now());
  updateArrivalDialogue(t);loweringDialogue.update(t);
  const figpalDialogueBlocked=documentViewer.active||laptopProgram.active||mobilePuzzle.active||inventoryUI.active||doorKeypadUI.active||figpalRounds.active||fireAlarm.dying;
