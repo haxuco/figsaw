@@ -2,6 +2,7 @@ import {createVictoryParade} from './victory-parade.js';
 import {captureRankedEscape} from './leaderboard.js';
 import {createLeaderboardRepository} from './leaderboard-remote.js';
 import {createLeaderboardUI} from './leaderboard-ui.js';
+import {createAboutUI} from './about-ui.js';
 import {createGamePause} from './game-pause.js';
 import {createInventory,createInventoryUI,ITEMS} from './inventory.js';
 import {createInventoryModelPreviews} from './inventory-models.js';
@@ -494,11 +495,15 @@ const deathTransition=createGameOverTransition(document.querySelector('#death-tr
 const gameOverShare=createGameOverShare(document.querySelector('#game-over-share'));
 const escapeScreen=document.querySelector('#escaped');
 const victoryShare=createVictoryShare(document.querySelector('#victory-share'));
-const leaderboardUI=createLeaderboardUI({repository:createLeaderboardRepository(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>!sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active,onOpen(){
+function canOpenInfo(){return !sawBusy()&&!laptopProgram.active&&!inventoryUI.active&&!documentViewer.active&&!mobilePuzzle.active;}
+function pauseForInfo(){
  leaderboardPause.pause(countdown);releaseControls();chainMenu.hide();sawMenu.hide();itemHover.clear();fireAlarm.silence();frameRate.reset();cancelAnimationFrame(frameRequest);frameRequest=0;
-},onClose(){
+}
+function resumeFromInfo(){
  leaderboardPause.resume();lastRenderAt=0;clock.getDelta();scheduleFrame();canvas.focus({preventScroll:true});
-},getCountdown:()=>countdown.status==='waiting'?null:countdown.update(),onRank:result=>victoryShare.prepare(result)});
+}
+const leaderboardUI=createLeaderboardUI({repository:createLeaderboardRepository(),root:document.querySelector('#victory-leaderboard'),button:document.querySelector('#top10-button'),canOpen:()=>canOpenInfo()&&!aboutUI.active,onOpen:pauseForInfo,onClose:resumeFromInfo,getCountdown:()=>countdown.status==='waiting'?null:countdown.update(),onRank:result=>victoryShare.prepare(result)});
+const aboutUI=createAboutUI({button:document.querySelector('#about-button'),canOpen:()=>canOpenInfo()&&!leaderboardUI.active,onOpen:pauseForInfo,onClose:resumeFromInfo});
 for(const dialog of[gameOver,escapeScreen])dialog.addEventListener('keydown',event=>{
  if(event.key!=='Tab')return;
  const buttons=[...dialog.querySelectorAll('button,input,select,textarea')].filter(control=>!control.disabled&&!control.closest('[hidden]')),index=buttons.indexOf(document.activeElement);
@@ -997,7 +1002,7 @@ function resetView({skipIntro=false}={}){
 function releaseControls(){state.space=false;dragPointer=null;itemHover.clear();}
 
 document.addEventListener('keydown',event=>{
- if(leaderboardUI.active||event.target.closest('#victory-leaderboard,.linkedin-share-dialog'))return;
+ if(leaderboardUI.active||aboutUI.active||event.target.closest('#victory-leaderboard,.linkedin-share-dialog'))return;
  // A browser refresh starts its own attempt on load; do not also restart here.
  if(event.code==='KeyR'&&(event.metaKey||event.ctrlKey||event.altKey))return;
  if(inventoryUI.active)return;
