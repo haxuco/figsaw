@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import {createLeaderboardHandler} from '../supabase/functions/leaderboard/handler.js';
-import {createLinkedInNameVerifier} from '../supabase/functions/leaderboard/linkedin-identity.js';
-import {createSupabaseLeaderboard} from '../dist/leaderboard-remote.js';
+import {createLeaderboardHandler} from '../payload/src/shared/handler.js';
+import {createLinkedInNameVerifier} from '../legacy/supabase/functions/leaderboard/linkedin-identity.js';
+import {createPayloadLeaderboard} from '../dist/leaderboard-remote.js';
 import {rankedEntries} from '../dist/leaderboard.js';
 import {linkedInDisplayName} from '../dist/linkedin-name.js';
 const user={id:'123e4567-e89b-12d3-a456-426614174000',identities:[{provider:'linkedin_oidc',identity_data:{sub:'member-1'}}]};
@@ -34,8 +34,8 @@ test('verified names are accepted only from the trusted server response, never a
 });
 test('cloud adapter does not submit a LinkedIn name during connect or without consent',async()=>{
  const calls=[];const client={configured:true,connected:true,name:body.name,leaderboardIdentity:()=>({name:body.name,accessToken:'verified-user',providerToken:body.providerToken})};
- const repo=createSupabaseLeaderboard({supabaseUrl:'https://project.supabase.co',publishableKey:'sb_publishable_test',linkedinClient:client,fetchImpl:async(url,options)=>{calls.push({url,options});return Response.json({ok:true,entries:[],entry:null});}});
+ const repo=createPayloadLeaderboard({apiBase:'/api/figsaw',linkedinClient:client,fetchImpl:async(url,options)=>{calls.push({url,options});return Response.json({ok:true,entries:[],entry:null});}});
  assert.deepEqual(await repo.connectLinkedIn(),{name:body.name});assert.equal(calls.length,0);
  assert.equal((await repo.submit({...body,nameConsent:false})).ok,false);assert.equal(calls.length,0);
- await repo.submit(body);assert.equal(calls.length,1);assert.equal(calls[0].options.headers.Authorization,'Bearer verified-user');assert.equal(JSON.parse(calls[0].options.body).nameConsent,true);
+ await repo.submit(body);assert.equal(calls.length,2);assert.equal(calls[1].options.credentials,'same-origin');assert.equal(calls[1].options.headers.Authorization,undefined);assert.equal(JSON.parse(calls[1].options.body).nameConsent,true);assert.equal(JSON.parse(calls[1].options.body).providerToken,undefined);
 });

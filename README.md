@@ -129,8 +129,8 @@ Testing highlights are on by default during this testing build. The top-right Te
 The game-over share graphic exports as a 1080 × 1080 PNG. Its square composition keeps the attempt count, Figsaw on his tricycle, and game URL visible together; the in-game preview uses the same 1:1 ratio and fits shorter screens.
 
 
-### Supabase leaderboard integration
+### Payload backend
 
-The leaderboard has an opt-in cloud adapter, protected SQL migration and authenticated Edge Function. Cloud name submissions require server-side moderation approval before storage. The game continues using device-local scores until configured. See [the Supabase setup guide](supabase/README.md) for deployment, secret handling, name-review requirements and the remaining score-authenticity limitations.
+The active game uses the same-origin Payload API for worldwide Top 10, LinkedIn sign-in/sharing, and private play analytics. See [the complete setup guide](payload/README.md) and [the concise Figma Make handoff](FIGMA_MAKE_HANDOFF.md). The previous Supabase code is archived under `legacy/supabase` and is not called by the game. This source migration does not delete live data or provision Figma hosting.
 
 The kerning app sits inside a lightweight Mac-style desktop with a menu bar, window controls, wallpaper and Dock. Current and completed pages show their word names; future pages remain locked and do not reveal their words. The Design inspector is removed. Dragging, arrow nudges and the calibrated 90-point pass threshold are unchanged. The menu-bar battery and physical screen readout use the same charging state.

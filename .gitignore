@@ -10,3 +10,22 @@ dist/client/
 supabase/.temp/
 supabase/.branches/
 supabase/.env*
+
+# Payload server secrets, generated output and local database
+**/.env
+**/.env.local
+**/.env.production
+**/.env.development
+payload/.next/
+payload/public/
+payload/*.db*
+payload/*.sqlite*
+payload/*.tsbuildinfo
+payload/next-env.d.ts
+payload/src/payload-types.ts
+
+# Private legacy exports and archived service credentials
+legacy/supabase/.env*
+legacy/supabase/.temp/
+legacy/supabase/.branches/
+payload/migration/*.private.json

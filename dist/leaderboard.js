@@ -40,7 +40,7 @@ export function rankedEntries(values,{trustedServer=false}={}){
 export function prospectiveRank(entries,seconds){return 1+entries.filter(entry=>entry.remainingSeconds>=seconds).length;}
 function browserStorage(){try{return globalThis.localStorage;}catch{return null;}}
 
-// Repository boundary: a later Supabase adapter can implement list()/submit().
+// Repository boundary: the Payload adapter can implement list()/submit().
 // No network, credentials or new dependency is needed for the local version.
 export function createLocalLeaderboard({storage=browserStorage(),now=()=>Date.now()}={}){
  let memory=[],persistent=!!storage;

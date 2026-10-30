@@ -1,1 +1,16 @@
-{"name":"figsaw","private":true,"type":"module","scripts":{"build":"node scripts/build.mjs","test":"node --test tests/*.test.mjs"},"devDependencies":{"esbuild":"^0.25.0"}}
+{
+  "name": "figsaw",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test tests/*.test.mjs",
+    "prepare:payload": "npm run build && node scripts/prepare-payload.mjs",
+    "build:payload": "npm run prepare:payload && npm --prefix payload run build",
+    "dev:payload": "npm run prepare:payload && npm --prefix payload run dev",
+    "test:payload": "npm --prefix payload test"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  }
+}

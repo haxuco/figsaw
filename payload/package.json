@@ -1,0 +1,42 @@
+{
+  "name": "figsaw-payload",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": "^22.23.4 || >=24.22.1"
+  },
+  "scripts": {
+    "dev": "next dev --webpack",
+    "build": "next build --webpack",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.mjs",
+    "migrate": "payload migrate",
+    "migrate:create": "payload migrate:create",
+    "bootstrap-owner": "node --env-file-if-exists=.env --import tsx scripts/bootstrap-owner.ts",
+    "cleanup": "node --env-file-if-exists=.env --import tsx scripts/cleanup.ts",
+    "import:legacy": "node --env-file-if-exists=.env --import tsx scripts/import-legacy.ts"
+  },
+  "dependencies": {
+    "@payloadcms/db-sqlite": "3.92.1",
+    "@payloadcms/email-nodemailer": "3.92.1",
+    "@payloadcms/next": "3.92.1",
+    "graphql": "^16.11.0",
+    "next": "16.4.3",
+    "payload": "3.92.1",
+    "react": "19.3.1",
+    "react-dom": "19.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "tsx": "^4.20.0",
+    "typescript": "^5.9.0"
+  },
+  "overrides": {
+    "dompurify": "3.4.17",
+    "graphql-scalars": "2.0.1",
+    "esbuild": "0.28.2"
+  }
+}

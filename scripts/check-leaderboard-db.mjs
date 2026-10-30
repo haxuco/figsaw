@@ -6,8 +6,8 @@ const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');
 const db=new PGlite();
 try{
  await db.exec('create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key);');
- await db.exec(await readFile(new URL('../supabase/migrations/202610300001_leaderboard.sql',import.meta.url),'utf8'));
- await db.exec(await readFile(new URL('../supabase/migrations/202610300003_linkedin_names.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../legacy/supabase/migrations/202610300001_leaderboard.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../legacy/supabase/migrations/202610300003_linkedin_names.sql',import.meta.url),'utf8'));
  const user='123e4567-e89b-12d3-a456-426614174001',other='123e4567-e89b-12d3-a456-426614174002';
  await db.query('insert into auth.users values ($1),($2)',[user,other]);
  let counter=0;const nextId=()=>`123e4567-e89b-12d3-a456-${String(++counter).padStart(12,'0')}`;

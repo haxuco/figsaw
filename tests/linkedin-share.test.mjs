@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {readFile} from 'node:fs/promises';
-import {createLinkedInHandler,POST_TEXT,PROMO_SOURCE} from '../supabase/functions/linkedin-share/handler.js';
+import {createLinkedInHandler,POST_TEXT,PROMO_SOURCE} from '../payload/src/shared/linkedin-post.js';
 import {createLinkedInClient,LINKEDIN_POST_TEXT} from '../dist/linkedin-client.js';
 const origin='https://figsaw.figma.site',id='f710d12c-6480-45f8-a453-5cf1ba79c257';
 const user={id:'user-1',identities:[{provider:'linkedin_oidc',identity_data:{sub:'member1'}}]};
@@ -49,6 +49,6 @@ test('repeated and uncertain requests never publish a second time',async()=>{
 test('client refuses a post before explicit confirmation or connection',async()=>{
  let requests=0;const client=createLinkedInClient({win:{},cryptoApi:{},fetcher:async()=>{requests++;}});await assert.rejects(client.post({kind:'video'}),/Review and confirm/);await assert.rejects(client.post({kind:'video',confirmed:true}),/Reconnect/);assert.equal(requests,0);
 });
-test('auth callback only returns the code to its same-origin opener, never posts',async()=>{
+test('auth callback only returns only sign-in status to its same-origin opener, never posts',async()=>{
  const source=await readFile(new URL('../dist/linkedin-callback.js',import.meta.url),'utf8');assert.match(source,/history.replaceState/);assert.match(source,/postMessage\(.*location.origin/);assert.doesNotMatch(source,/fetch\(|\.post\(/);
 });

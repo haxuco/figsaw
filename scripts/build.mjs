@@ -3,9 +3,13 @@ import {readFile,writeFile,cp} from 'node:fs/promises';
 import {createHash} from 'node:crypto';
 import {stageProductionAssets} from './production-assets.mjs';
 // Deploy the identical policy used by the browser; tests guard against drift.
-await cp('dist/display-name.js','supabase/functions/_shared/display-name.js');
-await cp('dist/linkedin-name.js','supabase/functions/_shared/linkedin-name.js');
-const options={entryPoints:['dist/app.js'],bundle:true,minify:true,format:'esm',target:['es2022'],legalComments:'external',sourcemap:false,logLevel:'info'};
+await cp('dist/display-name.js','payload/src/shared/display-name.js');
+await cp('dist/linkedin-name.js','payload/src/shared/linkedin-name.js');
+const analyticsSource=await readFile('dist/analytics.js','utf8');
+await writeFile('payload/src/shared/analytics-schema.js',analyticsSource.slice(analyticsSource.indexOf('export const ANALYTICS_STAGES'),analyticsSource.indexOf('// An attempt')).trim()+'\n');
+
+const payloadEnabled=process.env.FIGSAW_BACKEND!=='local';
+const options={entryPoints:['dist/app.js'],bundle:true,minify:true,format:'esm',target:['es2022'],legalComments:'external',sourcemap:false,logLevel:'info',define:{__FIGSAW_PAYLOAD__:String(payloadEnabled)}};
 async function updateEntrypoints(directory,production=false){
  const hash=createHash('sha256').update(await readFile(`${directory}/game.bundle.js`)).digest('hex').slice(0,12);
  const styleHash=createHash('sha256').update(await readFile(`${directory}/style.css`)).digest('hex').slice(0,12);
@@ -19,6 +23,7 @@ async function updateEntrypoints(directory,production=false){
 await build({...options,outfile:'dist/game.bundle.js'});
 await updateEntrypoints('dist');
 await stageProductionAssets('dist','dist/client');
+await writeFile('dist/client/backend-config.js',`export const backendConfig=Object.freeze({enabled:${payloadEnabled},apiBase:'/api/figsaw'});\n`);
 await cp('dist/game.bundle.js','dist/client/game.bundle.js');
 await cp('dist/game.bundle.js.LEGAL.txt','dist/client/game.bundle.js.LEGAL.txt');
 await updateEntrypoints('dist/client',true);

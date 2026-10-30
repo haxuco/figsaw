@@ -1,4 +1,4 @@
-import {linkedinConfig} from './linkedin-config.js';
+import {backendConfig} from './backend-config.js';
 export const ANALYTICS_STAGES=Object.freeze({room_ready:'Room loaded',intro_complete:'Intro finished',key_collected:'Key collected',shackle_unlocked:'Shackle unlocked',charger_connected:'Charger connected',laptop_opened:'Laptop opened',kerning_1:'Kerning: first word',kerning_2:'Kerning: second word',kerning_complete:'Kerning completed',org_chart_viewed:'Org chart inspected',pm_revealed:'PM clue revealed',skull_viewed:'Skull inspected',mobile_collected:'Mobile collected',mobile_hung:'Mobile hung',mobile_repaired:'Mobile repaired',chairs_repaired:'Both chairs repaired',chairs_positioned:'Chairs positioned',chairs_linked:'All chairs linked',tank_broken:'Tank broken',fire_extinguished:'Fire extinguished',figpal_saved:'One Figpal saved',two_figpals_saved:'Two Figpals saved',door_unlocked:'Door unlocked',chairs_at_door:'Chairs at the door',escaped:'Escaped'});
 export const ANALYTICS_CAUSES=Object.freeze({acid:'Acid exposure',saw:'Saw injury',fire:'Fire',explosion:'Explosion',laptop:'Laptop destroyed',deadline:'Time ran out',flood:'Flood blocked escape',objective:'Objective failed',load:'Loading failed'});
 
@@ -20,16 +20,16 @@ export function createAnalyticsState({uuid,secret,environment,device}){
  };
 }
 const noop=Object.freeze({ready(){},mark(){},finish(){},retry(){},observe(){},flush(){}});
-export function startAnalytics({window:win=globalThis.window,document:doc=globalThis.document,fetch:send=globalThis.fetch,config=linkedinConfig}={}){
+export function startAnalytics({window:win=globalThis.window,document:doc=globalThis.document,fetch:send=globalThis.fetch,config=backendConfig}={}){
  const environment=win?.location.hostname==='figsaw.figma.site'?'official':win?.location.hostname==='figsaw.haxuco.chatgpt.site'?'staging':null;
  // Development, browser privacy signals, and the owner dashboard are excluded.
- if(/(?:^|\/)insights(?:\.html)?\/?$/.test(win?.location.pathname||'')||!environment||!win.crypto?.randomUUID||win.navigator.globalPrivacyControl||win.navigator.doNotTrack==='1'||!config.projectUrl)return noop;
+ if(/(?:^|\/)insights(?:\.html)?\/?$/.test(win?.location.pathname||'')||!environment||!win.crypto?.randomUUID||win.navigator.globalPrivacyControl||win.navigator.doNotTrack==='1'||!config.enabled)return noop;
  const secret=Array.from(win.crypto.getRandomValues(new Uint8Array(32)),v=>v.toString(16).padStart(2,'0')).join('');
  const state=createAnalyticsState({uuid:()=>win.crypto.randomUUID(),secret,environment,device:win.matchMedia('(pointer: coarse)').matches?'mobile':'desktop'});
  const now=()=>win.performance.now();let last=now(),lastInput=last,read=null,pause=()=>false,lastSent=0,inFlight=false,disabled=false;
- const endpoint=config.projectUrl+'/rest/v1/rpc/figsaw_record_analytics';
+ const endpoint=config.apiBase+'/analytics';
  function sample(){const t=now();state.tick(t-last,{visible:doc.visibilityState==='visible',active:t-lastInput<60000&&!pause()});last=t;if(read&&!state.ended){try{const value=read();for(const key of value.stages||[])state.mark(key);state.rescued(value.saved||0);}catch{/* Telemetry never interrupts gameplay. */}}}
- function post(packet,keepalive=false){return send(endpoint,{method:'POST',headers:{apikey:config.publishableKey,'Content-Type':'application/json'},body:JSON.stringify(packet),keepalive,signal:keepalive?undefined:AbortSignal.timeout(8000)}).then(r=>{if([401,403,404].includes(r.status))disabled=true;}).catch(()=>{});}
+ function post(packet,keepalive=false){return send(endpoint,{method:'POST',credentials:'same-origin',headers:{'Content-Type':'application/json'},body:JSON.stringify(packet),keepalive,signal:keepalive?undefined:AbortSignal.timeout(8000)}).then(r=>{if([401,403,404].includes(r.status))disabled=true;}).catch(()=>{});}
  function flush(keepalive=false){if(disabled||inFlight&&!keepalive)return;sample();lastSent=now();inFlight=true;void post(state.packet(),keepalive).finally(()=>{inFlight=false;});}
  const input=()=>{lastInput=now();state.interact();};
  win.addEventListener('pointerdown',input,{passive:true});win.addEventListener('keydown',input,{passive:true});

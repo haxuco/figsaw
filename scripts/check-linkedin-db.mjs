@@ -3,7 +3,7 @@ import {readFile} from 'node:fs/promises';
 const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite'),db=new PGlite();
 try{
  await db.exec('create role anon; create role authenticated; create role service_role bypassrls; create schema auth; create table auth.users(id uuid primary key);');
- await db.exec(await readFile(new URL('../supabase/migrations/202610300002_linkedin_posts.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../legacy/supabase/migrations/202610300002_linkedin_posts.sql',import.meta.url),'utf8'));
  const user='123e4567-e89b-12d3-a456-426614174001';await db.query('insert into auth.users values ($1)',[user]);
  const id=i=>`123e4567-e89b-12d3-a456-${String(i).padStart(12,'0')}`;
  const claim=async i=>(await db.query('select public.figsaw_claim_linkedin_post($1,$2,$3) as result',[user,id(i),'video'])).rows[0].result;

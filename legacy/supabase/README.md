@@ -1,3 +1,7 @@
+# Archived Supabase implementation
+
+This is a rollback/data-export reference, not the active backend. Follow [the Payload setup guide](../../payload/README.md) for new deployments. Do not redeploy these functions as part of the Payload migration.
+
 # Connect the Top 10 leaderboard
 
 The game is still local-only until `dist/leaderboard-config.js` is configured.

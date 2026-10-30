@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';import {readFile} from 'node:fs/promises
 const {PGlite}=await import(process.env.PGLITE_MODULE||'@electric-sql/pglite');const db=new PGlite();
 try{
  await db.exec("create role anon;create role authenticated;create schema auth;create table auth.users(id uuid primary key,email text,email_confirmed_at timestamptz,is_anonymous boolean default false);create function auth.uid() returns uuid language sql as $$select nullif(current_setting('request.jwt.claim.sub',true),'')::uuid$$;");
- await db.exec(await readFile(new URL('../supabase/migrations/202610300004_analytics.sql',import.meta.url),'utf8'));
+ await db.exec(await readFile(new URL('../legacy/supabase/migrations/202610300004_analytics.sql',import.meta.url),'utf8'));
  const visit='11111111-1111-4111-8111-111111111111',run='22222222-2222-4222-8222-222222222222',owner='33333333-3333-4333-8333-333333333333',other='44444444-4444-4444-8444-444444444444';
  const data={sequence:1,environment:'official',device:'desktop',run_ms:0,active_ms:0,visible_ms:0,interactions:0,run_interactions:0,saved:0,load_ms:null,outcome:'playing',cause:null,milestones:{}};
  const send=(payload=data,secret='a'.repeat(64),id=run,session=visit)=>db.query('select public.figsaw_record_analytics($1,$2,$3,$4)',[session,secret,id,payload]);
